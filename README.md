@@ -13,56 +13,200 @@ January operates in two seamless modes:
 
 ---
 
-## 🏛️ System Architecture & Flow Diagram
+## 🏛️ System Architecture Flowchart
+
+```
++-----------------------------------------------------------------------------------+
+|                            JANUARY AI SYSTEM ARCHITECTURE                         |
++-----------------------------------------------------------------------------------+
+|                                                                                   |
+|  [ PHYSICAL INPUTS ]                                                              |
+|   +--------------------------+       +-----------------------------------------+  |
+|   | 🎙️ MacBook Microphone    |       | 💻 Interactive Terminal CLI ([ME])       |  |
+|   | (16kHz PCM via sounddevice)      | (Command input, questions, code request)|  |
+|   +------------+-------------+       +--------------------+--------------------+  |
+|                |                                          |                       |
+|                v                                          v                       |
+|  [ BACKGROUND DAEMON COORDINATOR ]           [ CLI AUTO-PAUSE/RESUME CONTROLLER ] |
+|   +------------------------------------+      +--------------------------------+  |
+|   | ⚡ Voice Activity Detection (VAD)   |<---->| ⏸️  Pauses background mic while  |  |
+|   | 🗣️ Faster-Whisper (multilingual)   |      |     CLI is attached & active.  |  |
+|   +-----------------+------------------+      +--------------------------------+  |
+|                     |                                                             |
+|                     v                                                             |
+|   +----------------------------------------------------------------------------+  |
+|   | 🧠 Central Agent Coordinator & State Machine                               |  |
+|   |    [PASSIVE]  <---->  [LISTENING]  <---->  [WORKING]  <---->  [SPEAKING]   |  |
+|   |                                  ^                                         |  |
+|   |                                  | (Sleep Word: "good night" / "Arise")    |  |
+|   |                                  v                                         |  |
+|   |                             [SLEEPING]                                     |  |
+|   +-----------------+--------------------+--------------------+---------------+  |
+|                     |                    |                    |                   |
+|                     v                    v                    v                   |
+|  [ INTELLIGENCE ENGINES & TOOLS ]                                                 |
+|   +-------------------------+  +------------------------+  +-------------------+  |
+|   | 🎭 Local Emotion Engine |  | 🌐 Real-Time Internet  |  | 🛠️ Anthropic Claude|  |
+|   | - 7 Mood Archetypes     |  | - DuckDuckGo Search    |  |    3.7 Sonnet     |  |
+|   | - Valence & Arousal     |  | - wttr.in Live Weather |  | - Code Generation |  |
+|   | - Dynamic Prosody Tuning|  | - Wikipedia Facts      |  | - Interactive Apps|  |
+|   +------------+------------+  +-----------+------------+  +---------+---------+  |
+|                |                           |                         |            |
+|                +---------------------------+-------------------------+            |
+|                                            |                                      |
+|                                            v                                      |
+|                              +--------------------------+                         |
+|                              | ✨ Google Gemini API     |                         |
+|                              | (gemini-3.6-flash / 3.5) |                         |
+|                              +-------------+------------+                         |
+|                                            |                                      |
+|                                            v                                      |
+|  [ VOCAL SYNTHESIS & OUTPUT ]                                                     |
+|   +----------------------------------------------------------------------------+  |
+|   | 🔤 Unicode Script & Language Classifier                                    |  |
+|   | (Auto-detects Hindi, Bengali, Marathi, Gujarati, Urdu, Sanskrit, etc.)     |  |
+|   +----------------------------------------+-----------------------------------+  |
+|                                            |                                      |
+|                                            v                                      |
+|   +----------------------------------------------------------------------------+  |
+|   | 🗣️ Microsoft Edge-TTS Multilingual Neural Voice Router                     |  |
+|   | (Pitch & Rate modulated by Emotion Engine: +4Hz Joy, -2Hz Empathetic, etc.)|  |
+|   +----------------------------------------+-----------------------------------+  |
+|                                            |                                      |
+|                                            v                                      |
+|   +----------------------------------------------------------------------------+  |
+|   | 🔊 MacBook Physical Speakers (/usr/bin/afplay)                             |  |
+|   +----------------------------------------------------------------------------+  |
++-----------------------------------------------------------------------------------+
+```
+
+---
+
+## 🔄 End-to-End Voice Lifecycle & Reverb Guard (Sequence Flow)
 
 ```mermaid
-flowchart TD
-    subgraph Input_Layer ["🎤 1. Audio & Terminal Input"]
-        Mic["🎙️ MacBook Physical Microphone\n(sounddevice / 16kHz PCM)"]
-        CLI["💻 Interactive Terminal CLI\n([ME] Input Prompt)"]
+sequenceDiagram
+    autonumber
+    actor User as 👤 User (Room / Hardware)
+    participant Mic as 🎙️ System Mic & Whisper
+    participant Daemon as ⚡ January Core Daemon
+    participant Emotion as 🎭 Emotion Engine
+    participant Web as 🌐 Web Search / Weather
+    participant Gemini as ✨ Gemini / Claude AI
+    participant TTS as 🗣️ Edge-TTS Neural Engine
+    participant Speaker as 🔊 MacBook Speakers
+
+    User->>Mic: Speaks: "Arise, whats the weather in Hubli?"
+    Mic->>Daemon: Transcribes text ("Arise, whats the weather in Hubli?")
+    Daemon->>Daemon: Detects "Arise" -> Transitions to [WORKING]
+    
+    par Parallel Analysis
+        Daemon->>Emotion: Analyze User Sentiment / Emotion
+        Emotion-->>Daemon: Detected: "Curious" (Pitch: +2Hz, Rate: +2%)
+    and Live Internet Query
+        Daemon->>Web: Query live weather for "Hubli"
+        Web-->>Daemon: Current: Overcast 20°C, Feels 19°C, Wind 24km/h
     end
 
-    subgraph Core_Daemon ["⚡ 2. January Core Daemon (server/src/index.ts)"]
-        VAD["⚡ Voice Activity Detection & Faster-Whisper\n(server/audio_engine/mic_stt_engine.py)"]
-        StateCoord["🧠 State Machine & Coordinator\n(passive | listening | working | speaking | sleeping)"]
-        WakeDet["🌟 Wake & Sleep Phrase Detector\n('Arise' / 'Good night')"]
-        CLIPause["⏸️ CLI Auto-Pause & Resume Manager"]
-    end
+    Daemon->>Gemini: Prompt + Weather Context + Emotion Guidance
+    Gemini-->>Daemon: Spoken Response: "It's currently an overcast 20°C in Hubli..."
+    
+    Daemon->>Mic: 🔕 Mute Physical Mic (Echo Cancellation)
+    Daemon->>TTS: Synthesize Speech (Voice: en-US / hi-IN, Pitch: +2Hz, Rate: +2%)
+    TTS-->>Speaker: Play audio via /usr/bin/afplay
+    Speaker-->>User: 🔊 Speaks out loud in the room
+    
+    Speaker->>Daemon: Playback finished
+    Daemon->>Mic: 🔔 Unmute Physical Mic (+1.2s Reverb Guard)
+    Daemon->>Daemon: Transition to [PASSIVE] standby
+```
 
-    subgraph Intelligence_Routing ["🧠 3. Intelligence & Tool Router"]
-        EmotionEng["🎭 Emotion Engine (7 Archetypes)\n(server/audio_engine/emotion_engine.py)"]
-        WebSearch["🌐 Real-Time Internet & Live Weather\n(DuckDuckGo / wttr.in / Wikipedia)"]
-        GeminiService["✨ Google Gemini API\n(gemini-3.6-flash / 3.5-flash-lite)"]
-        ClaudeCoding["🛠️ Anthropic Claude 3.7 Sonnet\n(Code & Live Simulation Generator)"]
-        OSTools["🖥️ macOS Native Tools\n(launch_app / manage_whatsapp)"]
-    end
+---
 
-    subgraph Output_Layer ["🔊 4. Expressive Speech & Vocalization"]
-        ScriptDetect["🔤 Script & Language Detector\n(English + 15 Indian Languages)"]
-        TTS["🗣️ Neural Speech Synthesis (Edge-TTS)\n(server/audio_engine/tts_engine.py)"]
-        Afplay["🔊 Physical Laptop Speakers\n(/usr/bin/afplay)"]
-    end
+## 💻 Terminal CLI & Background Daemon Auto-Switching Flow
 
-    Mic --> VAD
-    CLI --> CLIPause
-    CLIPause -.->|Pause Background Mic| VAD
-    VAD --> StateCoord
-    VAD --> WakeDet
-    CLI --> StateCoord
+```
++-----------------------------------------------------------------------------------+
+|                  TERMINAL CLI & BACKGROUND AUTO-SWITCHING FLOW                    |
++-----------------------------------------------------------------------------------+
+|                                                                                   |
+|           +----------------------------------------------------------+            |
+|           |       January Background Daemon Running (npm run dev)    |            |
+|           |       - Physical microphone ACTIVE & LISTENING           |            |
+|           |       - Ready for "Arise" or spoken voice prompts        |            |
+|           +----------------------------+-----------------------------+            |
+|                                        |                                          |
+|                     User launches:     | `npm run cli`                            |
+|                                        v                                          |
+|           +----------------------------------------------------------+            |
+|           |       Terminal CLI Connects to Daemon via WebSocket      |            |
+|           |       - Sends `cli_attach` handshake signal              |            |
+|           |       - 🔕 DAEMON AUTOMATICALLY PAUSES BACKGROUND MIC    |            |
+|           |       - Prevents double-hearing, echo, and overlap       |            |
+|           +----------------------------+-----------------------------+            |
+|                                        |                                          |
+|                     User types in      | [ME] prompt (Questions, Code, Languages) |
+|                                        v                                          |
+|           +----------------------------------------------------------+            |
+|           |       January Responds Inside Interactive Terminal       |            |
+|           |       - Formatted [JANUARY] ANSI output banner           |            |
+|           |       - Out-loud speech synthesized via laptop speaker   |            |
+|           +----------------------------+-----------------------------+            |
+|                                        |                                          |
+|                     User exits CLI:    | `exit`, `quit`, or `Ctrl + C`            |
+|                                        v                                          |
+|           +----------------------------------------------------------+            |
+|           |       Terminal CLI Sends `cli_detach` & Shuts Down       |            |
+|           |       - 🔔 DAEMON AUTOMATICALLY RESUMES BACKGROUND MIC   |            |
+|           |       - January seamlessly returns to room voice mode!   |            |
+|           +----------------------------------------------------------+            |
+|                                                                                   |
++-----------------------------------------------------------------------------------+
+```
 
-    StateCoord --> EmotionEng
-    StateCoord --> WebSearch
-    StateCoord --> GeminiService
-    StateCoord --> ClaudeCoding
-    StateCoord --> OSTools
+---
 
-    GeminiService --> ScriptDetect
-    ClaudeCoding --> ScriptDetect
-    OSTools --> ScriptDetect
-    EmotionEng -.->|Pitch & Rate Prosody| TTS
+## 🇮🇳 Multilingual Script & Neural Voice Routing Flow
 
-    ScriptDetect --> TTS
-    TTS --> Afplay
+```
++-----------------------------------------------------------------------------------+
+|                  MULTILINGUAL INDIAN LANGUAGE ROUTING FLOW                        |
++-----------------------------------------------------------------------------------+
+|                                                                                   |
+|                              Incoming Text String                                 |
+|                                        |                                          |
+|                                        v                                          |
+|                     +--------------------------------------+                      |
+|                     | Unicode Character & Script Analyzer  |                      |
+|                     +------------------+-------------------+                      |
+|                                        |                                          |
+|       +--------------+-----------------+---------------+------------------+       |
+|       |              |                                 |                  |       |
+|       v              v                                 v                  v       |
+|  [Devanagari]    [Bengali / Assamese]             [Gujarati]          [Perso-Arabic]
+|  (\u0900-\u097F) (\u0980-\u09FF)                  (\u0A80-\u0AFF)     (\u0600-\u06FF)
+|       |              |                                 |                  |       |
+|  Lexical Score:      +---> Bengali / Assamese          |                  +---> Urdu
+|  - Marathi (आहे)     |     Voice: bn-IN-Tanishaa       |                        Kashmiri
+|  - Nepali (छ)        |                                 |                        Sindhi
+|  - Sanskrit (अस्ति)  |                                 |                        Voice:
+|  - Hindi (है)        |                                 v                        ur-IN-Gul
+|       |              |                         Gujarati Voice:                    |
+|       v              |                         gu-IN-Dhwani                       |
+|  +----------------+  |                                 |                          |
+|  | mr-IN-Aarohi   |  |                                 |                          |
+|  | ne-NP-Hemkala  |  |                                 |                          |
+|  | hi-IN-Swara    |  |                                 |                          |
+|  +----------------+  |                                 |                          |
+|       |              |                                 |                          |
+|       +--------------+---------------------------------+--------------------------+
+|                                        |                                          |
+|                                        v                                          |
+|                 Synthesize with Microsoft Edge-TTS Engine                         |
+|                                        |                                          |
+|                                        v                                          |
+|                 Vocalize Out Loud via macOS /usr/bin/afplay                       |
++-----------------------------------------------------------------------------------+
 ```
 
 ---
