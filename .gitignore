@@ -1,0 +1,15 @@
+node_modules
+dist
+.env
+.env.*
+server/.env
+server/.env.*
+client/.env
+client/.env.*
+.DS_Store
+*.log
+*.wav
+*.mp3
+.venv
+__pycache__
+

@@ -1,0 +1,13 @@
+{
+  "name": "january-ai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "January - Local Autonomous AI Agent with Gemini & Claude",
+  "scripts": {
+    "dev": "npm run dev --prefix server",
+    "start": "npm run dev --prefix server",
+    "cli": "npm run cli --prefix server",
+    "build": "npm run build --prefix server",
+    "server": "npm run dev --prefix server"
+  }
+}

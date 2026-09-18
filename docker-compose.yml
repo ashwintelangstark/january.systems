@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  january:
+    build: .
+    container_name: january-ai
+    ports:
+      - "3001:3001"
+      - "5173:5173"
+    environment:
+      - PORT=3001
+      - HOST=0.0.0.0
+      - GEMINI_API=${GEMINI_API:-AQ.Ab8RN6LYPl7iRzyur85Q47u1L8XSHMGkuRgpT87wWQ_SANIUNw}
+      - GEMINI_VOICE=${GEMINI_VOICE:-Aoede}
+      - CLAUDE_CODE_API=${CLAUDE_CODE_API:-5034516b941546978cc765d4fefdebf2.s0Gap3peaFcyzBzc}
+      - WAKE_PHRASE=${WAKE_PHRASE:-Arise}
+    devices:
+      - /dev/snd:/dev/snd
+    volumes:
+      - ./server/.env:/app/server/.env
+    restart: unless-stopped
