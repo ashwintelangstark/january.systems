@@ -287,6 +287,21 @@ async function handleUserInput(text: string) {
     console.log(`│ ${yellow('⚠ Gemini API Notice:')} ${geminiResult.text}`);
     console.log(`${purple(bold('└────────────────────────────────────────────────────────────────────'))}`);
     await systemSpeaker.speakText(`Gemini API: ${geminiResult.error || geminiResult.text}`, { emotion: 'concerned' });
+  } else if (geminiResult.isCode) {
+    const langBadge = (geminiResult.language || 'Code').toUpperCase();
+    console.log(`│ ${brightCyan(bold(`[${langBadge}]`))} ${dim('Synthesized by:')} ${green(bold(geminiResult.modelUsed || 'Coding Engine'))}`);
+    console.log(`│`);
+    const lines = (geminiResult.text || geminiResult.codeSnippet || '').split('\n');
+    for (const line of lines) {
+      console.log(`│ ${line}`);
+    }
+    console.log(`│`);
+    if (geminiResult.compilationCommand) {
+      console.log(`│ ${yellow(bold('▶ Run Command:'))} ${brightCyan(geminiResult.compilationCommand)}`);
+    }
+    console.log(`${purple(bold('└────────────────────────────────────────────────────────────────────'))}`);
+    const verbal = geminiResult.verbalSummary || `I've generated the ${langBadge} code for you in your terminal.`;
+    await systemSpeaker.speakText(verbal, { emotion: 'focused', pitch: '+0Hz' });
   } else {
     console.log(`│ ${dim('Mood Attunement:')} ${emotionLabel} ${dim(`(Pitch: ${emotion?.pitch || '+0Hz'}, Rate: ${emotion?.rate || '+0%'})`)}`);
     console.log(`│`);

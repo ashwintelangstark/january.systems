@@ -158,6 +158,22 @@ geminiClient.on('toolResult', (payload) => {
     type: 'tool_result',
     payload,
   });
+
+  if (payload.name === 'delegate_coding' && payload.result?.success) {
+    const r = payload.result;
+    console.log(`\n\x1b[36m\x1b[1m╔═══════════════════════════════════════════════════════════════════╗\x1b[0m`);
+    console.log(`\x1b[36m\x1b[1m║ 💻 [CODE GENERATED IN TERMINAL: ${(r.language || 'CODE').toUpperCase()}] — ${(r.model || 'Gemini/Claude')}\x1b[0m`);
+    console.log(`\x1b[36m\x1b[1m╠═══════════════════════════════════════════════════════════════════╣\x1b[0m`);
+    const lines = (r.response || r.codeSnippet || '').split('\n');
+    for (const l of lines) {
+      console.log(`\x1b[36m\x1b[1m║\x1b[0m ${l}`);
+    }
+    if (r.compilationCommand) {
+      console.log(`\x1b[36m\x1b[1m╠═══════════════════════════════════════════════════════════════════╣\x1b[0m`);
+      console.log(`\x1b[36m\x1b[1m║\x1b[0m \x1b[33m\x1b[1m▶ Run Command:\x1b[0m \x1b[96m${r.compilationCommand}\x1b[0m`);
+    }
+    console.log(`\x1b[36m\x1b[1m╚═══════════════════════════════════════════════════════════════════╝\x1b[0m\n`);
+  }
 });
 
 geminiClient.on('interrupt', () => {

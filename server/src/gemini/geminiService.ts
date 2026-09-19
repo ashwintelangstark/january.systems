@@ -1,10 +1,15 @@
-import { GoogleGenAI } from '@google/genai';
 import { config } from '../config.js';
 import { executeTool } from '../tools/index.js';
+import { delegateCoding, DelegateCodingResult } from '../tools/delegateCoding.js';
 import { EmotionEngine, EmotionResult } from '../emotions/emotionEngine.js';
 
 export interface GeminiResponseResult {
   text: string;
+  verbalSummary?: string;
+  codeSnippet?: string;
+  language?: string;
+  compilationCommand?: string;
+  isCode?: boolean;
   toolCalls?: Array<{ name: string; args: any; result: any }>;
   isError?: boolean;
   error?: string;
@@ -12,11 +17,105 @@ export interface GeminiResponseResult {
   emotion?: EmotionResult;
 }
 
+/**
+ * Detects the language used in the prompt to enforce strict language mirroring
+ */
+function detectPromptLanguage(prompt: string): { langName: string; scriptGuidance: string } | null {
+  const lower = prompt.toLowerCase();
+
+  // Explicit language mentions or phrasing
+  if (/\b(hindi|हिंदी)\b/i.test(prompt) || /(?:hindi\s*me|hindi\s*mein|हिंदी\s*में)/i.test(prompt)) {
+    return { langName: 'Hindi', scriptGuidance: 'Respond strictly in authentic, conversational Hindi using Devanagari script (हिंदी).' };
+  }
+  if (/\b(marathi|मराठी)\b/i.test(prompt) || /(?:marathi\s*madhe|marathit|मराठीत|मराठी\s*मध्ये)/i.test(prompt)) {
+    return { langName: 'Marathi', scriptGuidance: 'Respond strictly in authentic, fluent Marathi using Devanagari script (मराठी).' };
+  }
+  if (/\b(bengali|bangla|বাংলা)\b/i.test(prompt) || /(?:bangla\s*y|bangla\s*te|বাংলায়)/i.test(prompt)) {
+    return { langName: 'Bengali', scriptGuidance: 'Respond strictly in authentic, fluent Bengali using Bengali script (বাংলা).' };
+  }
+  if (/\b(gujarati|ગુજરાતી)\b/i.test(prompt) || /(?:gujarati\s*ma|ગુજરાતીમાં)/i.test(prompt)) {
+    return { langName: 'Gujarati', scriptGuidance: 'Respond strictly in authentic, fluent Gujarati using Gujarati script (ગુજરાતી).' };
+  }
+  if (/\b(urdu|اردو)\b/i.test(prompt) || /(?:urdu\s*me|urdu\s*mein|اردو\s*میں)/i.test(prompt)) {
+    return { langName: 'Urdu', scriptGuidance: 'Respond strictly in authentic, polite Urdu using Perso-Arabic script (اردو).' };
+  }
+  if (/\b(kannada|ಕನ್ನಡ)\b/i.test(prompt) || /(?:kannada\s*dalli|ಕನ್ನಡದಲ್ಲಿ)/i.test(prompt)) {
+    return { langName: 'Kannada', scriptGuidance: 'Respond strictly in authentic, fluent Kannada using Kannada script (ಕನ್ನಡ).' };
+  }
+  if (/\b(tamil|தமிழ்)\b/i.test(prompt) || /(?:tamil\s*il|தமிழில்)/i.test(prompt)) {
+    return { langName: 'Tamil', scriptGuidance: 'Respond strictly in authentic, fluent Tamil using Tamil script (தமிழ்).' };
+  }
+  if (/\b(telugu|తెలుగు)\b/i.test(prompt) || /(?:telugu\s*lo|తెలుగులో)/i.test(prompt)) {
+    return { langName: 'Telugu', scriptGuidance: 'Respond strictly in authentic, fluent Telugu using Telugu script (తెలుగు).' };
+  }
+  if (/\b(malayalam|മലയാളം)\b/i.test(prompt) || /(?:malayalam\s*il|മലയാളത്തിൽ)/i.test(prompt)) {
+    return { langName: 'Malayalam', scriptGuidance: 'Respond strictly in authentic, fluent Malayalam using Malayalam script (മലയാളം).' };
+  }
+  if (/\b(punjabi|ਪੰਜਾਬੀ)\b/i.test(prompt) || /(?:punjabi\s*vich|ਪੰਜਾਬੀ\s*ਵਿੱਚ)/i.test(prompt)) {
+    return { langName: 'Punjabi', scriptGuidance: 'Respond strictly in authentic, fluent Punjabi using Gurmukhi script (ਪੰਜਾਬੀ).' };
+  }
+  if (/\b(sanskrit|संस्कृतम्|संस्कृत)\b/i.test(prompt)) {
+    return { langName: 'Sanskrit', scriptGuidance: 'Respond strictly in classical Sanskrit using Devanagari script (संस्कृतम्).' };
+  }
+  if (/\b(nepali|नेपाली)\b/i.test(prompt)) {
+    return { langName: 'Nepali', scriptGuidance: 'Respond strictly in authentic, fluent Nepali using Devanagari script (नेपाली).' };
+  }
+  if (/\b(odia|oriya|ଓଡ଼ିଆ)\b/i.test(prompt)) {
+    return { langName: 'Odia', scriptGuidance: 'Respond strictly in authentic, fluent Odia using Odia script (ଓଡ଼ିଆ).' };
+  }
+  if (/\b(assamese|অসমীয়া)\b/i.test(prompt)) {
+    return { langName: 'Assamese', scriptGuidance: 'Respond strictly in authentic Assamese using Assamese script (অসমীয়া).' };
+  }
+
+  // Unicode Script inspection for direct native text
+  if (/[\u0980-\u09FF]/.test(prompt)) {
+    return { langName: 'Bengali/Assamese', scriptGuidance: 'The user wrote in Bengali/Assamese. Respond strictly in Bengali using Bengali script.' };
+  }
+  if (/[\u0A80-\u0AFF]/.test(prompt)) {
+    return { langName: 'Gujarati', scriptGuidance: 'The user wrote in Gujarati. Respond strictly in Gujarati using Gujarati script.' };
+  }
+  if (/[\u0A00-\u0A7F]/.test(prompt)) {
+    return { langName: 'Punjabi', scriptGuidance: 'The user wrote in Gurmukhi. Respond strictly in Punjabi using Gurmukhi script.' };
+  }
+  if (/[\u0B00-\u0B7F]/.test(prompt)) {
+    return { langName: 'Odia', scriptGuidance: 'The user wrote in Odia. Respond strictly in Odia using Odia script.' };
+  }
+  if (/[\u0600-\u06FF]/.test(prompt)) {
+    return { langName: 'Urdu', scriptGuidance: 'The user wrote in Urdu (Perso-Arabic). Respond strictly in Urdu using Perso-Arabic script.' };
+  }
+  if (/[\u0C80-\u0CFF]/.test(prompt)) {
+    return { langName: 'Kannada', scriptGuidance: 'The user wrote in Kannada. Respond strictly in Kannada using Kannada script.' };
+  }
+  if (/[\u0B80-\u0BFF]/.test(prompt)) {
+    return { langName: 'Tamil', scriptGuidance: 'The user wrote in Tamil. Respond strictly in Tamil using Tamil script.' };
+  }
+  if (/[\u0C00-\u0C7F]/.test(prompt)) {
+    return { langName: 'Telugu', scriptGuidance: 'The user wrote in Telugu. Respond strictly in Telugu using Telugu script.' };
+  }
+  if (/[\u0D00-\u0D7F]/.test(prompt)) {
+    return { langName: 'Malayalam', scriptGuidance: 'The user wrote in Malayalam. Respond strictly in Malayalam using Malayalam script.' };
+  }
+  if (/[\u0900-\u097F]/.test(prompt)) {
+    if (/(?:आहे|नाही|काय|तुम्ही|सांगा|कसे|नमस्कार|झाले)/.test(prompt)) {
+      return { langName: 'Marathi', scriptGuidance: 'The user wrote in Marathi. Respond strictly in Marathi using Devanagari script.' };
+    }
+    if (/(?:छ|छैन|गर्ने|हुने|तपाईं|हुन्छ|नेपाल)/.test(prompt)) {
+      return { langName: 'Nepali', scriptGuidance: 'The user wrote in Nepali. Respond strictly in Nepali using Devanagari script.' };
+    }
+    if (/(?:अस्ति|भवति|नमः|स्वाहा|अहम्|सुप्रभातम्)/.test(prompt)) {
+      return { langName: 'Sanskrit', scriptGuidance: 'The user wrote in Sanskrit. Respond strictly in Sanskrit using Devanagari script.' };
+    }
+    return { langName: 'Hindi', scriptGuidance: 'The user wrote in Hindi. Respond strictly in Hindi using Devanagari script.' };
+  }
+
+  return null;
+}
+
 export class GeminiService {
   private candidateModels = [
-    'models/gemini-3.6-flash',
     'models/gemini-3.5-flash-lite',
-    'models/gemini-2.5-flash',
+    'models/gemini-3.6-flash',
+    'models/gemini-3.1-flash-lite',
   ];
   private emotionEngine: EmotionEngine;
 
@@ -30,26 +129,40 @@ export class GeminiService {
 
   /**
    * Directly queries Google Gemini API servers to analyze the user's question
-   * with adaptive emotion awareness and dynamic intelligence.
+   * with adaptive emotion awareness, language switching, and Python/C/C++ coding engine integration.
    */
   public async analyzeAndRespond(prompt: string): Promise<GeminiResponseResult> {
     const lower = prompt.toLowerCase();
     const emotionResult = await this.emotionEngine.analyzeText(prompt);
     const emotionPromptContext = this.emotionEngine.getEmotionalPromptContext(emotionResult.emotion);
 
-    const isCodingOrSimulation =
-      lower.includes('code') ||
-      lower.includes('develop') ||
-      lower.includes('simulation') ||
-      lower.includes('build an app') ||
-      lower.includes('create an app');
+    // 1. Check for Python, C, C++, Algorithms or Systems Coding Tasks
+    const isCoding =
+      (/(?:python|python3|\bpy\b|c\+\+|cpp|cxx|c\s+program|c\s+code|c\s+language|\bin\s+c\b|stdio\.h|iostream|malloc|quicksort|mergesort|binary\s*search|linked\s*list|fibonacci|pointers?|struct\s+\w+|class\s+\w+|algorithm|data\s*structure)/i.test(lower) ||
+       /\b(write|create|generate|build|code|implement|make|solve|debug|optimize)\b.*?\b(code|script|function|program|algorithm|class|python|c\+\+|cpp|c language|c program|struct|queue|stack|tree|graph)\b/i.test(lower) ||
+       /\b(how\s+to\s+code|how\s+to\s+write\s+a\s+program)\b/i.test(lower)) &&
+      !lower.startsWith('open ') && !lower.startsWith('launch ');
 
-    // Check if the user specifically asked to search the web, lookup live info, check weather, news, or URL
+    if (isCoding) {
+      console.log(`[GeminiService] Routing programming task to Coding Engine: "${prompt.slice(0, 60)}..."`);
+      const codingResult: DelegateCodingResult = await delegateCoding({ prompt });
+      return {
+        text: codingResult.response,
+        verbalSummary: codingResult.verbalSummary || `I've generated the ${(codingResult.language || 'code').toUpperCase()} code for you in your terminal.`,
+        codeSnippet: codingResult.codeSnippet,
+        language: codingResult.language,
+        compilationCommand: codingResult.compilationCommand,
+        isCode: true,
+        modelUsed: codingResult.model,
+        emotion: emotionResult,
+      };
+    }
+
+    // 2. Check for Live Web Search & Real-Time Weather
     const isWebSearch =
       (/\b(search|look\s*up|google|find\s*online|web\s*search|internet|weather|news|latest|current\s*price|headlines|stock\s*price|scores)\b/i.test(lower) ||
        /\b(what\s+is\s+happening|who\s+won|latest\s+news|how\s+is\s+the\s+weather)\b/i.test(lower) ||
-       /https?:\/\/[^\s]+/.test(prompt)) &&
-      !isCodingOrSimulation;
+       /https?:\/\/[^\s]+/.test(prompt));
 
     let webSearchContext = '';
     let webToolCall: any = null;
@@ -70,11 +183,22 @@ export class GeminiService {
       }
     }
 
+    // 3. Language Detection & Strict Mirroring
+    const detectedLang = detectPromptLanguage(prompt);
+    let languageDirective =
+      'CRITICAL LANGUAGE MIRRORING RULE:\n' +
+      'Strictly detect the language used in the user\'s prompt. If the user speaks, prompts, or asks in a specific language (Hindi, Marathi, Bengali, Gujarati, Kannada, Tamil, Telugu, Malayalam, Punjabi, Odia, Assamese, Urdu, Sanskrit, Nepali, English, etc.), you MUST reply 100% in THAT EXACT SAME LANGUAGE using its authentic native script.\n' +
+      'If the user switches languages from a previous message, you MUST immediately switch your response to match the user\'s new language. Never reply in English when prompted in an Indian language.';
+
+    if (detectedLang) {
+      languageDirective += `\n[MANDATORY CURRENT LANGUAGE TARGET: ${detectedLang.langName.toUpperCase()}] -> ${detectedLang.scriptGuidance}`;
+    }
+
     // Try Google Gemini API servers with candidate models
     if (config.geminiApiKey) {
       for (const model of this.candidateModels) {
         try {
-          console.log(`[GeminiService] Analyzing question with Gemini API servers (${model}) [Emotion: ${emotionResult.emotion}]...`);
+          console.log(`[GeminiService] Analyzing question with Gemini API servers (${model}) [Emotion: ${emotionResult.emotion}, Lang: ${detectedLang?.langName || 'English'}]...`);
 
           const promptWithWeb = prompt + (webSearchContext ? `\n\nContext from Live Web Search:\n${webSearchContext}` : '');
 
@@ -98,8 +222,7 @@ export class GeminiService {
                       text:
                         'You are January, an emotionally expressive, intelligent, delightfully human-like AI companion and OS assistant running on the user\'s laptop.\n' +
                         'CAPABILITIES & PERSONALITY GUIDELINES:\n' +
-                        '1. Multilingual Indian Languages: You are completely fluent in English and 15 Indian languages: Hindi (हिंदी), Bengali (বাংলা), Marathi (मराठी), Gujarati (ગુજરાતી), Punjabi (ਪੰਜਾਬੀ), Odia (ଓଡ଼ିଆ), Assamese (অসমীয়া), Maithili (मैथिली), Kashmiri (کٲشُر / कश्मीरी), Konkani (कोंकणी), Dogri (डोगरी), Sindhi (سنڌي / सिंधी), Urdu (اردو), Sanskrit (संस्कृतम्), and Nepali (नेपाली).\n' +
-                        '   - Whenever the user speaks, prompts, or asks you to reply in any Indian language, respond fluently, naturally, and warmly in that language using its authentic native script.\n' +
+                        '1. ' + languageDirective + '\n' +
                         '2. Real-Time Internet & Live Weather: You have direct live internet search and live weather tools. Use any search/weather context provided to give immediate, accurate, and helpful answers.\n' +
                         '3. Human Emotional Resonance: Sound like a genuine, warm, and engaging human being with authentic emotional colors. ' + emotionPromptContext + '\n' +
                         '4. Direct & Voice-Friendly: Answer directly and conversationally in 1-3 crisp, natural sentences suitable for out-loud speech, unless the user asks for deep detail.\n' +
@@ -145,7 +268,7 @@ export class GeminiService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: 'qwen2.5:latest',
-          prompt: `You are January, a local AI assistant. Answer concisely (1-3 sentences).\nUser: ${prompt}`,
+          prompt: `You are January, a local AI assistant. Answer concisely in the exact language the user used.\nUser: ${prompt}`,
           stream: false,
         }),
       });
