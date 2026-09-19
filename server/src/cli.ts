@@ -182,13 +182,16 @@ async function handleUserInput(text: string) {
 
   if (lower === 'help') {
     console.log(`\n${purple(bold('┌── [JANUARY : SYSTEM GUIDE] ────────────────────────────────────────'))}`);
-    console.log(`│ ${bold('Core Capabilities & Example Commands:')}`);
+    console.log(`│ ${bold('Core Capabilities & Example Voice / Text Commands:')}`);
     console.log(`│   ${cyan('• Python Coding:')}          "write a python script to calculate fibonacci numbers"`);
     console.log(`│   ${cyan('• C Programming:')}          "write a linked list implementation with malloc in C"`);
     console.log(`│   ${cyan('• C++ Engineering:')}        "code a thread-safe queue in modern C++ with templates"`);
     console.log(`│   ${purple('• Indian Languages:')}       "हिंदी में बताओ आज का मौसम कैसा है" or "मराठीत बोला"`);
+    console.log(`│   ${green('• Open Apps & Tools:')}      "open notes", "open safari", "launch terminal", "open vs code"`);
+    console.log(`│   ${green('• Open Folders & Files:')}   "open downloads folder", "open documents", "open pressora"`);
+    console.log(`│   ${green('• Open & Play Videos:')}    "open video sample.mp4", "play video intro", "open patient videos"`);
+    console.log(`│   ${green('• Search Files & Media:')}   "search files for report", "find video on my mac"`);
     console.log(`│   ${green('• Real-Time Search:')}       "whats the live weather in hubli", "latest news"`);
-    console.log(`│   ${green('• Local Tools:')}            "open notes", "launch calculator", "open safari"`);
     console.log(`│   ${yellow('• Sleep / Wake Words:')}     "good night" to sleep, "${config.wakePhrase}" to wake`);
     console.log(`│   ${green('• WhatsApp Messaging:')}     "send whatsapp to +14155552671 saying Meeting at 4"`);
     console.log(`${purple(bold('└────────────────────────────────────────────────────────────────────'))}`);

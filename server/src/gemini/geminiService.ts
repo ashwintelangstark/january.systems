@@ -136,7 +136,88 @@ export class GeminiService {
     const emotionResult = await this.emotionEngine.analyzeText(prompt);
     const emotionPromptContext = this.emotionEngine.getEmotionalPromptContext(emotionResult.emotion);
 
-    // 1. Check for Python, C, C++, Algorithms or Systems Coding Tasks
+    // 1. Check for System Resource Opening (Apps, Folders, Videos, Files, Audio)
+    const isOpenCommand =
+      (lower.startsWith('open ') || lower.startsWith('launch ') || lower.startsWith('play ') || lower.startsWith('start ') || lower.startsWith('show ')) &&
+      !lower.includes('code') && !lower.includes('python') && !lower.includes('c++') && !lower.includes('cpp') && !lower.includes('function') && !lower.includes('script') && !lower.includes('program') && !lower.includes('algorithm');
+
+    if (isOpenCommand) {
+      const target = prompt.replace(/^(?:open|launch|play|start|show)\s+(?:the\s+|my\s+)?/i, '').replace(/^(?:folder|directory|video|movie|file|app|application)\s+/i, '').replace(/\s+(?:app|application|folder|directory|video|movie|file)$/i, '').trim();
+      let resourceType: 'app' | 'folder' | 'video' | 'file' | 'audio' | 'auto' = 'auto';
+      if (lower.includes('video') || lower.includes('movie') || lower.includes('clip') || lower.startsWith('play ') || /\.(mp4|mov|mkv|avi|webm)$/i.test(lower)) {
+        resourceType = 'video';
+      } else if (lower.includes('folder') || lower.includes('directory')) {
+        resourceType = 'folder';
+      } else if (lower.includes('file') || lower.includes('document')) {
+        resourceType = 'file';
+      } else if (lower.includes('app') || lower.includes('application')) {
+        resourceType = 'app';
+      }
+
+      console.log(`[GeminiService] Executing open_system_resource: "${target}" (type: ${resourceType})`);
+      const toolRes = await executeTool('open_system_resource', { query: target, resourceType });
+      return {
+        text: toolRes.message,
+        verbalSummary: toolRes.message,
+        toolCalls: [{ name: 'open_system_resource', args: { query: target, resourceType }, result: toolRes }],
+        emotion: emotionResult,
+      };
+    }
+
+    // 2. Check for System File & Video Search
+    const isFileSearch =
+      /\b(find|search|look\s*for|where\s*is)\b.*?\b(files?|videos?|movies?|folders?|documents?|mp4|pdf|docs?)\b/i.test(lower) ||
+      /\b(where\s+is\s+my\s+file|where\s+is\s+the\s+video|search\s+my\s+mac|search\s+my\s+system)\b/i.test(lower);
+
+    if (isFileSearch) {
+      const queryTerm = prompt
+        .replace(/\b(find|search\s+for|search|look\s+for|where\s+is\s+my|where\s+is\s+the|where\s+is|files?|videos?|movies?|folders?|documents?|on\s+my\s+mac|on\s+the\s+system|in\s+my\s+laptop)\b/gi, '')
+        .trim()
+        .replace(/^(?:for|the|my|a|an)\s+/i, '')
+        .trim() || prompt;
+      let fileType: any = 'any';
+      if (lower.includes('video') || lower.includes('movie')) fileType = 'video';
+      else if (lower.includes('folder')) fileType = 'folder';
+      else if (lower.includes('document') || lower.includes('pdf')) fileType = 'document';
+
+      console.log(`[GeminiService] Searching system files: "${queryTerm}" (type: ${fileType})`);
+      const searchRes = await executeTool('search_system_files', { query: queryTerm, fileType });
+      return {
+        text: searchRes.message,
+        verbalSummary: searchRes.results?.length ? `I found ${searchRes.results.length} matching items on your Mac.` : `No items found matching ${queryTerm}.`,
+        toolCalls: [{ name: 'search_system_files', args: { query: queryTerm, fileType }, result: searchRes }],
+        emotion: emotionResult,
+      };
+    }
+
+    // 3. Check for Folder Listing
+    const isListFolder = /\b(list|show|what('s|\s+is)\s+in)\b.*?\b(downloads|desktop|documents|movies|pictures|folder|directory)\b/i.test(lower);
+    if (isListFolder) {
+      const folderMatch = lower.match(/\b(downloads|desktop|documents|movies|pictures|music|home)\b/i);
+      const folderName = folderMatch ? folderMatch[1] : 'Desktop';
+      const listRes = await executeTool('list_system_folder', { folderPath: folderName });
+      return {
+        text: listRes.message,
+        verbalSummary: `Here are the contents of your ${folderName} folder.`,
+        toolCalls: [{ name: 'list_system_folder', args: { folderPath: folderName }, result: listRes }],
+        emotion: emotionResult,
+      };
+    }
+
+    // 4. Check for WhatsApp Message Automation
+    if (lower.includes('whatsapp')) {
+      const numberMatch = prompt.match(/(?:\+?\d{8,15})/);
+      const number = numberMatch ? numberMatch[0] : '14155552671';
+      const toolRes = await executeTool('manage_whatsapp_message', { number, text: prompt });
+      return {
+        text: toolRes.message,
+        verbalSummary: toolRes.message,
+        toolCalls: [{ name: 'manage_whatsapp_message', args: { number, text: prompt }, result: toolRes }],
+        emotion: emotionResult,
+      };
+    }
+
+    // 5. Check for Python, C, C++, Algorithms or Systems Coding Tasks
     const isCoding =
       (/(?:python|python3|\bpy\b|c\+\+|cpp|cxx|c\s+program|c\s+code|c\s+language|\bin\s+c\b|stdio\.h|iostream|malloc|quicksort|mergesort|binary\s*search|linked\s*list|fibonacci|pointers?|struct\s+\w+|class\s+\w+|algorithm|data\s*structure)/i.test(lower) ||
        /\b(write|create|generate|build|code|implement|make|solve|debug|optimize)\b.*?\b(code|script|function|program|algorithm|class|python|c\+\+|cpp|c language|c program|struct|queue|stack|tree|graph)\b/i.test(lower) ||
@@ -158,7 +239,7 @@ export class GeminiService {
       };
     }
 
-    // 2. Check for Live Web Search & Real-Time Weather
+    // 6. Check for Live Web Search & Real-Time Weather
     const isWebSearch =
       (/\b(search|look\s*up|google|find\s*online|web\s*search|internet|weather|news|latest|current\s*price|headlines|stock\s*price|scores)\b/i.test(lower) ||
        /\b(what\s+is\s+happening|who\s+won|latest\s+news|how\s+is\s+the\s+weather)\b/i.test(lower) ||

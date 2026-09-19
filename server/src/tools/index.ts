@@ -2,6 +2,7 @@ import { launchApp } from './launchApp.js';
 import { delegateCoding } from './delegateCoding.js';
 import { manageWhatsappMessage } from './manageWhatsapp.js';
 import { searchWeb, fetchWebPage } from './webSearch.js';
+import { openSystemResource, searchSystemFiles, listSystemFolder, readSystemFile } from './systemAccess.js';
 
 export const GEMINI_TOOLS_DECLARATION = [
   {
@@ -32,6 +33,77 @@ export const GEMINI_TOOLS_DECLARATION = [
             },
           },
           required: ['url'],
+        },
+      },
+      {
+        name: 'open_system_resource',
+        description: 'Open any application, folder, file, video, audio, or document on the local operating system (e.g., "Downloads", "Documents", "sample.mp4", "patient_videos", "Safari", "VS Code", "Terminal", "Spotify").',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            query: {
+              type: 'STRING',
+              description: 'The file name, folder name, video name, app name, or path to open (e.g., "Downloads", "vacation.mp4", "report.pdf", "Calculator").',
+            },
+            resourceType: {
+              type: 'STRING',
+              description: 'Optional resource category: "app", "folder", "video", "file", "audio", or "auto".',
+            },
+          },
+          required: ['query'],
+        },
+      },
+      {
+        name: 'search_system_files',
+        description: 'Search local system files, videos, documents, or folders across the computer using native index.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            query: {
+              type: 'STRING',
+              description: 'Search keyword, file name, or pattern to look for.',
+            },
+            fileType: {
+              type: 'STRING',
+              description: 'Optional filter: "video", "folder", "document", "audio", "image", "code", or "any".',
+            },
+            limit: {
+              type: 'NUMBER',
+              description: 'Maximum number of results to return (default 10).',
+            },
+          },
+          required: ['query'],
+        },
+      },
+      {
+        name: 'list_system_folder',
+        description: 'List the files and directories inside a local folder (e.g., "Downloads", "Desktop", "Documents", or specific path).',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            folderPath: {
+              type: 'STRING',
+              description: 'The directory path or folder name to list (e.g., "Downloads", "Desktop", "~/Documents").',
+            },
+          },
+        },
+      },
+      {
+        name: 'read_system_file',
+        description: 'Read the text content of a local file on the computer.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            filePath: {
+              type: 'STRING',
+              description: 'Path or name of the file to read.',
+            },
+            maxLines: {
+              type: 'NUMBER',
+              description: 'Max lines to read (default 100).',
+            },
+          },
+          required: ['filePath'],
         },
       },
       {
@@ -101,6 +173,18 @@ export async function executeTool(name: string, args: Record<string, any>): Prom
 
     case 'fetch_web_page':
       return await fetchWebPage(args.url);
+
+    case 'open_system_resource':
+      return await openSystemResource(args as any);
+
+    case 'search_system_files':
+      return await searchSystemFiles(args as any);
+
+    case 'list_system_folder':
+      return await listSystemFolder(args as any);
+
+    case 'read_system_file':
+      return await readSystemFile(args as any);
 
     case 'launch_app':
       return await launchApp(args as any);

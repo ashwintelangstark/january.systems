@@ -8,6 +8,7 @@ import { WakeDetector } from './wake/wakeDetector.js';
 import { SystemSpeaker } from './audio/systemSpeaker.js';
 import { SystemMicrophone } from './audio/systemMic.js';
 import { EmotionEngine } from './emotions/emotionEngine.js';
+import { GeminiService } from './gemini/geminiService.js';
 import { AgentState, ClientMessage, ServerMessage } from './types.js';
 
 validateConfig();
@@ -37,10 +38,11 @@ const wss = new WebSocketServer({ server });
 // State & Core Singletons
 let currentState: AgentState = 'passive';
 const geminiClient = new GeminiLiveClient();
+const geminiService = new GeminiService();
 const wakeDetector = new WakeDetector();
 const systemSpeaker = new SystemSpeaker();
 const systemMic = new SystemMicrophone();
-const emotionEngine = new EmotionEngine();
+const emotionEngine = geminiService.getEmotionEngine();
 
 emotionEngine.on('emotionChange', (emotion) => {
   broadcast({ type: 'emotion_update', payload: emotion });
@@ -247,7 +249,117 @@ systemMic.on('sleep', (data) => {
   });
 });
 
-systemMic.on('speech', (text: string) => {
+async function handleUnifiedPrompt(text: string, source: 'voice' | 'text' = 'voice'): Promise<void> {
+  const clean = text.trim();
+  if (!clean) return;
+
+  // Interrupt previous audio immediately on fresh input
+  systemSpeaker.stopPlayback();
+
+  // If active CLI is attached in a separate terminal process, suppress background voice to prevent collisions
+  if (activeCliSockets.size > 0 && source === 'voice') {
+    console.log('[Coordinator] Terminal CLI session is active. Voice prompt ignored.');
+    return;
+  }
+
+  console.log(`\n🎙️ [Coordinator] Processing ${source.toUpperCase()} prompt: "${clean}"`);
+  broadcast({
+    type: 'transcript',
+    payload: {
+      role: 'user',
+      text: clean,
+      isFinal: true,
+      timestamp: Date.now(),
+    },
+  });
+
+  setAgentState('working', `Processing ${source} command`);
+
+  try {
+    const result = await geminiService.analyzeAndRespond(clean);
+
+    // 1. Broadcast tool calls & results if any system actions occurred
+    if (result.toolCalls && result.toolCalls.length > 0) {
+      for (const tc of result.toolCalls) {
+        broadcast({
+          type: 'tool_call',
+          payload: { id: Math.random().toString(36).substring(2, 9), name: tc.name, args: tc.args },
+        });
+        broadcast({
+          type: 'tool_result',
+          payload: { id: Math.random().toString(36).substring(2, 9), name: tc.name, result: tc.result },
+        });
+      }
+    }
+
+    // 2. Code Generation (Python / C / C++)
+    if (result.isCode) {
+      console.log(`\n\x1b[36m\x1b[1m╔═══════════════════════════════════════════════════════════════════╗\x1b[0m`);
+      console.log(`\x1b[36m\x1b[1m║ 💻 [CODE GENERATED IN TERMINAL: ${(result.language || 'CODE').toUpperCase()}] — ${(result.modelUsed || 'Coding Engine')}\x1b[0m`);
+      console.log(`\x1b[36m\x1b[1m╠═══════════════════════════════════════════════════════════════════╣\x1b[0m`);
+      const lines = (result.text || result.codeSnippet || '').split('\n');
+      for (const l of lines) {
+        console.log(`\x1b[36m\x1b[1m║\x1b[0m ${l}`);
+      }
+      if (result.compilationCommand) {
+        console.log(`\x1b[36m\x1b[1m╠═══════════════════════════════════════════════════════════════════╣\x1b[0m`);
+        console.log(`\x1b[36m\x1b[1m║\x1b[0m \x1b[33m\x1b[1m▶ Run Command:\x1b[0m \x1b[96m${result.compilationCommand}\x1b[0m`);
+      }
+      console.log(`\x1b[36m\x1b[1m╚═══════════════════════════════════════════════════════════════════╝\x1b[0m\n`);
+
+      const speechSummary = result.verbalSummary || `I've generated the ${(result.language || 'code').toUpperCase()} code for you in your terminal.`;
+      broadcast({
+        type: 'transcript',
+        payload: {
+          role: 'assistant',
+          text: result.text,
+          isFinal: true,
+          timestamp: Date.now(),
+        },
+      });
+
+      setAgentState('speaking', 'Speaking code summary');
+      await systemSpeaker.speakText(speechSummary, {
+        emotion: result.emotion?.emotion || 'focused',
+        pitch: result.emotion?.pitch || '+0Hz',
+        rate: result.emotion?.rate || '+0%',
+      });
+      setAgentState('passive', 'Speech completed');
+      return;
+    }
+
+    // 3. Regular Voice/Text Response (System Apps/Files/Videos, Live Web Search, Multilingual Indian Languages)
+    console.log(`\x1b[32m[January]\x1b[0m ${result.text}`);
+    broadcast({
+      type: 'transcript',
+      payload: {
+        role: 'assistant',
+        text: result.text,
+        isFinal: true,
+        timestamp: Date.now(),
+      },
+    });
+
+    setAgentState('speaking', 'Speaking voice response');
+    await systemSpeaker.speakText(result.text, {
+      pitch: result.emotion?.pitch,
+      rate: result.emotion?.rate,
+      emotion: result.emotion?.emotion,
+    });
+    setAgentState('passive', 'Response completed');
+  } catch (err: any) {
+    console.error('[Coordinator] Error in handleUnifiedPrompt:', err.message);
+    const errorMsg = `Sorry, an error occurred: ${err.message}`;
+    broadcast({
+      type: 'transcript',
+      payload: { role: 'assistant', text: errorMsg, isFinal: true, timestamp: Date.now() },
+    });
+    await systemSpeaker.speakText(errorMsg, { emotion: 'concerned' });
+    setAgentState('passive', 'Recovered');
+  }
+}
+
+systemMic.on('speech', async (text: string) => {
   const lower = text.toLowerCase().trim();
   if (lower === 'good night' || lower === 'goodnight' || lower === 'go to sleep' || lower === 'sleep') {
     console.log(`🌙 [Coordinator] Sleep phrase spoken: "${text}"`);
@@ -255,7 +367,7 @@ systemMic.on('speech', (text: string) => {
     setAgentState('sleeping', 'Sleep phrase spoken');
     const capWake = config.wakePhrase.charAt(0).toUpperCase() + config.wakePhrase.slice(1);
     const sleepMsg = `Good night. Standing by until you say ${capWake}.`;
-    systemSpeaker.speakText(sleepMsg);
+    await systemSpeaker.speakText(sleepMsg);
     broadcast({
       type: 'transcript',
       payload: {
@@ -272,16 +384,14 @@ systemMic.on('speech', (text: string) => {
     if (lower.includes('rise') || lower.includes('arise') || lower.includes('wake')) {
       console.log(`⚡ [Coordinator] Wake word spoken during sleep: "${text}"`);
       setAgentState('listening', 'Wake word received from sleep');
-      systemSpeaker.speakText('I am awake and listening.');
+      await systemSpeaker.speakText('I am awake and listening.');
       return;
     }
     console.log(`[Coordinator] Agent is sleeping. Ignoring non-wake speech: "${text}"`);
     return;
   }
 
-  console.log(`🗣️ [Coordinator] Spoken prompt received from system microphone: "${text}"`);
-  setAgentState('working', 'Processing voice prompt');
-  geminiClient.sendClientText(text);
+  await handleUnifiedPrompt(text, 'voice');
 });
 
 systemMic.on('level', (level: number) => {
@@ -400,14 +510,7 @@ wss.on('connection', (ws: WebSocket) => {
 
         case 'text_input': {
           if (!msg.text.trim()) return;
-          console.log(`[Coordinator] Received text prompt from client: "${msg.text}"`);
-
-          // Analyze emotion in real-time
-          emotionEngine.analyzeText(msg.text.trim()).catch(() => {});
-
-          // Seamlessly interweave text into Gemini Live conversation
-          setAgentState('working', 'Processing text prompt');
-          geminiClient.sendClientText(msg.text.trim());
+          await handleUnifiedPrompt(msg.text.trim(), 'text');
           break;
         }
 
