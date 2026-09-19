@@ -50,17 +50,17 @@ export const GEMINI_TOOLS_DECLARATION = [
       },
       {
         name: 'delegate_coding',
-        description: 'Delegate complex software engineering, architecture, code generation, refactoring, or algorithmic tasks to Anthropic Claude 3.7 Sonnet.',
+        description: 'Generate, explain, debug, or optimize code in Python, C, C++, algorithms, data structures, and systems programming.',
         parameters: {
           type: 'OBJECT',
           properties: {
             prompt: {
               type: 'STRING',
-              description: 'The detailed programming task, code request, bug fix description, or technical query for Claude 3.7 Sonnet.',
+              description: 'The detailed programming task, code request, algorithm implementation, or bug fix query (e.g. Python, C, C++).',
             },
             language: {
               type: 'STRING',
-              description: 'Optional programming language or framework (e.g. "TypeScript", "Python", "React", "Rust").',
+              description: 'Optional programming language (e.g. "Python", "C", "C++", "CPP").',
             },
             context: {
               type: 'STRING',

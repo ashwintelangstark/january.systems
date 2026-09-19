@@ -16,7 +16,7 @@ export class GeminiService {
   private candidateModels = [
     'models/gemini-3.6-flash',
     'models/gemini-3.5-flash-lite',
-    'models/gemini-3.1-flash-lite',
+    'models/gemini-2.5-flash',
   ];
   private emotionEngine: EmotionEngine;
 

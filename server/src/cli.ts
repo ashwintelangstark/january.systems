@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
  * January AI - Dual-Section Interactive Terminal CLI
- * Powered by Google Gemini 3.6 Flash API & Anthropic Claude 3.7 Sonnet API
- * Features 2 distinct interaction sections: [ME] and [JANUARY].
+ * Powered by Google Gemini API & Anthropic Claude (with automatic Gemini fallback)
+ * Specialized in Python, C, and C++ coding, real-time live internet, and multilingual speech.
  */
 
 import readline from 'readline';
@@ -95,11 +95,12 @@ console.log(`
 ${cyan(bold('╔═══════════════════════════════════════════════════════════════════╗'))}
 ${cyan(bold('║               ⚡ JANUARY AI — DUAL INTERACTIVE CLI                ║'))}
 ${cyan(bold('╠═══════════════════════════════════════════════════════════════════╣'))}
-${cyan(bold('║'))} ${brightCyan(bold(' [ME]      '))} ${white('Ask any question, command, or development task         ')} ${cyan(bold('║'))}
-${cyan(bold('║'))} ${purple(bold(' [JANUARY] '))} ${white('Real-time reasoning with Gemini API & Claude 3.7 Sonnet')} ${cyan(bold('║'))}
+${cyan(bold('║'))} ${brightCyan(bold(' [ME]      '))} ${white('Ask questions, Indian languages, or Python/C/C++ code  ')} ${cyan(bold('║'))}
+${cyan(bold('║'))} ${purple(bold(' [JANUARY] '))} ${white('Gemini & Claude Core with out-loud speaker synthesis   ')} ${cyan(bold('║'))}
 ${cyan(bold('╠═══════════════════════════════════════════════════════════════════╣'))}
-${cyan(bold('║'))} ${dim('Hardware Speaker:')} MacBook Physical Audio (${config.geminiVoice} / Edge-TTS)     ${cyan(bold('║'))}
-${cyan(bold('║'))} ${dim('Commands:')} ${yellow('clear')} ${dim('to reset screen,')} ${yellow('help')} ${dim('for ideas,')} ${yellow('exit')} ${dim('to quit.           ')} ${cyan(bold('║'))}
+${cyan(bold('║'))} ${dim('Coding Engine:')}   Python, C, and C++ (Claude with instant Gemini fallback)${cyan(bold('║'))}
+${cyan(bold('║'))} ${dim('Hardware Audio:')}  MacBook Physical Speaker (Edge-TTS Neural)          ${cyan(bold('║'))}
+${cyan(bold('║'))} ${dim('Commands:')}        ${yellow('clear')} ${dim('reset,')} ${yellow('help')} ${dim('examples,')} ${yellow('exit')} ${dim('to quit and resume room mic')}${cyan(bold('║'))}
 ${cyan(bold('╚═══════════════════════════════════════════════════════════════════╝'))}
 `);
 
@@ -135,7 +136,7 @@ async function handleUserInput(text: string) {
 
   // CLI Control Commands
   if (lower === 'exit' || lower === 'quit') {
-    console.log(dim('\nClosing January CLI session. Resuming background listener...\n'));
+    console.log(dim('\nClosing January CLI session. Resuming background room microphone...\n'));
     handleExitCleanly();
     process.exit(0);
   }
@@ -179,10 +180,12 @@ async function handleUserInput(text: string) {
 
   if (lower === 'help') {
     console.log(`\n${purple(bold('┌── [JANUARY : SYSTEM GUIDE] ────────────────────────────────────────'))}`);
-    console.log(`│ ${bold('Dynamic AI Capabilities (using your API keys):')}`);
-    console.log(`│   ${cyan('• Questions & Reasoning:')}   "what is quantum entanglement", "how do neural networks learn"`);
-    console.log(`│   ${purple('• Claude 3.7 Development:')}  "make a solar system simulation", "write a debounce function in ts"`);
-    console.log(`│   ${purple('• Web App Creation:')}       "build a stopwatch web app with laps", "create a calculator"`);
+    console.log(`│ ${bold('Core Capabilities & Example Commands:')}`);
+    console.log(`│   ${cyan('• Python Coding:')}          "write a python script to calculate fibonacci numbers"`);
+    console.log(`│   ${cyan('• C Programming:')}          "write a linked list implementation with malloc in C"`);
+    console.log(`│   ${cyan('• C++ Engineering:')}        "code a thread-safe queue in modern C++ with templates"`);
+    console.log(`│   ${purple('• Indian Languages:')}       "हिंदी में बताओ आज का मौसम कैसा है" or "मराठीत बोला"`);
+    console.log(`│   ${green('• Real-Time Search:')}       "whats the live weather in hubli", "latest news"`);
     console.log(`│   ${green('• Local Tools:')}            "open notes", "launch calculator", "open safari"`);
     console.log(`│   ${yellow('• Sleep / Wake Words:')}     "good night" to sleep, "arise" to wake`);
     console.log(`│   ${green('• WhatsApp Messaging:')}     "send whatsapp to +14155552671 saying Meeting at 4"`);
@@ -195,7 +198,7 @@ async function handleUserInput(text: string) {
   const launchMatch = lower.match(/(?:launch|open)\s+([a-zA-Z0-9\s]+?)(?:\s+(?:app|application))?$/i) ||
                       lower.match(/(?:launch|open)\s+([a-zA-Z0-9]+)/i);
 
-  if ((lower.includes('launch') || lower.includes('open')) && launchMatch && !lower.includes('code') && !lower.includes('claude') && !lower.includes('simulation') && !lower.includes('app for') && !lower.includes('app that')) {
+  if ((lower.includes('launch') || lower.includes('open')) && launchMatch && !lower.includes('code') && !lower.includes('python') && !lower.includes('c++') && !lower.includes('cpp')) {
     const appName = launchMatch[1].trim();
     console.log(`\n${purple(bold('┌── [JANUARY : LOCAL TOOL] ──────────────────────────────────────────'))}`);
     console.log(`│ ${dim('Executing tool:')} ${yellow(`launch_app("${appName}")`)}`);
@@ -221,48 +224,50 @@ async function handleUserInput(text: string) {
     return;
   }
 
-  // Check for Development / Code / Simulation -> Delegate to Claude 3.7 Sonnet API
-  const isCodingOrSimulation =
-    (/\b(claude|simulation|simulate|develop|web\s*app|website|frontend|html|calculator|timer|stopwatch|game|dashboard)\b/i.test(lower) ||
-     /\b(write|create|generate|build|code|implement|make)\b.*?\b(code|script|function|component|app|program|algorithm|class|simulation|ui|interface|page)\b/i.test(lower)) &&
+  // Check for Python, C, C++, Algorithms & Systems Coding
+  const isCoding =
+    (/(?:python|python3|\bpy\b|c\+\+|cpp|cxx|c\s+program|c\s+code|c\s+language|\bin\s+c\b|stdio\.h|iostream|malloc|quicksort|mergesort|binary\s*search|linked\s*list|fibonacci|pointers?|struct\s+\w+|class\s+\w+|algorithm|data\s*structure)/i.test(lower) ||
+     /\b(write|create|generate|build|code|implement|make|solve|debug|optimize)\b.*?\b(code|script|function|program|algorithm|class|python|c\+\+|cpp|c language|c program|struct|queue|stack|tree|graph)\b/i.test(lower) ||
+     /\b(how\s+to\s+code|how\s+to\s+write\s+a\s+program)\b/i.test(lower)) &&
     !lower.startsWith('open ') && !lower.startsWith('launch ');
 
-  if (isCodingOrSimulation) {
-    console.log(`\n${purple(bold('┌── [JANUARY : CLAUDE 3.7 SONNET] ───────────────────────────────────'))}`);
-    console.log(`│ ${dim('⚡ Routing task to Anthropic Claude 3.7 Sonnet API servers...')}`);
+  if (isCoding) {
+    console.log(`\n${purple(bold('┌── [JANUARY : CODING ENGINE (Python / C / C++)] ─────────────────────'))}`);
+    console.log(`│ ${dim('⚡ Routing task to Coding Engine (Claude -> Gemini Fallback)...')}`);
     
-    const claudeResult = await executeTool('delegate_coding', { prompt: clean });
+    const codingResult = await executeTool('delegate_coding', { prompt: clean });
 
-    if (claudeResult.success) {
+    if (codingResult.success) {
+      const langBadge = (codingResult.language || 'Code').toUpperCase();
+      console.log(`│ ${brightCyan(bold(`[${langBadge}]`))} ${dim('Synthesized by:')} ${green(bold(codingResult.model))}`);
       console.log(`│`);
-      // Print formatted output lines
-      const lines = (claudeResult.response || claudeResult.codeSnippet || '').split('\n');
+      
+      const lines = (codingResult.response || codingResult.codeSnippet || '').split('\n');
       for (const line of lines) {
         console.log(`│ ${line}`);
       }
       console.log(`│`);
-      if (claudeResult.htmlPreview || claudeResult.isWebApp) {
-        console.log(`│ ${green(bold('🌐 [Live Interactive Preview Ready]'))} View in web dashboard at ${cyan('http://localhost:5173')}`);
+      if (codingResult.compilationCommand) {
+        console.log(`│ ${yellow(bold('▶ Run Command:'))} ${brightCyan(codingResult.compilationCommand)}`);
       }
       console.log(`${purple(bold('└────────────────────────────────────────────────────────────────────'))}`);
       
-      const speechConfirmation = (claudeResult.htmlPreview || claudeResult.isWebApp)
-        ? "I've generated the simulation and loaded the live interactive preview for you on screen."
-        : "I've generated the code for you on screen.";
-      await systemSpeaker.speakText(speechConfirmation, { emotion: 'focused', pitch: '+0Hz' });
+      // Voice: Crisp verbal confirmation (never recites raw code lines aloud)
+      const verbal = codingResult.verbalSummary || `I've generated the ${langBadge} code for you on screen.`;
+      await systemSpeaker.speakText(verbal, { emotion: 'focused', pitch: '+0Hz' });
     } else {
-      console.log(`│ ${yellow('⚠ API Response:')} ${claudeResult.response || claudeResult.error}`);
+      console.log(`│ ${yellow('⚠ Coding Engine Notice:')} ${codingResult.response || codingResult.error}`);
       console.log(`${purple(bold('└────────────────────────────────────────────────────────────────────'))}`);
-      await systemSpeaker.speakText(`Claude API status: ${claudeResult.error || 'Check server configuration'}`, { emotion: 'concerned' });
+      await systemSpeaker.speakText(`Coding engine status: ${codingResult.error || 'Please check server configuration.'}`, { emotion: 'concerned' });
     }
 
     promptUser();
     return;
   }
 
-  // General Questions / Reasoning -> Analyze dynamically with Google Gemini API
-  console.log(`\n${purple(bold('┌── [JANUARY : GEMINI AI] ───────────────────────────────────────────'))}`);
-  console.log(`│ ${dim('🧠 Analyzing question with Google Gemini API servers...')}`);
+  // General Questions / Multilingual / Live Search -> Google Gemini API
+  console.log(`\n${purple(bold('┌── [JANUARY : INTELLIGENCE CORE] ───────────────────────────────────'))}`);
+  console.log(`│ ${dim('🧠 Reasoning with Google Gemini API & Emotion Attunement...')}`);
 
   const geminiResult = await geminiService.analyzeAndRespond(clean);
   const emotion = geminiResult.emotion;

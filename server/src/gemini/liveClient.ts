@@ -139,9 +139,9 @@ export class GeminiLiveClient extends EventEmitter {
                 '3. Keep voice spoken output crisp, natural, and concise (1-2 sentences max).\n' +
                 '4. You have access to local system tools:\n' +
                 '   - `launch_app(appName)`: Launch native applications on the user\'s computer.\n' +
-                '   - `delegate_coding(prompt, language, context)`: Delegate complex code generation, web application design, or refactoring tasks to Claude 3.7 Sonnet.\n' +
+                '   - `delegate_coding(prompt, language, context)`: Write, explain, debug, or optimize code in Python, C, C++, algorithms, and systems programming.\n' +
                 '   - `manage_whatsapp_message(number, text)`: Draft or dispatch messages via WhatsApp.\n' +
-                '5. CRITICAL VOICE RULE FOR CODE & APPS: When generating code or creating web applications, NEVER recite or read out raw code lines, syntax, functions, or HTML tags over the voice stream. Provide only a 1-sentence verbal summary (e.g., "I\'ve generated the application and loaded the live interactive preview on your screen.") and put the actual code in structured tool outputs or markdown code blocks.',
+                '5. CRITICAL VOICE RULE FOR CODE: When generating code or solving programming tasks in Python, C, or C++, NEVER recite raw code syntax, includes, brackets, or semicolons over the audio stream. Provide ONLY a 1-sentence verbal summary (e.g., "I\'ve generated the Python script for you on screen.") and place the complete code in structured tool outputs or markdown code blocks.',
             },
           ],
         },
@@ -347,41 +347,21 @@ export class GeminiLiveClient extends EventEmitter {
       return;
     }
 
-    // 3. Delegate to Claude 3.7 Sonnet for coding, simulation, or technical creation
-    const isCodingOrSimulation =
-      lower.includes('claude') ||
-      lower.includes('simulation') ||
-      lower.includes('simulate') ||
-      lower.includes('develop') ||
-      lower.includes('code') ||
-      lower.includes('script') ||
-      lower.includes('function') ||
-      lower.includes('component') ||
-      lower.includes('class') ||
-      lower.includes('implement') ||
-      lower.includes('build') ||
-      lower.includes('create') ||
-      lower.includes('web app') ||
-      lower.includes('website') ||
-      lower.includes('html') ||
-      lower.includes('frontend') ||
-      lower.includes('calculator') ||
-      lower.includes('timer') ||
-      lower.includes('stopwatch') ||
-      lower.includes('game') ||
-      lower.includes('todo') ||
-      lower.includes('dashboard');
+    // 3. Delegate to Coding Engine (Python, C, C++, Algorithms & Systems Programming)
+    const isCoding =
+      (/(?:python|python3|\bpy\b|c\+\+|cpp|cxx|c\s+program|c\s+code|c\s+language|\bin\s+c\b|stdio\.h|iostream|malloc|quicksort|mergesort|binary\s*search|linked\s*list|fibonacci|pointers?|struct\s+\w+|class\s+\w+|algorithm|data\s*structure)/i.test(lower) ||
+       /\b(write|create|generate|build|code|implement|make|solve|debug|optimize)\b.*?\b(code|script|function|program|algorithm|class|python|c\+\+|cpp|c language|c program|struct|queue|stack|tree|graph)\b/i.test(lower) ||
+       /\b(how\s+to\s+code|how\s+to\s+write\s+a\s+program)\b/i.test(lower)) &&
+      !lower.startsWith('open ') && !lower.startsWith('launch ');
 
-    if (isCodingOrSimulation && !lower.includes('launch') && !lower.includes('open notes') && !lower.includes('open safari')) {
+    if (isCoding) {
       const toolId = Math.random().toString(36).substring(2, 9);
       this.emit('toolCall', { id: toolId, name: 'delegate_coding', args: { prompt: text } });
       const result = await executeTool('delegate_coding', { prompt: text });
       this.emit('toolResult', { id: toolId, name: 'delegate_coding', result, isError: !result.success });
       
       const summary = result.success
-        ? (result.isWebApp || result.htmlPreview
-            ? "I've generated the simulation and loaded the live interactive preview for you on screen."
-            : "I've generated the code for you on screen.")
+        ? (result.verbalSummary || "I've generated the code for you on screen.")
         : result.response;
       this.emit('transcript', 'assistant', summary, true);
       return;
