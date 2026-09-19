@@ -228,7 +228,8 @@ systemMic.on('sleep', (data) => {
   console.log(`🌙 [Coordinator] PHYSICAL MIC SLEEP WORD HEARD ("${config.sleepPhrase.toUpperCase()}")!`);
   systemSpeaker.stopPlayback();
   setAgentState('sleeping', `Physical microphone sleep phrase recognized`);
-  const sleepMsg = 'Good night. Standing by until you say Arise.';
+  const capWake = config.wakePhrase.charAt(0).toUpperCase() + config.wakePhrase.slice(1);
+  const sleepMsg = `Good night. Standing by until you say ${capWake}.`;
   systemSpeaker.speakText(sleepMsg);
   broadcast({
     type: 'transcript',
@@ -252,7 +253,8 @@ systemMic.on('speech', (text: string) => {
     console.log(`🌙 [Coordinator] Sleep phrase spoken: "${text}"`);
     systemSpeaker.stopPlayback();
     setAgentState('sleeping', 'Sleep phrase spoken');
-    const sleepMsg = 'Good night. Standing by until you say Arise.';
+    const capWake = config.wakePhrase.charAt(0).toUpperCase() + config.wakePhrase.slice(1);
+    const sleepMsg = `Good night. Standing by until you say ${capWake}.`;
     systemSpeaker.speakText(sleepMsg);
     broadcast({
       type: 'transcript',
@@ -267,7 +269,7 @@ systemMic.on('speech', (text: string) => {
   }
 
   if (currentState === 'sleeping') {
-    if (lower.includes('arise') || lower.includes('wake')) {
+    if (lower.includes('rise') || lower.includes('arise') || lower.includes('wake')) {
       console.log(`⚡ [Coordinator] Wake word spoken during sleep: "${text}"`);
       setAgentState('listening', 'Wake word received from sleep');
       systemSpeaker.speakText('I am awake and listening.');
@@ -306,7 +308,8 @@ wakeDetector.on('sleep', (data) => {
   console.log(`🌙 [Coordinator] SLEEP TRIGGERED ("${config.sleepPhrase.toUpperCase()}") via ${data.source}!`);
   systemSpeaker.stopPlayback();
   setAgentState('sleeping', `Sleep word "${config.sleepPhrase}" detected`);
-  const sleepMsg = 'Good night. Standing by until you say Arise.';
+  const capWake = config.wakePhrase.charAt(0).toUpperCase() + config.wakePhrase.slice(1);
+  const sleepMsg = `Good night. Standing by until you say ${capWake}.`;
   systemSpeaker.speakText(sleepMsg);
   broadcast({
     type: 'system_log',

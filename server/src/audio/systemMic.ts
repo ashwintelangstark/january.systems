@@ -4,6 +4,7 @@ import fs from 'fs';
 import { EventEmitter } from 'events';
 import { fileURLToPath } from 'url';
 import readline from 'readline';
+import { config } from '../config.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -39,6 +40,7 @@ export class SystemMicrophone extends EventEmitter {
         ],
         {
           stdio: ['pipe', 'pipe', 'pipe'],
+          env: { ...process.env, WAKE_PHRASE: config.wakePhrase },
         }
       );
 

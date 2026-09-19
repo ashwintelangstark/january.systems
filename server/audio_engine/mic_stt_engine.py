@@ -157,11 +157,15 @@ def main():
                                 "timestamp": int(time.time() * 1000),
                             }), flush=True)
 
-                        # Check if wake phrase "Arise" was spoken
-                        elif "arise" in lower_text or "a rise" in lower_text or "wake up" in lower_text:
+                        # Check if wake phrase (e.g. "Rise" / "Arise") was spoken
+                        wake_target = os.environ.get("WAKE_PHRASE", "rise").lower()
+                        wake_variants = list(set([wake_target, "rise", "arise", "a rise", "wake up", "wake"]))
+                        is_wake_word = any(v in lower_text for v in wake_variants)
+
+                        if is_wake_word:
                             print(json.dumps({
                                 "type": "wake",
-                                "phrase": "arise",
+                                "phrase": wake_target,
                                 "raw": text,
                                 "timestamp": int(time.time() * 1000),
                             }), flush=True)

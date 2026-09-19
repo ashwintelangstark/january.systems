@@ -68,10 +68,10 @@ export const DualInputBar: React.FC<DualInputBarProps> = ({
   return (
     <div className="w-full glass-panel border-t border-white/10 px-6 py-4 z-20 select-none">
       <div className="max-w-5xl mx-auto flex items-center gap-3">
-        {/* Quick Wake Button ("Arise") */}
+        {/* Quick Wake Button ("Rise") */}
         <button
           onClick={onTriggerWake}
-          title='Trigger wake phrase "Arise"'
+          title='Trigger wake phrase "Rise"'
           className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border text-xs font-mono font-bold tracking-wide transition-all shadow-sm ${
             agentState === 'passive'
               ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30'
@@ -79,7 +79,7 @@ export const DualInputBar: React.FC<DualInputBarProps> = ({
           }`}
         >
           <Sparkles className="w-4 h-4" />
-          <span>Arise</span>
+          <span>Rise</span>
         </button>
 
         {/* Text Input Bar with History Navigation */}
@@ -91,7 +91,7 @@ export const DualInputBar: React.FC<DualInputBarProps> = ({
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder='Type a command for January or press "Arise" to speak...'
+              placeholder='Type a command for January or press "Rise" to speak...'
               className="w-full h-11 px-4 pr-12 rounded-xl glass-input text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/40 transition-all font-sans"
             />
 

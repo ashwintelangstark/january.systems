@@ -5,13 +5,12 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load .env comprehensively from server dir, root dir, or cwd
-dotenv.config();
-dotenv.config({ path: path.resolve(process.cwd(), 'server/.env') });
+// Load .env comprehensively prioritizing server/.env
+dotenv.config({ path: path.resolve(process.cwd(), 'server/.env'), override: true });
+dotenv.config({ path: path.resolve(__dirname, '../.env'), override: true });
+dotenv.config({ path: path.resolve(__dirname, '../../server/.env'), override: true });
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
-dotenv.config({ path: path.resolve(__dirname, '../../server/.env') });
+dotenv.config();
 
 export const config = {
   port: parseInt(process.env.PORT || '3001', 10),
@@ -22,8 +21,8 @@ export const config = {
   claudeApiKey: (process.env.CLAUDE_CODE_API || process.env.ANTHROPIC_API_KEY || '').replace(/^["']|["']$/g, '').trim(),
   claudeModel: process.env.CLAUDE_MODEL || 'claude-3-7-sonnet-20250219',
   claudeProxyUrl: process.env.CLAUDE_PROXY_URL || 'http://127.0.0.1:8082',
-  wakePhrase: (process.env.WAKE_PHRASE || 'Arise').toLowerCase(),
-  sleepPhrase: (process.env.SLEEP_PHRASE || 'good night').toLowerCase(),
+  wakePhrase: (process.env.WAKE_PHRASE || 'rise').replace(/^["'\s]+|["'\s]+$/g, '').toLowerCase(),
+  sleepPhrase: (process.env.SLEEP_PHRASE || 'good night').replace(/^["'\s]+|["'\s]+$/g, '').toLowerCase(),
 };
 
 export function validateConfig() {

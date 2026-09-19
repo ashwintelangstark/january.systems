@@ -92,7 +92,7 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({ messages, activeTools 
               January is Ready
             </h3>
             <p className="text-xs text-slate-400 max-w-sm mb-6">
-              Say <span className="text-amber-300 font-mono font-bold">"Arise"</span> or type a command below. January can launch applications, coordinate your system, or build full web applications with interactive previews.
+              Say <span className="text-amber-300 font-mono font-bold">"Rise"</span> or type a command below. January can launch applications, coordinate your system, or build full web applications with interactive previews.
             </p>
 
             {/* Quick action suggestions */}

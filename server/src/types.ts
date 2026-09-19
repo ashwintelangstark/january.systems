@@ -1,9 +1,9 @@
 export type AgentState =
-  | 'passive'    // Listening for "Arise"
+  | 'passive'    // Listening for "Rise"
   | 'listening'  // January is listening...
   | 'speaking'   // January is speaking...
   | 'working'    // Working... (Tool Execution / Claude Loading)
-  | 'sleeping';  // Sleeping (Waiting for "Arise")
+  | 'sleeping';  // Sleeping (Waiting for "Rise")
 
 export interface ToolCallPayload {
   id: string;

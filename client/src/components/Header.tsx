@@ -10,11 +10,13 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ agentState, emotionState, isConnected, config }) => {
+  const wakeWord = config?.wakePhrase ? config.wakePhrase.charAt(0).toUpperCase() + config.wakePhrase.slice(1) : 'Rise';
+
   const getStatusBadge = () => {
     switch (agentState) {
       case 'passive':
         return {
-          label: 'Listening for "Arise"',
+          label: `Listening for "${wakeWord}"`,
           color: 'text-amber-400 bg-amber-950/40 border-amber-500/30',
           dot: 'bg-amber-400 animate-pulse',
         };
@@ -38,7 +40,7 @@ export const Header: React.FC<HeaderProps> = ({ agentState, emotionState, isConn
         };
       case 'sleeping':
         return {
-          label: 'Sleeping (Say "Arise")',
+          label: `Sleeping (Say "${wakeWord}")`,
           color: 'text-indigo-400 bg-indigo-950/40 border-indigo-500/30',
           dot: 'bg-indigo-400 opacity-60',
         };
@@ -66,7 +68,7 @@ export const Header: React.FC<HeaderProps> = ({ agentState, emotionState, isConn
             </span>
           </div>
           <p className="text-[11px] text-slate-400 font-mono tracking-wide">
-            Wake: "{config?.wakePhrase || 'Arise'}" • Autonomous Multimodal OS
+            Wake: "{config?.wakePhrase || 'rise'}" • Autonomous Multimodal OS
           </p>
         </div>
       </div>

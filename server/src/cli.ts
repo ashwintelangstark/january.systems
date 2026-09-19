@@ -150,20 +150,22 @@ async function handleUserInput(text: string) {
   // Sleep Word Command
   if (lower === 'good night' || lower === 'goodnight' || lower === 'go to sleep' || lower === 'sleep') {
     isSleeping = true;
+    const capWake = config.wakePhrase.charAt(0).toUpperCase() + config.wakePhrase.slice(1);
     console.log(`\n${purple(bold('┌── [JANUARY : SLEEP MODE] ──────────────────────────────────────────'))}`);
     console.log(`│ ${purple('🌙 Good night. Standing by in sleep mode.')}`);
-    console.log(`│ ${dim('Say or type "arise" to wake January back up.')}`);
+    console.log(`│ ${dim(`Say or type "${config.wakePhrase}" to wake January back up.`)}`);
     console.log(`${purple(bold('└────────────────────────────────────────────────────────────────────'))}`);
-    await systemSpeaker.speakText('Good night. Standing by until you say Arise.', { emotion: 'calm', pitch: '-3Hz', rate: '-7%' });
+    await systemSpeaker.speakText(`Good night. Standing by until you say ${capWake}.`, { emotion: 'calm', pitch: '-3Hz', rate: '-7%' });
     promptUser();
     return;
   }
 
   // Wake Word Command
-  if (lower === 'arise' || lower === 'wake up' || lower === 'wake') {
+  if (lower === 'rise' || lower === 'arise' || lower === 'wake up' || lower === 'wake') {
     isSleeping = false;
+    const capWake = config.wakePhrase.charAt(0).toUpperCase() + config.wakePhrase.slice(1);
     console.log(`\n${purple(bold('┌── [JANUARY : ACTIVE] ──────────────────────────────────────────────'))}`);
-    console.log(`│ ${green('⚡ Arise acknowledged. January is awake and listening!')}`);
+    console.log(`│ ${green(`⚡ ${capWake} acknowledged. January is awake and listening!`)}`);
     console.log(`${purple(bold('└────────────────────────────────────────────────────────────────────'))}`);
     await systemSpeaker.speakText('I am awake and listening.', { emotion: 'joy', pitch: '+3Hz', rate: '+4%' });
     promptUser();
@@ -172,7 +174,7 @@ async function handleUserInput(text: string) {
 
   if (isSleeping) {
     console.log(`\n${purple(bold('┌── [JANUARY : SLEEPING] ────────────────────────────────────────────'))}`);
-    console.log(`│ ${dim('January is currently in sleep mode. Say or type')} ${yellow('arise')} ${dim('to wake me.')}`);
+    console.log(`│ ${dim('January is currently in sleep mode. Say or type')} ${yellow(config.wakePhrase)} ${dim('to wake me.')}`);
     console.log(`${purple(bold('└────────────────────────────────────────────────────────────────────'))}`);
     promptUser();
     return;
@@ -187,7 +189,7 @@ async function handleUserInput(text: string) {
     console.log(`│   ${purple('• Indian Languages:')}       "हिंदी में बताओ आज का मौसम कैसा है" or "मराठीत बोला"`);
     console.log(`│   ${green('• Real-Time Search:')}       "whats the live weather in hubli", "latest news"`);
     console.log(`│   ${green('• Local Tools:')}            "open notes", "launch calculator", "open safari"`);
-    console.log(`│   ${yellow('• Sleep / Wake Words:')}     "good night" to sleep, "arise" to wake`);
+    console.log(`│   ${yellow('• Sleep / Wake Words:')}     "good night" to sleep, "${config.wakePhrase}" to wake`);
     console.log(`│   ${green('• WhatsApp Messaging:')}     "send whatsapp to +14155552671 saying Meeting at 4"`);
     console.log(`${purple(bold('└────────────────────────────────────────────────────────────────────'))}`);
     promptUser();

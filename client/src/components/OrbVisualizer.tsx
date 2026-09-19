@@ -161,7 +161,7 @@ export const OrbVisualizer: React.FC<OrbVisualizerProps> = ({
         {/* Central Interactive Orb Button */}
         <button
           onClick={onActivate}
-          title={agentState === 'passive' ? 'Activate January (or say "Arise")' : 'Active'}
+          title={agentState === 'passive' ? 'Activate January (or say "Rise")' : 'Active'}
           className={`group relative z-10 w-36 h-36 rounded-full flex flex-col items-center justify-center transition-all duration-500 cursor-pointer ${theme.glowClass} active:scale-95`}
           style={{
             background: 'radial-gradient(circle at 35% 35%, rgba(255,255,255,0.15), rgba(14,19,31,0.9) 70%)',

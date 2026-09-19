@@ -8,7 +8,7 @@
 **January** is an intelligent, emotionally attuned operating system agent designed to run autonomously on your laptop. It listens directly to your MacBook's physical microphone using local **Faster-Whisper** speech-to-text, reasons with **Google Gemini 3.6 Flash** and **Anthropic Claude**, generates robust **Python, C, and C++** code with instant Gemini fallback, queries real-time internet search and live weather data, and vocalizes warm, human-like responses through your physical laptop speakers using **Microsoft Edge-TTS** neural voices.
 
 January operates in two seamless modes:
-1. **Autonomous Background Daemon (`npm run dev`)**: Runs headlessly in the background, listening for wake phrases (**"Arise"**) and voice commands in the room even with no windows open.
+1. **Autonomous Background Daemon (`npm run dev`)**: Runs headlessly in the background, listening for wake phrases (**"Rise"**) and voice commands in the room even with no windows open.
 2. **Interactive Terminal CLI (`npm run cli`)**: A dual-section REPL (`[ME]` & `[JANUARY]`) that automatically pauses the background microphone while you interact and resumes background listening upon exit.
 
 ---
@@ -26,7 +26,7 @@ flowchart TD
         VAD["⚡ Voice Activity Detection<br/>(Energy Threshold + 1.2s Reverb Guard)"]
         STT["🗣️ Faster-Whisper<br/>(Local Multilingual tiny Model)"]
         SW["⏸️ / 🔔 CLI Auto-Switching Coordinator<br/>(Pauses mic on CLI attach, resumes on exit)"]
-        STATE["🧠 Agent State Machine<br/>[PASSIVE] ⇋ [LISTENING] ⇋ [WORKING] ⇋ [SPEAKING]<br/>⇋ [SLEEPING] ('good night' / 'Arise')"]
+        STATE["🧠 Agent State Machine<br/>[PASSIVE] ⇋ [LISTENING] ⇋ [WORKING] ⇋ [SPEAKING]<br/>⇋ [SLEEPING] ('good night' / 'Rise')"]
     end
 
     subgraph Intelligence ["🧠 Intelligence & Processing Engines"]
@@ -113,9 +113,9 @@ sequenceDiagram
     participant TTS as 🗣️ Edge-TTS Neural Engine
     participant Speaker as 🔊 MacBook Speakers
 
-    User->>Mic: Speaks: "Arise, whats the weather in Hubli?"
-    Mic->>Daemon: Transcribes text ("Arise, whats the weather in Hubli?")
-    Daemon->>Daemon: Detects "Arise" -> Transitions to [WORKING]
+    User->>Mic: Speaks: "Rise, whats the weather in Hubli?"
+    Mic->>Daemon: Transcribes text ("Rise, whats the weather in Hubli?")
+    Daemon->>Daemon: Detects "Rise" -> Transitions to [WORKING]
     
     par Parallel Analysis
         Daemon->>Emotion: Analyze User Sentiment / Emotion
@@ -308,7 +308,7 @@ January speaks and understands **English** and **15 major Indian languages** nat
    - Generates clean, robust, compilable code with exact compilation commands (`gcc`, `g++`, `python3`) and provides a concise verbal summary over audio without reading raw code syntax aloud.
    - Powered by Claude with instant, seamless **Google Gemini fallback** if Claude is unavailable.
 2. **Autonomous Room Voice Interaction**:
-   - Speak into your laptop room: *"Arise, what are the top news headlines today?"*
+   - Speak into your laptop room: *"Rise, what are the top news headlines today?"*
    - January wakes up, searches the web, and speaks the answer aloud through your laptop speakers.
 3. **Real-Time Live Web Search & Global Weather**:
    - Ask: *"What is the weather in Hubli?"* or *"Who won the latest cricket match?"*
@@ -316,7 +316,7 @@ January speaks and understands **English** and **15 major Indian languages** nat
 4. **macOS Native Tool Execution**:
    - Say: *"Open Notes"*, *"Launch Safari"*, or *"Send WhatsApp to +14155552671 saying meeting at 4"*.
 5. **Smart Sleep & Standby**:
-   - Say: *"Good night"* or *"Go to sleep"*. January enters silent standby until you say *"Arise"*.
+   - Say: *"Good night"* or *"Go to sleep"*. January enters silent standby until you say *"Rise"*.
 
 ---
 
@@ -355,7 +355,7 @@ CLAUDE_CODE_API="YOUR_CLAUDE_API_KEY"
 CLAUDE_MODEL=claude-3-7-sonnet-20250219
 
 # Wake and Sleep Phrases
-WAKE_PHRASE=Arise
+WAKE_PHRASE=rise
 SLEEP_PHRASE="good night"
 ```
 

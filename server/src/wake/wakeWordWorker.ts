@@ -2,8 +2,8 @@ import { parentPort, workerData } from 'worker_threads';
 import { spawn } from 'child_process';
 import os from 'os';
 
-// Worker thread for monitoring microphone audio and detecting wake phrase "Arise"
-const wakePhrase = (workerData?.wakePhrase || 'Arise').toLowerCase();
+// Worker thread for monitoring microphone audio and detecting wake phrase "Rise"
+const wakePhrase = (workerData?.wakePhrase || 'rise').toLowerCase();
 
 console.log(`[WakeWordWorker] Initialized in worker thread. Target wake phrase: "${wakePhrase}"`);
 
