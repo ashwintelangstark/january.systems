@@ -90,7 +90,6 @@ const bold = (text: string) => `\x1b[1m${text}\x1b[0m`;
 const dim = (text: string) => `\x1b[2m${text}\x1b[0m`;
 const white = (text: string) => `\x1b[37m${text}\x1b[0m`;
 
-console.clear();
 console.log(`
 ${cyan(bold('╔═══════════════════════════════════════════════════════════════════╗'))}
 ${cyan(bold('║               ⚡ JANUARY AI — DUAL INTERACTIVE CLI                ║'))}
@@ -99,8 +98,10 @@ ${cyan(bold('║'))} ${brightCyan(bold(' [ME]      '))} ${white('Ask questions, 
 ${cyan(bold('║'))} ${purple(bold(' [JANUARY] '))} ${white('Gemini & Claude Core with out-loud speaker synthesis   ')} ${cyan(bold('║'))}
 ${cyan(bold('╠═══════════════════════════════════════════════════════════════════╣'))}
 ${cyan(bold('║'))} ${dim('Coding Engine:')}   Python, C, and C++ (Claude with instant Gemini fallback)${cyan(bold('║'))}
+${cyan(bold('║'))} ${dim('Ambient Eyes:')}    Continuous Camera & Face/Posture Monitoring (Local Edge)${cyan(bold('║'))}
+${cyan(bold('║'))} ${dim('Adaptive Memory:')} Learned Habits, Daily Rhythms & Personalized Profile  ${cyan(bold('║'))}
 ${cyan(bold('║'))} ${dim('Hardware Audio:')}  MacBook Physical Speaker (Edge-TTS Neural)          ${cyan(bold('║'))}
-${cyan(bold('║'))} ${dim('Commands:')}        ${yellow('clear')} ${dim('reset,')} ${yellow('help')} ${dim('examples,')} ${yellow('exit')} ${dim('to quit and resume room mic')}${cyan(bold('║'))}
+${cyan(bold('║'))} ${dim('Commands:')}        ${yellow('memory')}${dim(',')} ${yellow('eyes')}${dim(',')} ${yellow('clear')}${dim(',')} ${yellow('help')}${dim(',')} ${yellow('exit')} ${dim('to quit and resume room mic')}${cyan(bold('║'))}
 ${cyan(bold('╚═══════════════════════════════════════════════════════════════════╝'))}
 `);
 
@@ -180,9 +181,67 @@ async function handleUserInput(text: string) {
     return;
   }
 
+  if (lower === 'profile' || lower === 'memory' || lower === 'stats') {
+    const profile = geminiService.getLearnedProfileEngine().getProfile();
+    const topCoding = Object.entries(profile.preferredCodingLanguages)
+      .sort((a, b) => b[1] - a[1])
+      .map(([l, c]) => `${cyan(l)}: ${c}`)
+      .join(', ') || 'C++: 1, Python: 1, C: 1';
+    const topSpoken = Object.entries(profile.preferredSpokenLanguages)
+      .sort((a, b) => b[1] - a[1])
+      .map(([l, c]) => `${purple(l)}: ${c}`)
+      .join(', ') || 'English, Hindi, Marathi';
+
+    console.log(`\n${purple(bold('┌── [JANUARY : ADAPTIVE LEARNED MEMORY PROFILE] ─────────────────────'))}`);
+    console.log(`│ ${bold('User:')} ${brightCyan(profile.userName)}   ${dim('| Total Interactions Recorded:')} ${yellow(profile.totalInteractions.toString())}`);
+    console.log(`│ ${bold('Preferred Coding Languages:')} ${topCoding}`);
+    console.log(`│ ${bold('Preferred Spoken Languages:')} ${topSpoken}`);
+    console.log(`│ ${dim('Learned Coding Style:')}`);
+    for (const style of profile.codingStylePreferences) {
+      console.log(`│   ${green('•')} ${dim(style)}`);
+    }
+    console.log(`│ ${dim('Learned Tone & Style:')}`);
+    for (const pref of profile.communicationStylePreferences) {
+      console.log(`│   ${purple('•')} ${dim(pref)}`);
+    }
+    console.log(`│ ${dim('Observed Habits:')}`);
+    for (const habit of profile.observedHabits) {
+      console.log(`│   ${yellow('•')} ${dim(habit)}`);
+    }
+    console.log(`│ ${dim('Storage:')} ${cyan('server/data/memory/learned_profile.json')}`);
+    console.log(`${purple(bold('└────────────────────────────────────────────────────────────────────'))}`);
+    promptUser();
+    return;
+  }
+
+  if (lower === 'vision' || lower === 'eyes' || lower === 'camera status') {
+    try {
+      const res = await fetch(`http://${config.host}:${config.port}/api/health`);
+      if (res.ok) {
+        const data = (await res.json()) as any;
+        const vc = data.visualContext;
+        console.log(`\n${yellow(bold('┌── [JANUARY : AMBIENT VISUAL CORTEX STATUS] ────────────────────────'))}`);
+        console.log(`│ ${bold('Presence:')}   ${vc?.isPresent ? green('● USER DETECTED (' + (vc.identifiedUser || 'Ashwin') + ')') : dim('○ No user in front of laptop')}`);
+        console.log(`│ ${bold('Activity:')}   ${cyan(vc?.activity || 'Standing by')}`);
+        console.log(`│ ${bold('Posture:')}    ${white(vc?.posture || 'unknown')}`);
+        console.log(`│ ${bold('Mood/Face:')}  ${purple(vc?.expression || 'Neutral')} (Faces in frame: ${vc?.faceCount ?? 0})`);
+        console.log(`│ ${bold('Context:')}    ${dim(vc?.summary || 'Ambient camera monitoring active')}`);
+        console.log(`${yellow(bold('└────────────────────────────────────────────────────────────────────'))}`);
+      } else {
+        console.log(`\n${yellow('Ambient visual monitor is running in background daemon.')}`);
+      }
+    } catch {
+      console.log(`\n${dim('Ambient camera monitoring is managed by the background daemon (npm run dev / npm start).')}`);
+    }
+    promptUser();
+    return;
+  }
+
   if (lower === 'help') {
     console.log(`\n${purple(bold('┌── [JANUARY : SYSTEM GUIDE] ────────────────────────────────────────'))}`);
     console.log(`│ ${bold('Core Capabilities & Example Voice / Text Commands:')}`);
+    console.log(`│   ${yellow('• Adaptive Memory:')}        "memory" or "profile" to view your learned habits & stats`);
+    console.log(`│   ${yellow('• Ambient Eyes Status:')}     "eyes" or "vision" to see real-time camera perceptions`);
     console.log(`│   ${cyan('• Python Coding:')}          "write a python script to calculate fibonacci numbers"`);
     console.log(`│   ${cyan('• C Programming:')}          "write a linked list implementation with malloc in C"`);
     console.log(`│   ${cyan('• C++ Engineering:')}        "code a thread-safe queue in modern C++ with templates"`);

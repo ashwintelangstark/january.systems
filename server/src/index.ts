@@ -9,6 +9,7 @@ import { SystemSpeaker } from './audio/systemSpeaker.js';
 import { SystemMicrophone } from './audio/systemMic.js';
 import { EmotionEngine } from './emotions/emotionEngine.js';
 import { GeminiService } from './gemini/geminiService.js';
+import { VisualActivityMonitor } from './vision/activityMonitor.js';
 import { AgentState, ClientMessage, ServerMessage } from './types.js';
 
 validateConfig();
@@ -16,21 +17,6 @@ validateConfig();
 const app = express();
 app.use(cors());
 app.use(express.json());
-
-// Basic health & status endpoint
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    agent: 'January',
-    geminiModel: config.geminiModel,
-    claudeModel: config.claudeModel,
-    voice: config.geminiVoice,
-    wakePhrase: config.wakePhrase,
-    hasGeminiKey: !!config.geminiApiKey,
-    hasClaudeKey: !!config.claudeApiKey,
-    emotion: emotionEngine.getCurrentEmotion(),
-  });
-});
 
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
@@ -43,6 +29,32 @@ const wakeDetector = new WakeDetector();
 const systemSpeaker = new SystemSpeaker();
 const systemMic = new SystemMicrophone();
 const emotionEngine = geminiService.getEmotionEngine();
+const visualActivityMonitor = new VisualActivityMonitor();
+
+geminiService.setActivityMonitor(visualActivityMonitor);
+
+// Basic health & status endpoint
+app.get('/api/health', (req, res) => {
+  const profile = geminiService.getLearnedProfileEngine().getProfile();
+  res.json({
+    status: 'ok',
+    agent: 'January',
+    geminiModel: config.geminiModel,
+    claudeModel: config.claudeModel,
+    voice: config.geminiVoice,
+    wakePhrase: config.wakePhrase,
+    hasGeminiKey: !!config.geminiApiKey,
+    hasClaudeKey: !!config.claudeApiKey,
+    emotion: emotionEngine.getCurrentEmotion(),
+    visualContext: visualActivityMonitor.getCurrentContext(),
+    learnedInteractions: profile.totalInteractions,
+    preferredLanguages: profile.preferredCodingLanguages,
+  });
+});
+
+app.get('/api/profile', (req, res) => {
+  res.json(geminiService.getLearnedProfileEngine().getProfile());
+});
 
 emotionEngine.on('emotionChange', (emotion) => {
   broadcast({ type: 'emotion_update', payload: emotion });
@@ -439,6 +451,91 @@ wakeDetector.on('status', (status) => {
 });
 
 // ----------------------------------------------------
+// Ambient Camera Visual Activity Monitor Wiring
+// ----------------------------------------------------
+let lastArrivalGreetingTimestamp = 0;
+const ARRIVAL_GREETING_COOLDOWN_MS = 8 * 60 * 1000; // Minimum 8 minutes between unsolicited greetings
+
+visualActivityMonitor.on('userArrival', async (event) => {
+  console.log(`👁️ [Coordinator] USER ARRIVAL DETECTED: ${event.user}`);
+  broadcast({
+    type: 'system_log',
+    message: `Visual Perception: ${event.user} arrived at desk`,
+    level: 'info',
+  });
+
+  const now = Date.now();
+  if (currentState === 'sleeping') {
+    console.log('[Coordinator] User arrived, but agent is in sleep mode. Keeping silent.');
+    return;
+  }
+
+  // Enforce intelligent cooldown between unsolicited proactive greetings
+  if (now - lastArrivalGreetingTimestamp < ARRIVAL_GREETING_COOLDOWN_MS) {
+    const elapsedSec = Math.round((now - lastArrivalGreetingTimestamp) / 1000);
+    console.log(`[Coordinator] Arrival greeting suppressed by cooldown (${elapsedSec}s < 480s).`);
+    return;
+  }
+
+  lastArrivalGreetingTimestamp = now;
+  const hour = new Date().getHours();
+  const timeOfDay = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
+  const greeting = `Good ${timeOfDay}, ${event.user}! Good to see you back. What are we building today?`;
+
+  setAgentState('speaking', 'Proactive arrival greeting');
+  broadcast({
+    type: 'transcript',
+    payload: {
+      role: 'assistant',
+      text: greeting,
+      isFinal: true,
+      timestamp: now,
+    },
+  });
+
+  await systemSpeaker.speakText(greeting, { emotion: 'focused' });
+  setAgentState('passive', 'Speech completed');
+});
+
+visualActivityMonitor.on('userDeparture', (event) => {
+  console.log(`👋 [Coordinator] USER DEPARTURE: ${event.user}`);
+  broadcast({
+    type: 'system_log',
+    message: `Visual Perception: ${event.user} stepped away from desk`,
+    level: 'info',
+  });
+});
+
+visualActivityMonitor.on('gesture', async (event) => {
+  console.log(`👋 [Coordinator] Gesture recognized: ${event.type} from ${event.user}`);
+  if (currentState === 'sleeping') return;
+
+  if (event.type === 'wave') {
+    const waveReply = `Hey ${event.user}, I saw you wave! What can I help you with?`;
+    setAgentState('speaking', 'Wave acknowledged');
+    broadcast({
+      type: 'transcript',
+      payload: {
+        role: 'assistant',
+        text: waveReply,
+        isFinal: true,
+        timestamp: Date.now(),
+      },
+    });
+    await systemSpeaker.speakText(waveReply, { emotion: 'joy' });
+    setAgentState('passive', 'Speech completed');
+  }
+});
+
+visualActivityMonitor.on('activityUpdate', (context) => {
+  broadcast({
+    type: 'system_log',
+    message: `Visual Perception: ${context.identifiedUser} is ${context.activity} (posture: ${context.posture}, mood: ${context.expression})`,
+    level: 'info',
+  });
+});
+
+// ----------------------------------------------------
 // Browser WebSocket Connection Management
 // ----------------------------------------------------
 wss.on('connection', (ws: WebSocket) => {
@@ -579,4 +676,19 @@ System Speaker:   Edge-TTS / macOS afplay
 
   // Start Physical Laptop Microphone & STT Engine
   systemMic.start();
+
+  // Start Ambient Eyes & Face/Activity Monitoring
+  visualActivityMonitor.start();
 });
+
+// Graceful cleanup on server termination
+function handleShutdown(): void {
+  console.log('\n[Coordinator] Shutting down January AI Core...');
+  visualActivityMonitor.stop();
+  systemMic.stop();
+  systemSpeaker.stopPlayback();
+  process.exit(0);
+}
+
+process.on('SIGINT', handleShutdown);
+process.on('SIGTERM', handleShutdown);

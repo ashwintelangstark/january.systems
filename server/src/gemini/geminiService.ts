@@ -2,6 +2,8 @@ import { config } from '../config.js';
 import { executeTool } from '../tools/index.js';
 import { delegateCoding, DelegateCodingResult } from '../tools/delegateCoding.js';
 import { EmotionEngine, EmotionResult } from '../emotions/emotionEngine.js';
+import { LearnedProfileEngine } from '../memory/learnedProfileEngine.js';
+import { VisualActivityMonitor } from '../vision/activityMonitor.js';
 
 export interface GeminiResponseResult {
   text: string;
@@ -228,15 +230,27 @@ export class GeminiService {
     'models/gemini-3.1-flash-lite',
   ];
   private emotionEngine: EmotionEngine;
+  private learnedProfileEngine: LearnedProfileEngine;
+  private activityMonitor: VisualActivityMonitor | null = null;
   // Persistent active session language state
   private currentSessionLanguage: LanguageProfile | null = null;
 
   constructor() {
     this.emotionEngine = new EmotionEngine();
+    this.learnedProfileEngine = new LearnedProfileEngine();
   }
 
   public getEmotionEngine(): EmotionEngine {
     return this.emotionEngine;
+  }
+
+  public getLearnedProfileEngine(): LearnedProfileEngine {
+    return this.learnedProfileEngine;
+  }
+
+  public setActivityMonitor(monitor: VisualActivityMonitor): void {
+    this.activityMonitor = monitor;
+    console.log('[GeminiService] Ambient Visual Activity Monitor connected to reasoning engine.');
   }
 
   public getActiveLanguage(): LanguageProfile | null {
@@ -282,6 +296,12 @@ export class GeminiService {
         prompt,
         languageGuidance: activeLang ? activeLang.scriptGuidance : undefined,
       });
+
+      this.learnedProfileEngine.recordInteraction(prompt, visionResult.verbalSummary || visionResult.description, {
+        spokenLanguage: activeLang?.langName || 'English',
+        visualContext: visionResult.description,
+      });
+
       return {
         text: visionResult.description,
         verbalSummary: visionResult.verbalSummary,
@@ -394,6 +414,14 @@ export class GeminiService {
     if (isCoding) {
       console.log(`[GeminiService] Routing programming task to Coding Engine: "${prompt.slice(0, 60)}..."`);
       const codingResult: DelegateCodingResult = await delegateCoding({ prompt });
+
+      this.learnedProfileEngine.recordInteraction(prompt, codingResult.response, {
+        isCode: true,
+        codingLanguage: codingResult.language,
+        spokenLanguage: activeLang?.langName || 'English',
+        visualContext: this.activityMonitor?.getCurrentContext().summary,
+      });
+
       return {
         text: codingResult.response,
         verbalSummary: codingResult.verbalSummary || `I've generated the ${(codingResult.language || 'code').toUpperCase()} code for you in your terminal.`,
@@ -448,12 +476,16 @@ export class GeminiService {
     }
 
     // Try Google Gemini API servers with candidate models
+    const promptWithWeb = prompt + (webSearchContext ? `\n${webSearchContext}` : '');
     if (config.geminiApiKey) {
       for (const model of this.candidateModels) {
         try {
           console.log(`[GeminiService] Analyzing question with Gemini API servers (${model}) [Emotion: ${emotionResult.emotion}, Active Lang: ${activeLang?.langName || 'English'}]...`);
 
-          const promptWithWeb = prompt + (webSearchContext ? `\n\nContext from Live Web Search:\n${webSearchContext}` : '');
+          const ambientVisualPrompt = this.activityMonitor
+            ? `5. Ambient Camera Vision: You have live camera eyes observing the user through the laptop webcam. ${this.activityMonitor.getFormattedVisualSummary()}\n`
+            : '';
+          const learnedContext = this.learnedProfileEngine.getSystemPromptContext();
 
           const response = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${config.geminiApiKey}`,
@@ -479,8 +511,10 @@ export class GeminiService {
                         '2. Real-Time Internet & Live Weather: You have direct live internet search and live weather tools. Use any search/weather context provided to give immediate, accurate, and helpful answers.\n' +
                         '3. Human Emotional Resonance: Sound like a genuine, warm, and engaging human being with authentic emotional colors. ' + emotionPromptContext + '\n' +
                         '4. Direct & Voice-Friendly: Answer directly and conversationally in 1-3 crisp, natural sentences suitable for out-loud speech, unless the user asks for deep detail.\n' +
-                        '5. No AI Cliches: Never say "As an AI", "I am a language model", or repeat robotic greetings.\n' +
-                        '6. App Launching: If asked to open/launch an app, confirm happily and immediately.',
+                        ambientVisualPrompt +
+                        '6. Adaptive Memory & Personalized Evolution: ' + learnedContext + '\n' +
+                        '7. No AI Cliches: Never say "As an AI", "I am a language model", or repeat robotic greetings.\n' +
+                        '8. App Launching: If asked to open/launch an app, confirm happily and immediately.',
                     },
                   ],
                 },
@@ -498,6 +532,12 @@ export class GeminiService {
             // Clean any echoed emotion tag
             reply = reply.replace(/^\[Emotion:[^\]]+\]\s*/i, '').trim();
             if (reply) {
+              // Record interaction to continually learn user preferences
+              this.learnedProfileEngine.recordInteraction(prompt, reply, {
+                spokenLanguage: activeLang?.langName || 'English',
+                visualContext: this.activityMonitor?.getCurrentContext().summary,
+              });
+
               return {
                 text: reply,
                 modelUsed: model,

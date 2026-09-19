@@ -114,6 +114,72 @@ flowchart TD
 
 ---
 
+## 👁️‍🗨️ Continuous Ambient Camera Eyes & Adaptive Self-Learning System
+
+January runs a background **Continuous Ambient Visual Cortex** and **Adaptive Self-Learning Memory System** that continuously monitors your desk presence, reads gestures, understands posture and emotions, and continuously evolves its coding and interaction models based on your habits.
+
+```mermaid
+flowchart TD
+    subgraph EdgeWatch ["⚡ Local Edge Vision Loop (Every 4 seconds)"]
+        TICK["⏱️ Timer Tick (4s)"] --> SNAP["📷 Native Swift Camera Snap (~0.6s)"]
+        SNAP --> OPENCV["👤 Local OpenCV Haar-Cascade Face & Motion Detector (<20ms CPU)"]
+        OPENCV --> PRESENCE{"Presence Transition?"}
+    end
+
+    subgraph StateEvents ["🌟 Proactive Ambient Events"]
+        PRESENCE -->|"User Just Arrived (0 ➜ 1 Face)"| ARRIVAL["🚀 User Arrival Event<br/>(Desk presence recognized)"]
+        PRESENCE -->|"User Stepped Away (1 ➜ 0 Faces)"| DEPART["👋 User Departure Event<br/>(Away state logged)"]
+        PRESENCE -->|"User Still Present (>45s Cadence)"| PERIODIC["🧠 Ambient Periodic Multimodal Check"]
+    end
+
+    subgraph Cortex ["🧠 Multimodal Visual Reasoning & Gesture Cortex"]
+        ARRIVAL --> GEMINI_VISION["✨ Gemini Multimodal Vision<br/>(Inspects posture, activity, expression, wave gestures)"]
+        PERIODIC --> GEMINI_VISION
+        GEMINI_VISION --> GESTURE{"Waving Gesture Detected?"}
+        GESTURE -->|"Yes"| WAVE_ACK["👋 Proactive Spoken Wave Acknowledgment"]
+        GESTURE -->|"No"| UPDATE_CTX["📊 Update Visual Context State"]
+        ARRIVAL --> COOLDOWN{"Arrival Cooldown Elapsed (>8 min) & Not Sleeping?"}
+        COOLDOWN -->|"Yes"| PROACTIVE_GREET["🗣️ Proactive Spoken Greeting<br/>('Good afternoon, Ashwin! Good to see you back. What are we building today?')"]
+        COOLDOWN -->|"Cooldown Active"| KEEP_SILENT["🤫 Silent Presence Sync"]
+    end
+
+    subgraph MemoryEngine ["🧠 Continuous Adaptive Self-Learning System"]
+        INTERACTION["💬 User Interaction<br/>(Voice, Coding, System Commands, Camera Inquiries)"]
+        INTERACTION --> LOG["📝 Append Interaction to server/data/memory/interactions.jsonl"]
+        LOG --> ADAPT["🔄 Incremental Memory Adaptation<br/>- Preferred Coding Languages (C++, Python, C)<br/>- Preferred Spoken Languages (English, Hindi, Marathi)<br/>- Daily Work Rhythms (Hourly Activity Distribution)<br/>- Learned Coding Style Preferences"]
+        ADAPT --> STORE["💾 Local Profile Storage: server/data/memory/learned_profile.json"]
+        STORE --> INJECT["💉 Dynamic System Prompt Injection into Gemini<br/>(All future coding outputs and replies automatically personalize)"]
+    end
+
+    UPDATE_CTX --> INJECT
+    PROACTIVE_GREET --> INJECT
+
+    classDef visionBox fill:#1e1e2e,stroke:#a6e3a1,stroke-width:2px,color:#cdd6f4;
+    classDef memBox fill:#181825,stroke:#f9e2af,stroke-width:2px,color:#cdd6f4;
+    class EdgeWatch,StateEvents,Cortex visionBox;
+    class MemoryEngine memBox;
+```
+
+### 🎯 Key Visual & Memory Innovations
+1. **Two-Tier Smart Sampling**:
+   - Continuous 60fps cloud streaming would exhaust API quotas and drain battery within minutes.
+   - January solves this with **Two-Tier Smart Sampling**: an ultra-light local OpenCV face/motion check executes on the native Mac CPU every 4 seconds (<20ms CPU, 0 cloud bandwidth).
+   - Rich multimodal Gemini cloud inspection is invoked strictly upon state changes (such as user desk arrival) or at a gentle 45-second ambient cadence.
+2. **Proactive Arrival & Gesture Attunement**:
+   - When you sit down at your laptop, January detects your arrival and offers a warm, context-aware greeting (*"Good morning, Ashwin! Good to see you back. What are we building today?"*).
+   - Includes an intelligent **8-minute cooldown guard** so you are never spammed with repetitive greetings, and remains completely silent in sleep mode.
+   - Waving at the webcam triggers immediate, friendly recognition (*"Hey Ashwin, I saw you wave! What can I help you with?"*).
+3. **Adaptive Self-Learning Memory (No External Cloud Database)**:
+   - Stores all learned habits locally in [`server/data/memory/learned_profile.json`](file:///Users/ashwintelangstark/Desktop/dot.files/PVT.PROJECTS/JANUARY/january-ai/server/data/memory/learned_profile.json) and [`interactions.jsonl`](file:///Users/ashwintelangstark/Desktop/dot.files/PVT.PROJECTS/JANUARY/january-ai/server/data/memory/interactions.jsonl).
+   - Tracks your preferred coding languages (modern C++20, Python 3.10+, C), natural communication dialects, and hourly activity rhythms.
+   - Directly injects your personalized profile into Gemini's system instruction, ensuring all code generation matches your exact paradigms without having to repeat instructions.
+4. **Interactive CLI & REST Inspection**:
+   - Type `memory` or `profile` in the CLI to inspect your learned profile metrics.
+   - Type `eyes` or `vision` to view current ambient posture, mood, and presence telemetry.
+   - Query `GET /api/profile` or `GET /api/health` from any browser or client.
+
+---
+
 ## 🔄 Multi-Tier Fallback Engine Loop
 
 January is built with an **automatic multi-tier resilience loop** that prevents downtime from API rate limits, daily quotas (RPD/RPM), or network drops.
@@ -329,6 +395,8 @@ flowchart TD
 | Component | Technology | Purpose |
 | :--- | :--- | :--- |
 | **Runtime & Backend** | Node.js 22+, TypeScript, Express, `ws` (WebSockets) | Core state coordination, process daemon, and IPC routing |
+| **Continuous Ambient Visual Cortex** | `VisualActivityMonitor` (Two-tier sampling: 4s edge + 45s cloud) | Real-time presence, arrival greetings, wave gesture recognition, posture & expression tracking |
+| **Adaptive Self-Learning Memory** | `LearnedProfileEngine` + Local JSON/JSONL Storage | Dynamic profile adaptation for C++/Python/C preferences, spoken languages, and work habits |
 | **Computer Vision Engine** | macOS `AVFoundation` (Swift Binary) + OpenCV Haar Cascade | ~0.6s 1080p native camera capture & sub-20ms local face detection |
 | **Multimodal Vision Reasoning** | Google Gemini Multimodal Vision (`gemini-3.5-flash-lite`, `gemini-2.0-flash`) | Real-time object recognition, document reading, posture analysis |
 | **Multi-Tier Fallback Loop** | Gemini Cascade ➜ Local Ollama (`qwen2.5` / `llama3.1`) | Zero-downtime resilience against cloud rate limits & offline use |
@@ -357,7 +425,8 @@ january-ai/
 │   ├── tsconfig.json          # TypeScript compiler configuration
 │   ├── data/                  # Local data & state persistence (No cloud DB required)
 │   │   ├── captures/          # Local camera frame cache (latest.jpg auto-overwritten)
-│   │   └── faces/             # Enrolled user identity profiles (profile.json)
+│   │   ├── faces/             # Enrolled user identity profiles (profile.json)
+│   │   └── memory/            # Continuous self-learning user memory (learned_profile.json, interactions.jsonl)
 │   ├── camera_engine/         # Native vision & face recognition engines
 │   │   ├── camera_snap.swift  # Swift AVFoundation native camera snapshot tool
 │   │   ├── camera_snap        # High-performance compiled native binary
@@ -371,7 +440,10 @@ january-ai/
 │       ├── cli.ts             # Dual-section interactive Terminal CLI
 │       ├── config.ts          # Environment variables validation & defaults
 │       ├── types.ts           # State machine, WebSocket & tool type definitions
+│       ├── memory/
+│       │   └── learnedProfileEngine.ts # Adaptive self-learning profile engine & prompt injector
 │       ├── vision/
+│       │   ├── activityMonitor.ts # Continuous ambient camera monitor & gesture detector
 │       │   ├── cameraService.ts # Swift camera snapshot invoker & frame cache
 │       │   └── faceEngine.ts  # Face detection manager & profile loader
 │       ├── emotions/
@@ -383,7 +455,7 @@ january-ai/
 │       │   ├── wakeDetector.ts # Wake/Sleep phrase lifecycle manager
 │       │   └── wakeWordWorker.ts # Worker thread monitoring audio stream
 │       ├── gemini/
-│       │   ├── geminiService.ts # Gemini API caller with search context & prompt
+│       │   ├── geminiService.ts # Gemini API caller with search context, memory & prompt
 │       │   └── liveClient.ts  # Multimodal Live API client & dispatcher
 │       └── tools/
 │           ├── index.ts       # Central tool registry & function declarations

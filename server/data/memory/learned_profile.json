@@ -1,0 +1,39 @@
+{
+  "userName": "Ashwin",
+  "totalInteractions": 6,
+  "preferredCodingLanguages": {
+    "C++": 5,
+    "Python": 5,
+    "C": 1
+  },
+  "preferredSpokenLanguages": {
+    "English": 5,
+    "Hindi": 3,
+    "Marathi": 1
+  },
+  "codingStylePreferences": [
+    "Modern C++20 with smart pointers and RAII",
+    "Python 3.10+ with type hints and concise main blocks",
+    "Show clean code in terminal with exact compilation command",
+    "Never read code syntax aloud over speakers"
+  ],
+  "communicationStylePreferences": [
+    "Crisp, direct 1-3 sentence conversational replies",
+    "Warm, authentic emotional attunement without robotic phrases",
+    "Respect persistent session language until explicitly changed"
+  ],
+  "workPatterns": {
+    "hourlyActivity": {
+      "20": 6
+    },
+    "totalSessions": 1,
+    "lastActiveTimestamp": 1789830962235
+  },
+  "observedHabits": [
+    "Works directly on macOS via terminal CLI and background daemon",
+    "Monitors posture and surroundings using laptop camera eyes",
+    "Values local edge privacy and zero cloud image leaks"
+  ],
+  "lastInteractionTimestamp": 1789830962235,
+  "updatedAt": 1789830962235
+}
