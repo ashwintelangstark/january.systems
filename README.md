@@ -594,9 +594,13 @@ GEMINI_VOICE=Aoede
 CLAUDE_CODE_API="YOUR_CLAUDE_API_KEY"
 CLAUDE_MODEL=claude-3-7-sonnet-20250219
 
-# Wake and Sleep Phrases
+# System Wake and Sleep Phrases
 WAKE_PHRASE=rise
 SLEEP_PHRASE="good night"
+
+# Camera Eyes Wake & Sleep Phrases (60 FPS Continuous Hardware Stream)
+CAMERA_WAKE_PHRASE="eyes open"
+CAMERA_SLEEP_PHRASE="eyes closed"
 ```
 
 ---

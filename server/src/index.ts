@@ -273,6 +273,42 @@ systemMic.on('sleep', (data) => {
   });
 });
 
+systemMic.on('camera_wake', async (data) => {
+  console.log(`👁️ [Coordinator] PHYSICAL MIC CAMERA WAKE WORD HEARD ("${config.cameraWakePhrase.toUpperCase()}")!`);
+  visualActivityMonitor.openEyes(60);
+  const msg = 'Eyes open. Real-time 60 FPS camera vision activated.';
+  broadcast({
+    type: 'transcript',
+    payload: { role: 'assistant', text: msg, isFinal: true, timestamp: Date.now() },
+  });
+  broadcast({
+    type: 'system_log',
+    message: `Physical Mic: Camera wake phrase "${config.cameraWakePhrase}" recognized`,
+    level: 'info',
+  });
+  setAgentState('speaking', 'Camera eyes opened');
+  await systemSpeaker.speakText(msg, { emotion: 'joy' });
+  setAgentState('passive', 'Speech completed');
+});
+
+systemMic.on('camera_sleep', async (data) => {
+  console.log(`🌙 [Coordinator] PHYSICAL MIC CAMERA SLEEP WORD HEARD ("${config.cameraSleepPhrase.toUpperCase()}")!`);
+  visualActivityMonitor.closeEyes();
+  const msg = 'Eyes closed. Camera monitoring paused and hardware turned off.';
+  broadcast({
+    type: 'transcript',
+    payload: { role: 'assistant', text: msg, isFinal: true, timestamp: Date.now() },
+  });
+  broadcast({
+    type: 'system_log',
+    message: `Physical Mic: Camera sleep phrase "${config.cameraSleepPhrase}" recognized`,
+    level: 'info',
+  });
+  setAgentState('speaking', 'Camera eyes closed');
+  await systemSpeaker.speakText(msg, { emotion: 'calm' });
+  setAgentState('passive', 'Speech completed');
+});
+
 async function handleUnifiedPrompt(text: string, source: 'voice' | 'text' = 'voice'): Promise<void> {
   const clean = text.trim();
   if (!clean) return;
@@ -297,10 +333,16 @@ async function handleUnifiedPrompt(text: string, source: 'voice' | 'text' = 'voi
     },
   });
 
-  const lowerPrompt = clean.toLowerCase();
+  // Strip punctuation and extra whitespace for robust phrase detection
+  const strippedPrompt = clean.toLowerCase().replace(/[^\w\s]/g, '').trim();
 
-  // Camera Eyes Wake & Sleep Commands
-  if (lowerPrompt === 'eyes open' || lowerPrompt === 'open eyes' || lowerPrompt === 'camera open' || lowerPrompt === 'open camera' || lowerPrompt === 'eyes on') {
+  // Camera Eyes Wake Command
+  const isCamWakeCommand =
+    strippedPrompt === config.cameraWakePhrase ||
+    ['eyes open', 'open eyes', 'camera open', 'open camera', 'eyes on', 'turn on camera', 'enable camera'].includes(strippedPrompt) ||
+    (/\b(eyes open|open eyes|camera open|open camera|eyes on|turn on camera|enable camera)\b/i.test(strippedPrompt) && strippedPrompt.length < 35);
+
+  if (isCamWakeCommand) {
     visualActivityMonitor.openEyes(60);
     const msg = 'Eyes open. Real-time 60 FPS camera vision activated.';
     console.log(`👁️ [Coordinator] Camera wake word recognized: EYES OPEN (60 FPS Stream).`);
@@ -308,13 +350,24 @@ async function handleUnifiedPrompt(text: string, source: 'voice' | 'text' = 'voi
       type: 'transcript',
       payload: { role: 'assistant', text: msg, isFinal: true, timestamp: Date.now() },
     });
+    broadcast({
+      type: 'system_log',
+      message: `Camera Eyes Activated: 60 FPS continuous hardware stream running`,
+      level: 'info',
+    });
     setAgentState('speaking', 'Camera eyes opened');
     await systemSpeaker.speakText(msg, { emotion: 'joy' });
     setAgentState('passive', 'Speech completed');
     return;
   }
 
-  if (lowerPrompt === 'eyes closed' || lowerPrompt === 'close eyes' || lowerPrompt === 'camera closed' || lowerPrompt === 'close camera' || lowerPrompt === 'eyes off') {
+  // Camera Eyes Sleep Command
+  const isCamSleepCommand =
+    strippedPrompt === config.cameraSleepPhrase ||
+    ['eyes closed', 'close eyes', 'camera closed', 'close camera', 'eyes off', 'turn off camera', 'disable camera'].includes(strippedPrompt) ||
+    (/\b(eyes closed|close eyes|camera closed|close camera|eyes off|turn off camera|disable camera)\b/i.test(strippedPrompt) && strippedPrompt.length < 35);
+
+  if (isCamSleepCommand) {
     visualActivityMonitor.closeEyes();
     const msg = 'Eyes closed. Camera monitoring paused and hardware turned off.';
     console.log(`🌙 [Coordinator] Camera sleep word recognized: EYES CLOSED.`);
@@ -322,9 +375,52 @@ async function handleUnifiedPrompt(text: string, source: 'voice' | 'text' = 'voi
       type: 'transcript',
       payload: { role: 'assistant', text: msg, isFinal: true, timestamp: Date.now() },
     });
+    broadcast({
+      type: 'system_log',
+      message: `Camera Eyes Deactivated: Hardware process terminated (LED off, 0% CPU)`,
+      level: 'info',
+    });
     setAgentState('speaking', 'Camera eyes closed');
     await systemSpeaker.speakText(msg, { emotion: 'calm' });
     setAgentState('passive', 'Speech completed');
+    return;
+  }
+
+  // System Sleep Command
+  const isSystemSleepCommand =
+    strippedPrompt === config.sleepPhrase ||
+    ['good night', 'goodnight', 'go to sleep', 'sleep'].includes(strippedPrompt) ||
+    (/\b(good night|goodnight|go to sleep)\b/i.test(strippedPrompt) && strippedPrompt.length < 25);
+
+  if (isSystemSleepCommand) {
+    console.log(`🌙 [Coordinator] Sleep phrase recognized: "${clean}"`);
+    systemSpeaker.stopPlayback();
+    setAgentState('sleeping', 'Sleep phrase spoken');
+    const capWake = config.wakePhrase.charAt(0).toUpperCase() + config.wakePhrase.slice(1);
+    const sleepMsg = `Good night. Standing by until you say ${capWake}.`;
+    broadcast({
+      type: 'transcript',
+      payload: { role: 'assistant', text: sleepMsg, isFinal: true, timestamp: Date.now() },
+    });
+    await systemSpeaker.speakText(sleepMsg, { emotion: 'calm' });
+    return;
+  }
+
+  // System Wake Command
+  const isSystemWakeCommand =
+    strippedPrompt === config.wakePhrase ||
+    ['rise', 'arise', 'a rise', 'wake up', 'wake'].includes(strippedPrompt) ||
+    (/\b(rise|arise|wake up)\b/i.test(strippedPrompt) && strippedPrompt.length < 25);
+
+  if (isSystemWakeCommand) {
+    console.log(`⚡ [Coordinator] Wake phrase recognized: "${clean}"`);
+    setAgentState('listening', 'Wake phrase received');
+    const wakeMsg = 'I am awake and listening.';
+    broadcast({
+      type: 'transcript',
+      payload: { role: 'assistant', text: wakeMsg, isFinal: true, timestamp: Date.now() },
+    });
+    await systemSpeaker.speakText(wakeMsg, { emotion: 'joy' });
     return;
   }
 
@@ -415,52 +511,16 @@ async function handleUnifiedPrompt(text: string, source: 'voice' | 'text' = 'voi
 }
 
 systemMic.on('speech', async (text: string) => {
-  const lower = text.toLowerCase().trim();
-  if (lower === 'good night' || lower === 'goodnight' || lower === 'go to sleep' || lower === 'sleep') {
-    console.log(`🌙 [Coordinator] Sleep phrase spoken: "${text}"`);
-    systemSpeaker.stopPlayback();
-    setAgentState('sleeping', 'Sleep phrase spoken');
-    const capWake = config.wakePhrase.charAt(0).toUpperCase() + config.wakePhrase.slice(1);
-    const sleepMsg = `Good night. Standing by until you say ${capWake}.`;
-    await systemSpeaker.speakText(sleepMsg);
-    broadcast({
-      type: 'transcript',
-      payload: {
-        role: 'assistant',
-        text: sleepMsg,
-        isFinal: true,
-        timestamp: Date.now(),
-      },
-    });
-    return;
-  }
+  const stripped = text.toLowerCase().replace(/[^\w\s]/g, '').trim();
 
-  if (lower === 'eyes open' || lower === 'open eyes' || lower === 'camera open' || lower === 'eyes on') {
-    visualActivityMonitor.openEyes(60);
-    const msg = 'Eyes open. Real-time 60 FPS camera vision activated.';
-    console.log(`👁️ [Coordinator] Mic speech camera wake word: EYES OPEN.`);
-    broadcast({
-      type: 'transcript',
-      payload: { role: 'assistant', text: msg, isFinal: true, timestamp: Date.now() },
-    });
-    await systemSpeaker.speakText(msg, { emotion: 'joy' });
-    return;
-  }
-
-  if (lower === 'eyes closed' || lower === 'close eyes' || lower === 'camera closed' || lower === 'eyes off') {
-    visualActivityMonitor.closeEyes();
-    const msg = 'Eyes closed. Camera monitoring paused and hardware turned off.';
-    console.log(`🌙 [Coordinator] Mic speech camera sleep word: EYES CLOSED.`);
-    broadcast({
-      type: 'transcript',
-      payload: { role: 'assistant', text: msg, isFinal: true, timestamp: Date.now() },
-    });
-    await systemSpeaker.speakText(msg, { emotion: 'calm' });
-    return;
-  }
-
+  // If agent is sleeping, only wake phrases awaken it
   if (currentState === 'sleeping') {
-    if (lower.includes('rise') || lower.includes('arise') || lower.includes('wake')) {
+    const isWake =
+      stripped === config.wakePhrase ||
+      ['rise', 'arise', 'wake up', 'wake'].includes(stripped) ||
+      /\b(rise|arise|wake up)\b/i.test(stripped);
+
+    if (isWake) {
       console.log(`⚡ [Coordinator] Wake word spoken during sleep: "${text}"`);
       setAgentState('listening', 'Wake word received from sleep');
       await systemSpeaker.speakText('I am awake and listening.');

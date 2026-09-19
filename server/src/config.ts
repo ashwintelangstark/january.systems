@@ -23,6 +23,8 @@ export const config = {
   claudeProxyUrl: process.env.CLAUDE_PROXY_URL || 'http://127.0.0.1:8082',
   wakePhrase: (process.env.WAKE_PHRASE || 'rise').replace(/^["'\s]+|["'\s]+$/g, '').toLowerCase(),
   sleepPhrase: (process.env.SLEEP_PHRASE || 'good night').replace(/^["'\s]+|["'\s]+$/g, '').toLowerCase(),
+  cameraWakePhrase: (process.env.CAMERA_WAKE_PHRASE || 'eyes open').replace(/^["'\s]+|["'\s]+$/g, '').toLowerCase(),
+  cameraSleepPhrase: (process.env.CAMERA_SLEEP_PHRASE || 'eyes closed').replace(/^["'\s]+|["'\s]+$/g, '').toLowerCase(),
 };
 
 export function validateConfig() {

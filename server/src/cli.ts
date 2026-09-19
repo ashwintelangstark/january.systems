@@ -134,22 +134,28 @@ async function handleUserInput(text: string) {
   }
 
   const lower = clean.toLowerCase();
+  const stripped = lower.replace(/[^\w\s]/g, '').trim();
 
   // CLI Control Commands
-  if (lower === 'exit' || lower === 'quit') {
+  if (stripped === 'exit' || stripped === 'quit') {
     console.log(dim('\nClosing January CLI session. Resuming background room microphone...\n'));
     handleExitCleanly();
     process.exit(0);
   }
 
-  if (lower === 'clear' || lower === 'cls') {
+  if (stripped === 'clear' || stripped === 'cls') {
     console.clear();
     promptUser();
     return;
   }
 
   // Sleep Word Command
-  if (lower === 'good night' || lower === 'goodnight' || lower === 'go to sleep' || lower === 'sleep') {
+  const isSleepCommand =
+    stripped === config.sleepPhrase ||
+    ['good night', 'goodnight', 'go to sleep', 'sleep'].includes(stripped) ||
+    (/\b(good night|goodnight|go to sleep)\b/i.test(stripped) && stripped.length < 25);
+
+  if (isSleepCommand) {
     isSleeping = true;
     const capWake = config.wakePhrase.charAt(0).toUpperCase() + config.wakePhrase.slice(1);
     console.log(`\n${purple(bold('┌── [JANUARY : SLEEP MODE] ──────────────────────────────────────────'))}`);
@@ -162,7 +168,12 @@ async function handleUserInput(text: string) {
   }
 
   // Wake Word Command
-  if (lower === 'rise' || lower === 'arise' || lower === 'wake up' || lower === 'wake') {
+  const isWakeCommand =
+    stripped === config.wakePhrase ||
+    ['rise', 'arise', 'a rise', 'wake up', 'wake'].includes(stripped) ||
+    (/\b(rise|arise|wake up)\b/i.test(stripped) && stripped.length < 25);
+
+  if (isWakeCommand) {
     isSleeping = false;
     const capWake = config.wakePhrase.charAt(0).toUpperCase() + config.wakePhrase.slice(1);
     console.log(`\n${purple(bold('┌── [JANUARY : ACTIVE] ──────────────────────────────────────────────'))}`);
@@ -181,8 +192,13 @@ async function handleUserInput(text: string) {
     return;
   }
 
-  // Camera Wake / Sleep Commands
-  if (lower === 'eyes open' || lower === 'open eyes' || lower === 'camera open' || lower === 'eyes on') {
+  // Camera Eyes Wake Command
+  const isCamWakeCommand =
+    stripped === config.cameraWakePhrase ||
+    ['eyes open', 'open eyes', 'camera open', 'open camera', 'eyes on', 'turn on camera', 'enable camera'].includes(stripped) ||
+    (/\b(eyes open|open eyes|camera open|open camera|eyes on|turn on camera|enable camera)\b/i.test(stripped) && stripped.length < 35);
+
+  if (isCamWakeCommand) {
     try {
       await fetch(`http://${config.host}:${config.port}/api/camera/toggle`, {
         method: 'POST',
@@ -199,7 +215,13 @@ async function handleUserInput(text: string) {
     return;
   }
 
-  if (lower === 'eyes closed' || lower === 'close eyes' || lower === 'camera closed' || lower === 'eyes off') {
+  // Camera Eyes Sleep Command
+  const isCamSleepCommand =
+    stripped === config.cameraSleepPhrase ||
+    ['eyes closed', 'close eyes', 'camera closed', 'close camera', 'eyes off', 'turn off camera', 'disable camera'].includes(stripped) ||
+    (/\b(eyes closed|close eyes|camera closed|close camera|eyes off|turn off camera|disable camera)\b/i.test(stripped) && stripped.length < 35);
+
+  if (isCamSleepCommand) {
     try {
       await fetch(`http://${config.host}:${config.port}/api/camera/toggle`, {
         method: 'POST',

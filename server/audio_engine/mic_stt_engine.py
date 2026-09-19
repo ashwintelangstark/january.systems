@@ -9,6 +9,7 @@ import os
 import sys
 import json
 import time
+import re
 import queue
 import tempfile
 import threading
@@ -147,31 +148,86 @@ def main():
 
                     if text:
                         lower_text = text.lower()
-                        sys.stderr.write(f"[Mic Engine] Transcribed: \"{text}\"\n")
+                        # Strip punctuation and extra whitespace for robust phrase recognition
+                        clean_text = re.sub(r'[^\w\s]', '', lower_text).strip()
+                        sys.stderr.write(f"[Mic Engine] Transcribed: \"{text}\" (normalized: \"{clean_text}\")\n")
 
-                        # Check if sleep phrase "Good night" was spoken
-                        if "good night" in lower_text or "goodnight" in lower_text or "go to sleep" in lower_text:
+                        # 1. Check Camera Wake Phrase (e.g. "eyes open")
+                        cam_wake_target = os.environ.get("CAMERA_WAKE_PHRASE", "eyes open").strip().strip('"\'').lower()
+                        cam_wake_variants = list(set([
+                            cam_wake_target,
+                            "eyes open", "open eyes", "camera open", "open camera", "eyes on", "turn on camera", "enable camera"
+                        ]))
+                        is_cam_wake = any(
+                            clean_text == v or re.search(r'\b' + re.escape(v) + r'\b', clean_text)
+                            for v in cam_wake_variants if v
+                        )
+
+                        # 2. Check Camera Sleep Phrase (e.g. "eyes closed")
+                        cam_sleep_target = os.environ.get("CAMERA_SLEEP_PHRASE", "eyes closed").strip().strip('"\'').lower()
+                        cam_sleep_variants = list(set([
+                            cam_sleep_target,
+                            "eyes closed", "close eyes", "camera closed", "close camera", "eyes off", "turn off camera", "disable camera"
+                        ]))
+                        is_cam_sleep = any(
+                            clean_text == v or re.search(r'\b' + re.escape(v) + r'\b', clean_text)
+                            for v in cam_sleep_variants if v
+                        )
+
+                        # 3. Check System Sleep Phrase (e.g. "good night")
+                        sleep_target = os.environ.get("SLEEP_PHRASE", "good night").strip().strip('"\'').lower()
+                        sleep_variants = list(set([
+                            sleep_target,
+                            "good night", "goodnight", "go to sleep", "sleep"
+                        ]))
+                        is_sleep = any(
+                            clean_text == v or re.search(r'\b' + re.escape(v) + r'\b', clean_text)
+                            for v in sleep_variants if v
+                        )
+
+                        # 4. Check System Wake Phrase (e.g. "rise")
+                        wake_target = os.environ.get("WAKE_PHRASE", "rise").strip().strip('"\'').lower()
+                        wake_variants = list(set([
+                            wake_target,
+                            "rise", "arise", "a rise", "wake up", "wake"
+                        ]))
+                        is_wake = any(
+                            clean_text == v or re.search(r'\b' + re.escape(v) + r'\b', clean_text)
+                            for v in wake_variants if v
+                        )
+
+                        if is_cam_wake:
+                            sys.stderr.write(f"[Mic Engine] Matched Camera Wake Phrase: \"{cam_wake_target}\"\n")
                             print(json.dumps({
-                                "type": "sleep",
-                                "phrase": "good night",
+                                "type": "camera_wake",
+                                "phrase": cam_wake_target,
                                 "raw": text,
                                 "timestamp": int(time.time() * 1000),
                             }), flush=True)
-
-                        # Check if wake phrase (e.g. "Rise" / "Arise") was spoken
-                        wake_target = os.environ.get("WAKE_PHRASE", "rise").lower()
-                        wake_variants = list(set([wake_target, "rise", "arise", "a rise", "wake up", "wake"]))
-                        is_wake_word = any(v in lower_text for v in wake_variants)
-
-                        if is_wake_word:
+                        elif is_cam_sleep:
+                            sys.stderr.write(f"[Mic Engine] Matched Camera Sleep Phrase: \"{cam_sleep_target}\"\n")
+                            print(json.dumps({
+                                "type": "camera_sleep",
+                                "phrase": cam_sleep_target,
+                                "raw": text,
+                                "timestamp": int(time.time() * 1000),
+                            }), flush=True)
+                        elif is_sleep:
+                            sys.stderr.write(f"[Mic Engine] Matched System Sleep Phrase: \"{sleep_target}\"\n")
+                            print(json.dumps({
+                                "type": "sleep",
+                                "phrase": sleep_target,
+                                "raw": text,
+                                "timestamp": int(time.time() * 1000),
+                            }), flush=True)
+                        elif is_wake:
+                            sys.stderr.write(f"[Mic Engine] Matched System Wake Phrase: \"{wake_target}\"\n")
                             print(json.dumps({
                                 "type": "wake",
                                 "phrase": wake_target,
                                 "raw": text,
                                 "timestamp": int(time.time() * 1000),
                             }), flush=True)
-
-                        # Regular user speech prompt
                         else:
                             print(json.dumps({
                                 "type": "speech",

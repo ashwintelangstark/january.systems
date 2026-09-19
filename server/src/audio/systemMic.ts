@@ -40,7 +40,13 @@ export class SystemMicrophone extends EventEmitter {
         ],
         {
           stdio: ['pipe', 'pipe', 'pipe'],
-          env: { ...process.env, WAKE_PHRASE: config.wakePhrase },
+          env: {
+            ...process.env,
+            WAKE_PHRASE: config.wakePhrase,
+            SLEEP_PHRASE: config.sleepPhrase,
+            CAMERA_WAKE_PHRASE: config.cameraWakePhrase,
+            CAMERA_SLEEP_PHRASE: config.cameraSleepPhrase,
+          },
         }
       );
 
@@ -70,6 +76,16 @@ export class SystemMicrophone extends EventEmitter {
             case 'sleep':
               console.log(`🌙 [SystemMicrophone] Sleep phrase "${msg.phrase}" heard on system microphone!`);
               this.emit('sleep', msg);
+              break;
+
+            case 'camera_wake':
+              console.log(`👁️ [SystemMicrophone] Camera wake phrase "${msg.phrase}" heard on system microphone!`);
+              this.emit('camera_wake', msg);
+              break;
+
+            case 'camera_sleep':
+              console.log(`🌙 [SystemMicrophone] Camera sleep phrase "${msg.phrase}" heard on system microphone!`);
+              this.emit('camera_sleep', msg);
               break;
 
             case 'speech':
