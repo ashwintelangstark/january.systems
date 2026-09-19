@@ -40,11 +40,15 @@ export class GeminiLiveClient extends EventEmitter {
       return;
     }
 
+    const liveModel = config.geminiModel && config.geminiModel.includes('2.0')
+      ? config.geminiModel
+      : 'models/gemini-2.0-flash-exp';
+
     const host = 'generativelanguage.googleapis.com';
     const path = `/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${config.geminiApiKey}`;
     const url = `wss://${host}${path}`;
 
-    console.log(`[GeminiLiveClient] Connecting to Gemini Live API WebSocket... (${config.geminiModel})`);
+    console.log(`[GeminiLiveClient] Connecting to Gemini Live API WebSocket... (${liveModel})`);
 
     try {
       this.ws = new WebSocket(url);
@@ -115,9 +119,13 @@ export class GeminiLiveClient extends EventEmitter {
   private sendSetupMessage(): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
 
+    const liveModel = config.geminiModel && config.geminiModel.includes('2.0')
+      ? config.geminiModel
+      : 'models/gemini-2.0-flash-exp';
+
     const setupPayload = {
       setup: {
-        model: config.geminiModel,
+        model: liveModel,
         generationConfig: {
           responseModalities: ['AUDIO'],
           speechConfig: {

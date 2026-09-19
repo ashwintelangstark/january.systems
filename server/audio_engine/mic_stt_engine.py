@@ -5,6 +5,7 @@ Listens to physical laptop microphone via sounddevice, performs VAD,
 and transcribes speech using Faster-Whisper (tiny.en). Emits JSON events to stdout.
 """
 
+import os
 import sys
 import json
 import time
