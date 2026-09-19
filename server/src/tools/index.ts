@@ -3,6 +3,7 @@ import { delegateCoding } from './delegateCoding.js';
 import { manageWhatsappMessage } from './manageWhatsapp.js';
 import { searchWeb, fetchWebPage } from './webSearch.js';
 import { openSystemResource, searchSystemFiles, listSystemFolder, readSystemFile } from './systemAccess.js';
+import { seeAndAnalyze } from './visionTool.js';
 
 export const GEMINI_TOOLS_DECLARATION = [
   {
@@ -143,6 +144,19 @@ export const GEMINI_TOOLS_DECLARATION = [
         },
       },
       {
+        name: 'see_and_analyze',
+        description: 'Activate the physical system camera to visually look, recognize people/faces, identify objects, inspect documents, check posture, or describe surroundings.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            prompt: {
+              type: 'STRING',
+              description: 'What to visually look for, analyze, recognize, or describe through the camera (e.g. "What am I holding?", "Who is in front of the camera?", "Read this book page", "Describe the room").',
+            },
+          },
+        },
+      },
+      {
         name: 'manage_whatsapp_message',
         description: 'Draft or initiate sending a WhatsApp message to a phone number or contact.',
         parameters: {
@@ -168,6 +182,9 @@ export async function executeTool(name: string, args: Record<string, any>): Prom
   console.log(`[ToolsDispatcher] Executing function "${name}" with args:`, JSON.stringify(args));
 
   switch (name) {
+    case 'see_and_analyze':
+      return await seeAndAnalyze(args as any);
+
     case 'search_web':
       return await searchWeb(args.query);
 

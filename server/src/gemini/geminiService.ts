@@ -136,6 +136,24 @@ export class GeminiService {
     const emotionResult = await this.emotionEngine.analyzeText(prompt);
     const emotionPromptContext = this.emotionEngine.getEmotionalPromptContext(emotionResult.emotion);
 
+    // 0. Check for Camera Vision, Object Identification & Facial Recognition
+    const isVisionQuery =
+      (/\b(look|see|camera|holding|what('s|\s+is)\s+this|what\s+do\s+you\s+see|who\s+am\s+i|recognize\s+me|can\s+you\s+see|my\s+face|posture|read\s+this|examine|surroundings|my\s+room)\b/i.test(lower) ||
+       /(?:देखो|पहचानो|क्या\s*दिख\s*रहा|बघा|ओळखतोस)/i.test(prompt)) &&
+      !lower.startsWith('search ') && !lower.startsWith('look up ') && !lower.startsWith('find ') && !lower.startsWith('open ') && !lower.includes('code');
+
+    if (isVisionQuery) {
+      console.log(`[GeminiService] Activating Camera Eyes & Face Engine for: "${prompt}"...`);
+      const visionResult = await executeTool('see_and_analyze', { prompt });
+      return {
+        text: visionResult.description,
+        verbalSummary: visionResult.verbalSummary,
+        toolCalls: [{ name: 'see_and_analyze', args: { prompt }, result: visionResult }],
+        modelUsed: visionResult.modelUsed || 'Gemini Multimodal Vision',
+        emotion: emotionResult,
+      };
+    }
+
     // 1. Check for System Resource Opening (Apps, Folders, Videos, Files, Audio)
     const isOpenCommand =
       (lower.startsWith('open ') || lower.startsWith('launch ') || lower.startsWith('play ') || lower.startsWith('start ') || lower.startsWith('show ')) &&
