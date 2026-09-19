@@ -27,8 +27,8 @@ export async function seeAndAnalyze(args: SeeAndAnalyzeArgs = {}): Promise<Visio
 
   console.log(`[VisionTool] Capturing frame and analyzing: "${userPrompt}"...`);
 
-  // 1. Capture snapshot via native camera
-  const snapshot = await cameraService.captureSnapshot();
+  // 1. Capture snapshot via native camera (zero-lag frame if stream active)
+  const snapshot = await cameraService.getLatestFrame();
   if (!snapshot.success || !snapshot.base64 || !snapshot.filePath) {
     return {
       success: false,

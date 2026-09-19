@@ -744,14 +744,14 @@ System Speaker:   Edge-TTS / macOS afplay
   // Start Physical Laptop Microphone & STT Engine
   systemMic.start();
 
-  // Start Ambient Eyes & Face/Activity Monitoring
-  visualActivityMonitor.start();
+  // Ambient Camera Eyes starts in CLOSED state (LED off) until commanded with "eyes open"
+  console.log('👁️ [Coordinator] Camera eyes are CLOSED by default (LED off). Say or type "eyes open" to activate 60 FPS live video tracking.');
 });
 
 // Graceful cleanup on server termination
 function handleShutdown(): void {
   console.log('\n[Coordinator] Shutting down January AI Core...');
-  visualActivityMonitor.stop();
+  visualActivityMonitor.closeEyes();
   systemMic.stop();
   systemSpeaker.stopPlayback();
   process.exit(0);
