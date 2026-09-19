@@ -154,21 +154,33 @@ export class GeminiService {
       };
     }
 
-    // 1. Check for System Resource Opening (Apps, Folders, Videos, Files, Audio)
-    const isOpenCommand =
-      (lower.startsWith('open ') || lower.startsWith('launch ') || lower.startsWith('play ') || lower.startsWith('start ') || lower.startsWith('show ')) &&
-      !lower.includes('code') && !lower.includes('python') && !lower.includes('c++') && !lower.includes('cpp') && !lower.includes('function') && !lower.includes('script') && !lower.includes('program') && !lower.includes('algorithm');
+    // 1. Check for System Resource Opening (IDEs, Softwares, Folders, Videos, Files, Audio)
+    const isMultilingualOpen = /(?:खोलो|ओपन\s*करो|चालू\s*करो|चलाओ|उघडा|ओपन\s*करा|प्ले\s*करा|दाखवा)$/i.test(prompt.trim());
+    const isEnglishOpen =
+      (lower.startsWith('open ') || lower.startsWith('launch ') || lower.startsWith('play ') || lower.startsWith('start ') || lower.startsWith('show ') || lower.startsWith('run ') || lower.startsWith('view ')) &&
+      !lower.startsWith('open ai') && !lower.startsWith('open source');
+
+    const isCodingRequest =
+      lower.includes('write ') || lower.includes('code ') || lower.includes('implement ') || lower.includes('create script') || lower.includes('algorithm') || lower.includes('program for');
+
+    const isOpenCommand = (isEnglishOpen || isMultilingualOpen) && !isCodingRequest;
 
     if (isOpenCommand) {
-      const target = prompt.replace(/^(?:open|launch|play|start|show)\s+(?:the\s+|my\s+)?/i, '').replace(/^(?:folder|directory|video|movie|file|app|application)\s+/i, '').replace(/\s+(?:app|application|folder|directory|video|movie|file)$/i, '').trim();
+      let target = prompt
+        .replace(/^(?:open|launch|play|start|show|run|view)\s+(?:the\s+|my\s+)?/i, '')
+        .replace(/\s+(?:खोलो|ओपन\s*करो|चालू\s*करो|चलाओ|उघडा|ओपन\s*करा|प्ले\s*करा|दाखवा)$/i, '')
+        .replace(/^(?:folder|directory|video|movie|file|document|app|application|ide|software)\s+/i, '')
+        .replace(/\s+(?:app|application|ide|software|folder|directory|video|movie|file|document)$/i, '')
+        .trim();
+
       let resourceType: 'app' | 'folder' | 'video' | 'file' | 'audio' | 'auto' = 'auto';
       if (lower.includes('video') || lower.includes('movie') || lower.includes('clip') || lower.startsWith('play ') || /\.(mp4|mov|mkv|avi|webm)$/i.test(lower)) {
         resourceType = 'video';
       } else if (lower.includes('folder') || lower.includes('directory')) {
         resourceType = 'folder';
-      } else if (lower.includes('file') || lower.includes('document')) {
+      } else if (lower.includes('file') || lower.includes('document') || /\.(pdf|docx|xlsx|pptx|txt|md|json|csv)$/i.test(lower)) {
         resourceType = 'file';
-      } else if (lower.includes('app') || lower.includes('application')) {
+      } else if (lower.includes('app') || lower.includes('application') || lower.includes('ide') || lower.includes('software') || lower.includes('code editor') || /\b(vscode|vs code|cursor|xcode|pycharm|intellij|webstorm|sublime|safari|chrome|brave|vlc|spotify|slack|discord|docker|postman|finder|terminal|iterm)\b/i.test(lower)) {
         resourceType = 'app';
       }
 

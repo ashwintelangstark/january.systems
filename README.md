@@ -148,9 +148,46 @@ flowchart TD
     class T1,T2,T3 tierNode;
 ```
 
-### 💡 Why this Fallback Design is Powerful:
-- **Model-Specific Free Quotas**: Google AI Studio assigns rate limits (e.g., 1,500 Requests Per Day) **per model**. If you exhaust your daily limit on `gemini-3.6-flash`, January automatically switches to `gemini-2.0-flash` or `gemini-3.5-flash-lite` on the exact same free API key without throwing errors.
-- **Offline Self-Sufficiency**: If your internet drops or all cloud quotas are exhausted, January automatically drops down to your local **Ollama** LLM so your Mac assistant never stops working.
+---
+
+## 🖥️ macOS System Control Engine: IDEs, Softwares, Videos, Documents & Folders
+
+January has deep **macOS OS integration** with the ability to launch any IDE, software, or developer tool, search and play video files, open documents and spreadsheets, explore folders, and read file contents.
+
+```mermaid
+flowchart TD
+    CMD["👤 User Voice / CLI Command<br/>('Open VS Code', 'Launch Safari', 'Play project demo.mp4',<br/>'Open resume.pdf', 'Show Downloads folder', 'VS Code खोलो', 'video प्ले करा')"] --> PARSE{"Intent & Resource Classifier<br/>(geminiService.ts)"}
+
+    PARSE -->|"IDE / Software"| APP_LOOKUP{"Known App & Alias Dictionary<br/>(KNOWN_APP_ALIASES)"}
+    PARSE -->|"Video / Movie"| SPOT_VID["🎬 Spotlight Video Search<br/>(mdfind public.movie / *.mp4 / *.mov / *.mkv)"]
+    PARSE -->|"Document / File"| SPOT_DOC["📄 Spotlight Document Search<br/>(mdfind public.document / *.pdf / *.docx / *.txt)"]
+    PARSE -->|"Folder / Directory"| FOLDER_LOOKUP["📁 System Path & Shortcut Resolver<br/>(~/Downloads, ~/Desktop, ~/Documents, ~/Movies)"]
+
+    APP_LOOKUP -->|"Known Alias Match"| EXEC_APP["🚀 /usr/bin/open -a '<App>'<br/>(Instant Launch)"]
+    APP_LOOKUP -->|"Custom App"| SPOT_APP["🔍 Spotlight Application Finder<br/>(mdfind kMDItemKind == 'Application')"]
+    SPOT_APP --> EXEC_APP
+
+    SPOT_VID --> PLAY_VID["🎥 Launch Default Video Player / VLC<br/>(/usr/bin/open '<VideoPath>')"]
+    SPOT_DOC --> OPEN_DOC["📖 Open in Default App / Preview<br/>(/usr/bin/open '<DocPath>')"]
+    FOLDER_LOOKUP --> OPEN_FOLDER["📂 Open in macOS Finder<br/>(/usr/bin/open '<FolderPath>')"]
+
+    EXEC_APP & PLAY_VID & OPEN_DOC & OPEN_FOLDER --> CONFIRM["🗣️ Speaker Audio & Terminal Output:<br/>'Opened Visual Studio Code on your Mac.' / 'Playing demo.mp4'"]
+
+    classDef sysNode fill:#1e1e2e,stroke:#cba6f7,stroke-width:2px,color:#cdd6f4;
+    class CMD,EXEC_APP,PLAY_VID,OPEN_DOC,OPEN_FOLDER,CONFIRM sysNode;
+```
+
+### 🎯 Supported System Actions & Examples
+
+| Category | Examples & Supported Targets | Voice / Text Command Examples |
+| :--- | :--- | :--- |
+| **IDEs & Editors** | VS Code, Cursor, Antigravity IDE, Xcode, PyCharm, IntelliJ IDEA, WebStorm, Android Studio, Sublime Text, CLion, Zed, Neovim | *"Open VS Code"*, *"Launch Cursor"*, *"Start Xcode"*, *"VS Code खोलो"* |
+| **Softwares & Apps** | Safari, Chrome, Brave, Arc, Firefox, Slack, Discord, WhatsApp, Spotify, VLC, Zoom, Teams, Docker, Postman, Notes, Calculator, Finder | *"Open Spotify"*, *"Launch Docker Desktop"*, *"Open Calculator"*, *"Safari ओपन करा"* |
+| **Videos & Movies** | `.mp4`, `.mov`, `.mkv`, `.avi`, `.webm` across `~/Movies`, `~/Downloads`, `~/Desktop`, and whole disk | *"Play my project demo video"*, *"Open vacation.mp4"*, *"video चलाओ"* |
+| **Documents & Files** | `.pdf`, `.docx`, `.xlsx`, `.pptx`, `.txt`, `.md`, `.json`, `.csv` | *"Open resume.pdf"*, *"Show report.docx"*, *"Open document"* |
+| **Folders & Directories**| `Downloads`, `Desktop`, `Documents`, `Movies`, `Pictures`, `Music`, custom project folders | *"Open Downloads folder"*, *"Show Desktop"*, *"Downloads फोल्डर उघडा"* |
+| **System File Search** | Spotlight fast index search across the entire Mac storage | *"Find all mp4 files on my Mac"*, *"Search for presentation PDF"* |
+| **Read File Contents** | Direct terminal file preview without opening external windows | *"Read notes.txt"*, *"Show contents of package.json"* |
 
 ---
 

@@ -81,21 +81,154 @@ function resolveSystemPath(inputPath: string): string | null {
   return null;
 }
 
+// Comprehensive dictionary of common IDEs, developer tools, browsers, productivity apps, and software
+const KNOWN_APP_ALIASES: Record<string, string[]> = {
+  // IDEs & Code Editors
+  'vs code': ['Visual Studio Code', 'Code'],
+  'vscode': ['Visual Studio Code', 'Code'],
+  'visual studio code': ['Visual Studio Code'],
+  'code': ['Visual Studio Code'],
+  'cursor': ['Cursor'],
+  'cursor ide': ['Cursor'],
+  'antigravity': ['Antigravity IDE', 'Antigravity'],
+  'antigravity ide': ['Antigravity IDE', 'Antigravity'],
+  'xcode': ['Xcode'],
+  'pycharm': ['PyCharm', 'PyCharm CE', 'PyCharm Professional', 'PyCharm Community Edition'],
+  'intellij': ['IntelliJ IDEA', 'IntelliJ IDEA Ultimate', 'IntelliJ IDEA Community Edition'],
+  'intellij idea': ['IntelliJ IDEA', 'IntelliJ IDEA Ultimate'],
+  'webstorm': ['WebStorm'],
+  'android studio': ['Android Studio'],
+  'sublime': ['Sublime Text'],
+  'sublime text': ['Sublime Text'],
+  'clion': ['CLion'],
+  'goland': ['GoLand'],
+  'rider': ['Rider'],
+  'phpstorm': ['PhpStorm'],
+  'rubymine': ['RubyMine'],
+  'eclipse': ['Eclipse'],
+  'atom': ['Atom'],
+  'zed': ['Zed'],
+  'neovim': ['nvim', 'Neovim'],
+  
+  // Terminals & Developer Tools
+  'terminal': ['Terminal'],
+  'iterm': ['iTerm', 'iTerm2'],
+  'iterm2': ['iTerm', 'iTerm2'],
+  'warp': ['Warp'],
+  'ghostty': ['Ghostty'],
+  'alacritty': ['Alacritty'],
+  'kitty': ['kitty'],
+  'docker': ['Docker', 'Docker Desktop'],
+  'docker desktop': ['Docker Desktop', 'Docker'],
+  'postman': ['Postman'],
+  'insomnia': ['Insomnia'],
+  'tableplus': ['TablePlus'],
+  'dbeaver': ['DBeaver', 'DBeaver Community'],
+  'wireshark': ['Wireshark'],
+  'gitkraken': ['GitKraken'],
+  'sourcetree': ['Sourcetree'],
+
+  // Browsers
+  'chrome': ['Google Chrome'],
+  'google chrome': ['Google Chrome'],
+  'safari': ['Safari'],
+  'brave': ['Brave Browser', 'Brave'],
+  'brave browser': ['Brave Browser'],
+  'arc': ['Arc'],
+  'firefox': ['Firefox'],
+  'edge': ['Microsoft Edge'],
+  'microsoft edge': ['Microsoft Edge'],
+  'opera': ['Opera'],
+
+  // Media, Music & Video Players
+  'vlc': ['VLC', 'VLC media player'],
+  'iina': ['IINA'],
+  'quicktime': ['QuickTime Player'],
+  'quicktime player': ['QuickTime Player'],
+  'spotify': ['Spotify'],
+  'music': ['Music'],
+  'apple music': ['Music'],
+  'podcasts': ['Podcasts'],
+  'tv': ['TV'],
+
+  // Productivity, Documents & Office
+  'notes': ['Notes'],
+  'reminders': ['Reminders'],
+  'calendar': ['Calendar'],
+  'calculator': ['Calculator'],
+  'preview': ['Preview'],
+  'pages': ['Pages'],
+  'keynote': ['Keynote'],
+  'numbers': ['Numbers'],
+  'word': ['Microsoft Word'],
+  'microsoft word': ['Microsoft Word'],
+  'excel': ['Microsoft Excel'],
+  'microsoft excel': ['Microsoft Excel'],
+  'powerpoint': ['Microsoft PowerPoint'],
+  'microsoft powerpoint': ['Microsoft PowerPoint'],
+  'notion': ['Notion'],
+  'obsidian': ['Obsidian'],
+  'figma': ['Figma'],
+
+  // Communication & Social
+  'whatsapp': ['WhatsApp'],
+  'slack': ['Slack'],
+  'discord': ['Discord'],
+  'telegram': ['Telegram'],
+  'zoom': ['zoom.us', 'Zoom'],
+  'teams': ['Microsoft Teams'],
+  'microsoft teams': ['Microsoft Teams'],
+  'signal': ['Signal'],
+  'messages': ['Messages'],
+  'facetime': ['FaceTime'],
+  'mail': ['Mail'],
+
+  // System Utilities
+  'finder': ['Finder'],
+  'system settings': ['System Settings', 'System Preferences'],
+  'settings': ['System Settings', 'System Preferences'],
+  'preferences': ['System Settings', 'System Preferences'],
+  'activity monitor': ['Activity Monitor'],
+  'disk utility': ['Disk Utility'],
+  'keychain': ['Keychain Access'],
+  'app store': ['App Store'],
+};
+
 /**
- * Universal System Opener: Opens any app, file, folder, video, audio, or document on macOS / Linux / Windows
+ * Universal System Opener: Opens any app, IDE, file, folder, video, audio, or document on macOS / Linux / Windows
  */
 export async function openSystemResource(args: SystemResourceArgs): Promise<{ success: boolean; message: string; path?: string; details?: any }> {
   const { query, resourceType = 'auto' } = args;
   if (!query || typeof query !== 'string') {
-    return { success: false, message: 'Missing target file, folder, app, or video name.' };
+    return { success: false, message: 'Missing target file, folder, app, IDE, or video name.' };
   }
 
   const platform = os.platform();
   const rawQuery = query.replace(/^["'\s]+|["'\s]+$/g, '').trim();
+  const lowerQuery = rawQuery.toLowerCase().replace(/^(the\s+|my\s+)/, '');
 
   console.log(`[Tool:openSystemResource] Request to open "${rawQuery}" (type: ${resourceType})`);
 
-  // 1. Direct standard path resolution
+  // 1. Direct Known App / IDE Aliases Check
+  if (platform === 'darwin') {
+    const aliasCandidates = KNOWN_APP_ALIASES[lowerQuery];
+    if (aliasCandidates && aliasCandidates.length > 0) {
+      for (const appName of aliasCandidates) {
+        try {
+          console.log(`[Tool:openSystemResource] Attempting to launch known app alias "${appName}"...`);
+          await execAsync(`open -a "${appName}"`);
+          return {
+            success: true,
+            message: `Launched ${appName} on your Mac.`,
+          };
+        } catch {
+          // Continue to next alias candidate
+        }
+      }
+    }
+  }
+
+  // 2. Direct standard folder / absolute / relative path resolution
   const directPath = resolveSystemPath(rawQuery);
   if (directPath && fs.existsSync(directPath)) {
     try {
@@ -110,14 +243,14 @@ export async function openSystemResource(args: SystemResourceArgs): Promise<{ su
       return {
         success: true,
         path: directPath,
-        message: `Opened ${isDir ? 'folder' : 'file'} "${path.basename(directPath)}" at ${directPath}`,
+        message: `Opened ${isDir ? 'folder' : 'file'} "${path.basename(directPath)}" on your system.`,
       };
     } catch (e: any) {
       return { success: false, message: `Could not open path ${directPath}: ${e.message}` };
     }
   }
 
-  // 2. macOS Spotlight / Native Index Search for Files, Videos, Folders, and Apps
+  // 3. macOS Spotlight / Native Index Search for Files, Videos, Documents, Folders, and Apps
   if (platform === 'darwin') {
     try {
       let mdQuery = '';
@@ -129,12 +262,12 @@ export async function openSystemResource(args: SystemResourceArgs): Promise<{ su
       } else if (resourceType === 'folder' || /\b(folder|directory)\b/i.test(rawQuery)) {
         const queryTerm = cleanName.replace(/\b(folder|directory|open)\b/gi, '').trim() || cleanName;
         mdQuery = `mdfind "kMDItemContentTypeTree == 'public.folder' && kMDItemFSName == '*${queryTerm}*'c" | head -n 5`;
-      } else if (resourceType === 'app' || /\b(app|application)\b/i.test(rawQuery)) {
-        const queryTerm = cleanName.replace(/\b(app|application|open|launch)\b/gi, '').trim() || cleanName;
-        mdQuery = `mdfind "kMDItemKind == 'Application' && kMDItemFSName == '*${queryTerm}*.app'c" | head -n 5`;
+      } else if (resourceType === 'app' || /\b(app|application|ide|software)\b/i.test(rawQuery)) {
+        const queryTerm = cleanName.replace(/\b(app|application|ide|software|open|launch|start)\b/gi, '').trim() || cleanName;
+        mdQuery = `mdfind "kMDItemKind == 'Application' && (kMDItemFSName == '*${queryTerm}*.app'c || kMDItemDisplayName == '*${queryTerm}*'c)" | head -n 5`;
       } else {
         // Auto / General Search
-        mdQuery = `mdfind "kMDItemFSName == '*${cleanName}*'c" | head -n 5`;
+        mdQuery = `mdfind "kMDItemFSName == '*${cleanName}*'c || kMDItemDisplayName == '*${cleanName}*'c" | head -n 5`;
       }
 
       console.log(`[Tool:openSystemResource] Running spotlight query: ${mdQuery}`);
@@ -147,7 +280,7 @@ export async function openSystemResource(args: SystemResourceArgs): Promise<{ su
         await execAsync(`open "${bestMatch}"`);
         
         const isDir = fs.existsSync(bestMatch) && fs.statSync(bestMatch).isDirectory();
-        const resLabel = isDir ? 'folder' : (/\.(mp4|mov|mkv|avi|webm)$/i.test(bestMatch) ? 'video' : 'item');
+        const resLabel = isDir ? 'folder' : (/\.(mp4|mov|mkv|avi|webm)$/i.test(bestMatch) ? 'video' : (/\.(pdf|docx|xlsx|pptx|txt|md)$/i.test(bestMatch) ? 'document' : 'file'));
         return {
           success: true,
           path: bestMatch,
@@ -156,22 +289,22 @@ export async function openSystemResource(args: SystemResourceArgs): Promise<{ su
         };
       }
 
-      // Fallback: try opening as application name directly
+      // Fallback: try opening as application name directly via `open -a`
       try {
         await execAsync(`open -a "${cleanName}"`);
         return {
           success: true,
-          message: `Launched application "${cleanName}".`,
+          message: `Launched "${cleanName}" on your Mac.`,
         };
       } catch (appErr) {
-        // Continue to not found
+        // Continue to user directory scan
       }
     } catch (err: any) {
       console.warn(`[Tool:openSystemResource] Spotlight search notice: ${err.message}`);
     }
   }
 
-  // 3. Fallback: Search common user folders (Downloads, Desktop, Documents, Movies)
+  // 4. Fallback: Search common user folders (Downloads, Desktop, Documents, Movies, Pictures)
   const userDirs = [
     path.join(os.homedir(), 'Desktop'),
     path.join(os.homedir(), 'Downloads'),
@@ -208,7 +341,7 @@ export async function openSystemResource(args: SystemResourceArgs): Promise<{ su
 
   return {
     success: false,
-    message: `Could not find any file, folder, video, or app matching "${rawQuery}" on your system.`,
+    message: `Could not find any file, document, folder, video, or software matching "${rawQuery}" on your system.`,
   };
 }
 
