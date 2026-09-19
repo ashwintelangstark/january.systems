@@ -1,11 +1,11 @@
 # ⚡ January AI (`january.systems`)
-> **An emotionally expressive, local autonomous AI companion and OS assistant running on macOS, powered by Google Gemini, Anthropic Claude, Python/C/C++ Coding Engine, and open-source neural audio engines.**
+> **An emotionally expressive, local autonomous AI companion and OS assistant running on macOS, powered by Google Gemini Multimodal Vision, Anthropic Claude, Python/C/C++ Coding Engine, AVFoundation Native Camera, and open-source neural audio engines.**
 
 ---
 
 ## 🌟 Overview
 
-**January** is an intelligent, emotionally attuned operating system agent designed to run autonomously on your laptop. It listens directly to your MacBook's physical microphone using local **Faster-Whisper** speech-to-text, reasons with **Google Gemini 3.6 Flash** and **Anthropic Claude**, generates robust **Python, C, and C++** code with instant Gemini fallback, queries real-time internet search and live weather data, and vocalizes warm, human-like responses through your physical laptop speakers using **Microsoft Edge-TTS** neural voices.
+**January** is an intelligent, emotionally attuned operating system agent designed to run autonomously on your laptop. It listens directly to your MacBook's physical microphone using local **Faster-Whisper** speech-to-text, sees through your native Mac webcam with **AVFoundation** and sub-20ms **local face detection**, reasons with **Google Gemini Multimodal Vision**, generates robust **Python, C, and C++** code with instant Claude & Gemini fallback, queries real-time internet search and live weather data, and vocalizes warm, human-like responses through your physical laptop speakers using **Microsoft Edge-TTS** neural voices.
 
 January operates in two seamless modes:
 1. **Autonomous Background Daemon (`npm run dev`)**: Runs headlessly in the background, listening for wake phrases (**"Rise"**) and voice commands in the room even with no windows open.
@@ -17,8 +17,9 @@ January operates in two seamless modes:
 
 ```mermaid
 flowchart TD
-    subgraph Inputs ["🎙️ Physical Inputs & User Interfaces"]
+    subgraph Inputs ["🎙️ & 📷 Physical Inputs & User Interfaces"]
         MIC["🎙️ MacBook Microphone<br/>(16kHz PCM sounddevice)"]
+        CAM["📷 MacBook Camera Eyes<br/>(Native AVFoundation Swift Binary)"]
         CLI["💻 Interactive Terminal CLI<br/>([ME] Input REPL)"]
     end
 
@@ -29,11 +30,18 @@ flowchart TD
         STATE["🧠 Agent State Machine<br/>[PASSIVE] ⇋ [LISTENING] ⇋ [WORKING] ⇋ [SPEAKING]<br/>⇋ [SLEEPING] ('good night' / 'Rise')"]
     end
 
-    subgraph Intelligence ["🧠 Intelligence & Processing Engines"]
+    subgraph VisionEngine ["👁️ Native Computer Vision & Face Engine"]
+        SNAP["⚡ Swift Camera Snap Engine<br/>(1080p JPEG in ~0.6s via AVFoundation)"]
+        FACE["👤 Local Face & Presence Detector<br/>(OpenCV Haar-Cascade in <20ms)"]
+        PROF["📁 Local Profile Storage<br/>(server/data/faces/profile.json)"]
+    end
+
+    subgraph Intelligence ["🧠 Multi-Tier Intelligence & Fallback Pipeline"]
         EMO["🎭 Local Emotion Engine<br/>(7 Mood Archetypes & Prosody Attunement)"]
         WEB["🌐 Real-Time Internet & Weather<br/>(DuckDuckGo Search + wttr.in Live Weather)"]
         CODE["💻 Python / C / C++ Coding Engine<br/>(Claude 3.7 ➜ Instant Gemini Fallback)"]
-        GEM["✨ Google Gemini 3.6 Flash API<br/>(Reasoning, Vision, Indian Languages)"]
+        GEM["✨ Google Gemini Multimodal Vision<br/>(Reasoning, Object & Face Analysis, Indian Languages)"]
+        FALLBACK["🔄 Multi-Tier Fallback Loop<br/>(Gemini 3.5 ➜ Gemini 2.0 ➜ Offline Ollama)"]
     end
 
     subgraph Synthesis ["🔊 Vocal Synthesis & Physical Output"]
@@ -43,12 +51,15 @@ flowchart TD
     end
 
     MIC --> VAD --> STT --> STATE
+    CAM --> SNAP --> FACE --> PROF
+    FACE --> GEM
     CLI <--> SW <--> VAD
     CLI --> STATE
     STATE --> EMO
     STATE --> WEB
     STATE --> CODE
     STATE --> GEM
+    GEM --> FALLBACK
     EMO -.-> GEM
     WEB -.-> GEM
     CODE -.-> ROUTER
@@ -57,14 +68,93 @@ flowchart TD
 
     classDef primary fill:#1e1e2e,stroke:#89b4fa,stroke-width:2px,color:#cdd6f4;
     classDef highlight fill:#313244,stroke:#f9e2af,stroke-width:2px,color:#f9e2af;
-    classDef accent fill:#181825,stroke:#a6e3a1,stroke-width:2px,color:#a6e3a1;
+    classDef visionBox fill:#1e1e2e,stroke:#a6e3a1,stroke-width:2px,color:#a6e3a1;
     class Inputs,Synthesis primary;
     class Daemon,Intelligence highlight;
+    class VisionEngine visionBox;
 ```
 
 ---
 
-## 💻 Python, C & C++ Coding Engine (Workflow Flowchart)
+## 👁️ Native Computer Vision & Local Face Recognition
+
+January has native **vision capabilities** powered by macOS hardware acceleration, local edge face detection, and Google Gemini's multimodal models.
+
+```mermaid
+flowchart TD
+    A["👤 User Voice / CLI Command<br/>('What do you see?', 'Look at what I am holding', 'Who am I?', 'देखो मैं क्या पकड़ा हूँ')"] --> B{"Visual Intent Router<br/>(geminiService.ts)"}
+    
+    B -->|"Visual Question Detected"| C["⚡ Native Camera Snap Engine<br/>(server/camera_engine/camera_snap.swift)"]
+    
+    C --> D["📸 1920x1080 Frame Captured<br/>(Saved to server/data/captures/latest.jpg in ~0.6s)"]
+    
+    D --> E["👤 Local Face & Presence Detector<br/>(server/camera_engine/face_detect.py in <20ms)"]
+    
+    E --> F{"Face Detected in Frame?"}
+    F -->|"Yes"| G["Match with Enrolled Profile<br/>('Recognized Ashwin' from profile.json)"]
+    F -->|"No"| H["Telemetry: No Face in Foreground"]
+    
+    G --> I["✨ Multimodal Gemini Vision Payload<br/>(Base64 Frame + Local Telemetry + Prompt)"]
+    H --> I
+    
+    I --> J["🧠 Gemini Multimodal Vision Model<br/>(Identifies objects, clothing, documents, room context)"]
+    
+    J --> K["🖥️ Terminal / Web Output:<br/>Detailed Visual Description"]
+    J --> L["🗣️ Speaker Audio Output:<br/>Crisp, warm 1-2 sentence spoken summary with emotion"]
+
+    classDef visionNode fill:#1e1e2e,stroke:#a6e3a1,stroke-width:2px,color:#cdd6f4;
+    class A,C,D,E,I,J,K,L visionNode;
+```
+
+### 🔑 Vision Features & Privacy Architecture
+1. **Zero Cloud Image Leaks**: Snapshots are saved locally to [`server/data/captures/latest.jpg`](file:///Users/ashwintelangstark/Desktop/dot.files/PVT.PROJECTS/JANUARY/january-ai/server/data/captures/latest.jpg). Each new snapshot automatically overwrites the previous one to protect privacy and prevent disk bloat.
+2. **Lightning-Fast Native Capture**: Written in Swift (`AVFoundation`), bypassing heavy Python camera wrappers and taking crystal-clear 1080p photos in ~0.6s.
+3. **Edge Face Recognition**: Runs a multi-scale Haar-Cascade face detector in <20ms directly on your Mac CPU before contacting any AI model.
+4. **Natural Spoken Perception**: Understands objects you are holding (e.g. tools, mugs, phones), reads handwritten or printed text on paper, checks your sitting posture, and acknowledges you by name.
+
+---
+
+## 🔄 Multi-Tier Fallback Engine Loop
+
+January is built with an **automatic multi-tier resilience loop** that prevents downtime from API rate limits, daily quotas (RPD/RPM), or network drops.
+
+```mermaid
+flowchart TD
+    REQ["👤 User Request<br/>(Text / Voice / Vision / Coding)"] --> T1
+
+    subgraph Tier1 ["Tier 1: High-Speed Primary Models"]
+        T1["✨ Primary Gemini Model<br/>(gemini-3.5-flash-lite / gemini-3.6-flash)<br/>or Claude 3.7 for Coding"]
+    end
+
+    T1 -->|"200 OK Response"| SUCCESS["✅ Instant Response Delivered"]
+    T1 -->|"HTTP 429 (Rate Limit / Daily Quota Reached) or Network Error"| T2
+
+    subgraph Tier2 ["Tier 2: Alternative Free-Tier Gemini Cascade"]
+        T2["🔄 Switch to Secondary Gemini Model<br/>(gemini-2.0-flash / gemini-3.1-flash-lite)<br/>Separate Quota Bucket on Same Free API Key"]
+    end
+
+    T2 -->|"200 OK Response"| SUCCESS
+    T2 -->|"All Cloud Quotas Exhausted / Offline"| T3
+
+    subgraph Tier3 ["Tier 3: Local Offline Safety Net (Zero Internet)"]
+        T3["💻 Local Ollama Engine<br/>(qwen2.5:latest / llama3.1:8b / qwen2.5-coder)<br/>Runs 100% locally on your Mac hardware"]
+    end
+
+    T3 --> SUCCESS
+
+    classDef successNode fill:#1e1e2e,stroke:#a6e3a1,stroke-width:2px,color:#cdd6f4;
+    classDef tierNode fill:#313244,stroke:#89b4fa,stroke-width:2px,color:#cdd6f4;
+    class REQ,SUCCESS successNode;
+    class T1,T2,T3 tierNode;
+```
+
+### 💡 Why this Fallback Design is Powerful:
+- **Model-Specific Free Quotas**: Google AI Studio assigns rate limits (e.g., 1,500 Requests Per Day) **per model**. If you exhaust your daily limit on `gemini-3.6-flash`, January automatically switches to `gemini-2.0-flash` or `gemini-3.5-flash-lite` on the exact same free API key without throwing errors.
+- **Offline Self-Sufficiency**: If your internet drops or all cloud quotas are exhausted, January automatically drops down to your local **Ollama** LLM so your Mac assistant never stops working.
+
+---
+
+## 💻 Python, C & C++ Coding Engine
 
 ```mermaid
 flowchart TD
@@ -78,7 +168,7 @@ flowchart TD
     LC --> T1
     LCPP --> T1
 
-    subgraph Pipeline ["⚡ Multi-Tier Execution Pipeline"]
+    subgraph Pipeline ["⚡ Multi-Tier Coding Pipeline"]
         T1{"Tier 1: Anthropic Claude API<br/>(claude-3-7-sonnet)"}
         T2{"Tier 2: Google Gemini API<br/>(gemini-3.6-flash / 3.5-flash-lite)"}
         T3{"Tier 3: Local Coding Model<br/>(qwen2.5-coder / Ollama)"}
@@ -202,13 +292,16 @@ flowchart TD
 | Component | Technology | Purpose |
 | :--- | :--- | :--- |
 | **Runtime & Backend** | Node.js 22+, TypeScript, Express, `ws` (WebSockets) | Core state coordination, process daemon, and IPC routing |
-| **Reasoning Foundation** | Google Gemini 3.6 Flash & Gemini 3.5 Flash-Lite | Real-time question answering, conversational intelligence & vision |
+| **Computer Vision Engine** | macOS `AVFoundation` (Swift Binary) + OpenCV Haar Cascade | ~0.6s 1080p native camera capture & sub-20ms local face detection |
+| **Multimodal Vision Reasoning** | Google Gemini Multimodal Vision (`gemini-3.5-flash-lite`, `gemini-2.0-flash`) | Real-time object recognition, document reading, posture analysis |
+| **Multi-Tier Fallback Loop** | Gemini Cascade ➜ Local Ollama (`qwen2.5` / `llama3.1`) | Zero-downtime resilience against cloud rate limits & offline use |
 | **Python, C & C++ Coding Engine** | Anthropic Claude 3.7 Sonnet + Google Gemini Fallback | Clean, compilable Python 3, C (C99/C11), and modern C++ (C++17/20) with run instructions |
 | **Local Speech-to-Text** | Faster-Whisper (`tiny` multilingual model), `sounddevice` | Zero-latency local microphone listening & transcription |
 | **Neural Voice Synthesis** | Microsoft Edge-TTS, macOS Native `/usr/bin/afplay` | Free high-fidelity neural voice synthesis with emotional prosody |
 | **Emotion Engine** | Python 3.11+, Valence-Arousal NLP Classifier | Real-time emotion classification across 7 archetypes |
 | **Real-Time Internet Access** | DuckDuckGo Instant API, DuckDuckGo HTML, Wikipedia API | Real-time search with zero API key dependency |
 | **Live Weather Engine** | `wttr.in` JSON API & Open-Meteo Geocoding | Instant global live weather, humidity, wind & forecast |
+| **System Access & Resource Search** | Native macOS Spotlight `mdfind` + AppleScript + `open` | Instant file, folder, movie, video, and app opening |
 | **Terminal CLI** | Node.js `readline`, ANSI Color Utilities | Dual-section interactive console (`[ME]` / `[JANUARY]`) |
 
 ---
@@ -225,6 +318,13 @@ january-ai/
 │   ├── .env.example           # Example environment variables template
 │   ├── package.json           # Server dependencies & scripts
 │   ├── tsconfig.json          # TypeScript compiler configuration
+│   ├── data/                  # Local data & state persistence (No cloud DB required)
+│   │   ├── captures/          # Local camera frame cache (latest.jpg auto-overwritten)
+│   │   └── faces/             # Enrolled user identity profiles (profile.json)
+│   ├── camera_engine/         # Native vision & face recognition engines
+│   │   ├── camera_snap.swift  # Swift AVFoundation native camera snapshot tool
+│   │   ├── camera_snap        # High-performance compiled native binary
+│   │   └── face_detect.py     # Sub-20ms OpenCV Haar-cascade presence detector
 │   ├── audio_engine/          # Local Python audio & emotion engines
 │   │   ├── emotion_engine.py  # 100% free local emotion & sentiment classifier
 │   │   ├── mic_stt_engine.py  # sounddevice + Faster-Whisper microphone daemon
@@ -234,6 +334,9 @@ january-ai/
 │       ├── cli.ts             # Dual-section interactive Terminal CLI
 │       ├── config.ts          # Environment variables validation & defaults
 │       ├── types.ts           # State machine, WebSocket & tool type definitions
+│       ├── vision/
+│       │   ├── cameraService.ts # Swift camera snapshot invoker & frame cache
+│       │   └── faceEngine.ts  # Face detection manager & profile loader
 │       ├── emotions/
 │       │   └── emotionEngine.ts # TypeScript emotional memory & prompt injector
 │       ├── audio/
@@ -247,6 +350,8 @@ january-ai/
 │       │   └── liveClient.ts  # Multimodal Live API client & dispatcher
 │       └── tools/
 │           ├── index.ts       # Central tool registry & function declarations
+│           ├── visionTool.ts  # Multimodal camera & face analysis tool (see_and_analyze)
+│           ├── systemAccess.ts # Spotlight file, video, folder & app opener
 │           ├── webSearch.ts   # DuckDuckGo, Wikipedia & live weather fetcher
 │           ├── delegateCoding.ts # Python, C & C++ coding engine with Gemini fallback
 │           ├── launchApp.ts   # macOS native application opener
@@ -303,19 +408,22 @@ January speaks and understands **English** and **15 major Indian languages** nat
 
 ## ⚡ What All January Can Do
 
-1. **Python, C, and C++ Systems Programming**:
+1. **Native Computer Vision & Facial Recognition**:
+   - Ask: *"What do you see?"*, *"Look at what I'm holding"*, *"Who am I?"*, *"Read this note on my desk"*, or *"Check my posture"*.
+   - Uses native Swift `AVFoundation` camera capture and local OpenCV presence detection to analyze your environment with Google Gemini Vision.
+2. **Python, C, and C++ Systems Programming**:
    - Ask: *"Write a quicksort in Python with type hints"*, *"Code a linked list with malloc in C"*, or *"Write a thread-safe queue in modern C++"*.
    - Generates clean, robust, compilable code with exact compilation commands (`gcc`, `g++`, `python3`) and provides a concise verbal summary over audio without reading raw code syntax aloud.
    - Powered by Claude with instant, seamless **Google Gemini fallback** if Claude is unavailable.
-2. **Autonomous Room Voice Interaction**:
+3. **Autonomous Room Voice Interaction**:
    - Speak into your laptop room: *"Rise, what are the top news headlines today?"*
    - January wakes up, searches the web, and speaks the answer aloud through your laptop speakers.
-3. **Real-Time Live Web Search & Global Weather**:
+4. **macOS System File, Folder, Video & App Control**:
+   - Say: *"Open Safari"*, *"Open Downloads folder"*, *"Play my project demo video"*, or *"Find all PDF files on my Mac"*.
+5. **Real-Time Live Web Search & Global Weather**:
    - Ask: *"What is the weather in Hubli?"* or *"Who won the latest cricket match?"*
    - Fetches live temperature, weather conditions, wind, humidity, and web answers instantly with zero API keys.
-4. **macOS Native Tool Execution**:
-   - Say: *"Open Notes"*, *"Launch Safari"*, or *"Send WhatsApp to +14155552671 saying meeting at 4"*.
-5. **Smart Sleep & Standby**:
+6. **Smart Sleep & Standby**:
    - Say: *"Good night"* or *"Go to sleep"*. January enters silent standby until you say *"Rise"*.
 
 ---
@@ -345,7 +453,7 @@ Create `server/.env` based on `server/.env.example`:
 PORT=3001
 HOST=localhost
 
-# Google Gemini API Key
+# Google Gemini API Key (Free tier supported with auto-fallback)
 GEMINI_API="YOUR_GEMINI_API_KEY"
 GEMINI_MODEL=models/gemini-3.6-flash
 GEMINI_VOICE=Aoede
@@ -388,3 +496,4 @@ npm run cli
 
 ## 📄 License
 MIT License © 2026 Ashwin Telang Stark. All Rights Reserved.
+
