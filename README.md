@@ -418,18 +418,29 @@ When you speak or type to January, the emotion engine classifies your sentiment 
 
 ---
 
-## 🇮🇳 Multilingual Language Support
+## 🇮🇳 Multilingual Language Support & Persistent Session Locking
 
-January speaks and understands **English** and **15 major Indian languages** natively with authentic regional pronunciation, grammar, and script:
+January speaks and understands **English** and **15 major Indian languages** natively with authentic regional pronunciation, grammar, and official script:
 
-| Language | Script | Native Neural Voice (Edge-TTS) | Regional Tone / Context |
+### 🔒 Persistent Session Language & Phonetic Transliteration
+1. **Multi-Turn Language Locking**: When you ask January to speak in a specific language (e.g. *"Speak in Hindi"*, *"मराठीत बोला"*), January **locks into that language for all future questions and turns** until you explicitly command it to switch back (e.g. *"Switch to English"*).
+2. **Phonetic / Romanized Input Decoding**: If you speak or type in Romanized Hinglish/Manglish (e.g. *"mudje dekho"*, *"aap kaun ho"*, *"kasa ahes"*), January automatically interprets your phonetic intent into the target language and replies strictly in the **authentic native script** (e.g. Devanagari हिंदी / मराठी) with regional voice inflection.
+3. **Explicit Switching Commands**:
+   - Switch to Indian Language: *"Speak in Hindi"*, *"Talk in Marathi"*, *"Switch language to Gujarati"*, *"कन्नडमध्ये बोला"*
+   - Switch back to English: *"Switch to English"*, *"Speak in English"*, *"English please"*
+
+| Language | Script | Native Neural Voice (Edge-TTS) | Regional Tone & Phonetic Interpretation |
 | :--- | :--- | :--- | :--- |
-| **Hindi** (हिंदी) | Devanagari | `hi-IN-SwaraNeural` / `hi-IN-MadhurNeural` | Natural conversational Hindi & Hinglish |
-| **Bengali** (বাংলা) | Bengali | `bn-IN-TanishaaNeural` / `bn-IN-BashkarNeural` | Expressive West Bengal & Tripura Bengali |
-| **Marathi** (मराठी) | Devanagari | `mr-IN-AarohiNeural` / `mr-IN-ManoharNeural` | Fluent native Marathi |
-| **Gujarati** (ગુજરાતી) | Gujarati | `gu-IN-DhwaniNeural` / `gu-IN-NiranjanNeural` | Fluent native Gujarati |
-| **Punjabi** (ਪੰਜਾਬੀ) | Gurmukhi | `hi-IN-SwaraNeural` / `pa-IN` | Authentic Punjabi phonology |
-| **Odia** (ଓଡ଼ିଆ) | Odia | `hi-IN-SwaraNeural` / `or-IN` | Odia regional pronunciation |
+| **Hindi** (हिंदी) | Devanagari | `hi-IN-SwaraNeural` / `hi-IN-MadhurNeural` | Natural conversational Hindi & Hinglish ("mudje dekho" ➜ "मुझे देखो") |
+| **Marathi** (मराठी) | Devanagari | `mr-IN-AarohiNeural` / `mr-IN-ManoharNeural` | Fluent native Marathi ("kasa ahes" ➜ "कसा आहेस") |
+| **Bengali** (বাংলা) | Bengali | `bn-IN-TanishaaNeural` / `bn-IN-BashkarNeural` | Expressive West Bengal Bengali ("kemon acho" ➜ "কেমন আছো") |
+| **Gujarati** (ગુજરાતી) | Gujarati | `gu-IN-DhwaniNeural` / `gu-IN-NiranjanNeural` | Fluent native Gujarati ("kem cho" ➜ "કેમ છો") |
+| **Kannada** (ಕನ್ನಡ) | Kannada | `kn-IN-SapnaNeural` | Native Kannada ("hegiddira" ➜ "ಹೇಗಿದ್ದೀರಾ") |
+| **Tamil** (தமிழ்) | Tamil | `ta-IN-PallaviNeural` | Fluent Tamil ("eppadi irukkinga" ➜ "எப்படி இருக்கிறீர்கள்") |
+| **Telugu** (తెలుగు) | Telugu | `te-IN-ShrutiNeural` | Native Telugu ("ela unnaru" ➜ "ఎలా ఉన్నారు") |
+| **Malayalam** (മലയാളം) | Malayalam | `ml-IN-SobhanaNeural` | Expressive Malayalam ("engane und" ➜ "എങ്ങനെയുണ്ട്") |
+| **Punjabi** (ਪੰਜਾਬੀ) | Gurmukhi | `hi-IN-SwaraNeural` / `pa-IN` | Authentic Punjabi ("ki haal" ➜ "ਕੀ ਹਾਲ ਹੈ") |
+| **Odia** (ଓଡ଼ିଆ) | Odia | `hi-IN-SwaraNeural` / `or-IN` | Odia regional pronunciation ("kemiti achhanti" ➜ "କେମିତି ଅଛନ୍ତି") |
 | **Assamese** (অসমীয়া) | Assamese | `bn-IN-TanishaaNeural` | Northeastern Assamese inflection |
 | **Maithili** (मैथिली) | Devanagari | `hi-IN-SwaraNeural` | Bihari Maithili cadence |
 | **Kashmiri** (کٲشُر) | Perso-Arabic / Dev | `ur-IN-GulNeural` / `hi-IN-SwaraNeural` | Kashmiri phrasing & vocabulary |

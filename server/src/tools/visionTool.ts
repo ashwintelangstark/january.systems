@@ -8,6 +8,7 @@ const faceEngine = new FaceEngine();
 export interface SeeAndAnalyzeArgs {
   prompt?: string;
   focus?: 'general' | 'face' | 'text' | 'object' | 'posture';
+  languageGuidance?: string;
 }
 
 export interface VisionToolResult {
@@ -44,7 +45,7 @@ export async function seeAndAnalyze(args: SeeAndAnalyzeArgs = {}): Promise<Visio
   console.log(`[VisionTool] Face detection result: ${faceResult.message}`);
 
   // 3. Gemini Multimodal Vision Analysis
-  const visionSystemInstruction =
+  let visionSystemInstruction =
     'You are January, an intelligent AI operating system assistant with live camera vision.\n' +
     `The primary user and owner of this computer is ${enrolledUser.name}.\n` +
     (faceResult.hasFace
@@ -52,6 +53,10 @@ export async function seeAndAnalyze(args: SeeAndAnalyzeArgs = {}): Promise<Visio
       : '[LOCAL VISION TELEMETRY: No human face is detected in the immediate foreground.]\n') +
     'Provide a direct, perceptive, and natural analysis of what you see through the laptop camera.\n' +
     'Always address or acknowledge the user warmly if they appear in the frame. Keep responses direct, engaging, and suitable for spoken conversation (2-3 sentences max).';
+
+  if (args.languageGuidance) {
+    visionSystemInstruction += `\n\n[MANDATORY LANGUAGE & SCRIPT DIRECTIVE]:\n${args.languageGuidance}`;
+  }
 
   const candidateVisionModels = [
     'models/gemini-3.5-flash-lite',

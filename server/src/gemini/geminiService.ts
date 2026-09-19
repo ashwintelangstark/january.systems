@@ -17,98 +17,208 @@ export interface GeminiResponseResult {
   emotion?: EmotionResult;
 }
 
+export interface LanguageProfile {
+  langCode: string;
+  langName: string;
+  nativeName: string;
+  scriptName: string;
+  scriptGuidance: string;
+}
+
+const SUPPORTED_LANGUAGES: Record<string, LanguageProfile> = {
+  hindi: {
+    langCode: 'hi',
+    langName: 'Hindi',
+    nativeName: 'हिंदी',
+    scriptName: 'Devanagari',
+    scriptGuidance: 'Respond strictly in authentic, conversational Hindi using Devanagari script (हिंदी लिपि). If the user asks in Romanized Hindi / Hinglish (e.g., "mudje dekho", "aap kaise ho", "mujhe batao"), interpret their phonetic meaning and reply in authentic Devanagari Hindi (देवनागरी हिंदी). Do NOT write in Latin/English letters.',
+  },
+  marathi: {
+    langCode: 'mr',
+    langName: 'Marathi',
+    nativeName: 'मराठी',
+    scriptName: 'Devanagari',
+    scriptGuidance: 'Respond strictly in authentic, fluent Marathi using Devanagari script (मराठी लिपी). If the user asks in Romanized Marathi (e.g., "mala bagha", "kasa ahes", "kay challay"), interpret their phonetic meaning and reply in authentic Devanagari Marathi (देवनागरी मराठी). Do NOT write in Latin/English letters.',
+  },
+  bengali: {
+    langCode: 'bn',
+    langName: 'Bengali',
+    nativeName: 'বাংলা',
+    scriptName: 'Bengali',
+    scriptGuidance: 'Respond strictly in authentic Bengali using Bengali script (বাংলা লিপি). If the user asks in Romanized Bengali (e.g., "amake dekho", "kemon acho"), interpret and reply in Bengali script.',
+  },
+  gujarati: {
+    langCode: 'gu',
+    langName: 'Gujarati',
+    nativeName: 'ગુજરાતી',
+    scriptName: 'Gujarati',
+    scriptGuidance: 'Respond strictly in authentic Gujarati using Gujarati script (ગુજરાતી લિપિ). If the user asks in Romanized Gujarati (e.g., "kem cho", "mane joi"), interpret and reply in Gujarati script.',
+  },
+  kannada: {
+    langCode: 'kn',
+    langName: 'Kannada',
+    nativeName: 'ಕನ್ನಡ',
+    scriptName: 'Kannada',
+    scriptGuidance: 'Respond strictly in authentic Kannada using Kannada script (ಕನ್ನಡ ಲಿಪಿ). If the user asks in Romanized Kannada (e.g., "nannu nodi", "hegiddira"), interpret and reply in Kannada script.',
+  },
+  tamil: {
+    langCode: 'ta',
+    langName: 'Tamil',
+    nativeName: 'தமிழ்',
+    scriptName: 'Tamil',
+    scriptGuidance: 'Respond strictly in authentic Tamil using Tamil script (தமிழ் எழுத்து). If the user asks in Romanized Tamil (e.g., "ennai paarunga", "eppadi irukkinga"), interpret and reply in Tamil script.',
+  },
+  telugu: {
+    langCode: 'te',
+    langName: 'Telugu',
+    nativeName: 'తెలుగు',
+    scriptName: 'Telugu',
+    scriptGuidance: 'Respond strictly in authentic Telugu using Telugu script (తెలుగు లిపి). If the user asks in Romanized Telugu (e.g., "nannu chudandi", "ela unnaru"), interpret and reply in Telugu script.',
+  },
+  malayalam: {
+    langCode: 'ml',
+    langName: 'Malayalam',
+    nativeName: 'മലയാളം',
+    scriptName: 'Malayalam',
+    scriptGuidance: 'Respond strictly in authentic Malayalam using Malayalam script (മലയാള ലിപി). If the user asks in Romanized Malayalam (e.g., "engane und"), interpret and reply in Malayalam script.',
+  },
+  punjabi: {
+    langCode: 'pa',
+    langName: 'Punjabi',
+    nativeName: 'ਪੰਜਾਬੀ',
+    scriptName: 'Gurmukhi',
+    scriptGuidance: 'Respond strictly in authentic Punjabi using Gurmukhi script (ਗੁਰਮੁਖੀ ਲਿਪੀ). If the user asks in Romanized Punjabi (e.g., "ki haal"), interpret and reply in Gurmukhi script.',
+  },
+  urdu: {
+    langCode: 'ur',
+    langName: 'Urdu',
+    nativeName: 'اردو',
+    scriptName: 'Perso-Arabic',
+    scriptGuidance: 'Respond strictly in authentic, polite Urdu using Perso-Arabic script (اردو رسم الخط). If the user asks in Romanized Urdu, interpret and reply in Perso-Arabic script.',
+  },
+  sanskrit: {
+    langCode: 'sa',
+    langName: 'Sanskrit',
+    nativeName: 'संस्कृतम्',
+    scriptName: 'Devanagari',
+    scriptGuidance: 'Respond strictly in classical Sanskrit using Devanagari script (संस्कृतम्).',
+  },
+  nepali: {
+    langCode: 'ne',
+    langName: 'Nepali',
+    nativeName: 'नेपाली',
+    scriptName: 'Devanagari',
+    scriptGuidance: 'Respond strictly in authentic Nepali using Devanagari script (नेपाली).',
+  },
+  odia: {
+    langCode: 'or',
+    langName: 'Odia',
+    nativeName: 'ଓଡ଼ିଆ',
+    scriptName: 'Odia',
+    scriptGuidance: 'Respond strictly in authentic Odia using Odia script (ଓଡ଼ିଆ).',
+  },
+  assamese: {
+    langCode: 'as',
+    langName: 'Assamese',
+    nativeName: 'অসমীয়া',
+    scriptName: 'Assamese',
+    scriptGuidance: 'Respond strictly in authentic Assamese using Assamese script (অসমীয়া).',
+  },
+};
+
 /**
- * Detects the language used in the prompt to enforce strict language mirroring
+ * Detects whether the user is explicitly requesting a language switch,
+ * or using Romanized/native script for a supported language.
  */
-function detectPromptLanguage(prompt: string): { langName: string; scriptGuidance: string } | null {
-  const lower = prompt.toLowerCase();
+function inspectPromptLanguage(prompt: string): { action: 'switch_english' | 'set_language' | 'none'; profile?: LanguageProfile } {
+  const lower = prompt.toLowerCase().trim();
 
-  // Explicit language mentions or phrasing
-  if (/\b(hindi|हिंदी)\b/i.test(prompt) || /(?:hindi\s*me|hindi\s*mein|हिंदी\s*में)/i.test(prompt)) {
-    return { langName: 'Hindi', scriptGuidance: 'Respond strictly in authentic, conversational Hindi using Devanagari script (हिंदी).' };
-  }
-  if (/\b(marathi|मराठी)\b/i.test(prompt) || /(?:marathi\s*madhe|marathit|मराठीत|मराठी\s*मध्ये)/i.test(prompt)) {
-    return { langName: 'Marathi', scriptGuidance: 'Respond strictly in authentic, fluent Marathi using Devanagari script (मराठी).' };
-  }
-  if (/\b(bengali|bangla|বাংলা)\b/i.test(prompt) || /(?:bangla\s*y|bangla\s*te|বাংলায়)/i.test(prompt)) {
-    return { langName: 'Bengali', scriptGuidance: 'Respond strictly in authentic, fluent Bengali using Bengali script (বাংলা).' };
-  }
-  if (/\b(gujarati|ગુજરાતી)\b/i.test(prompt) || /(?:gujarati\s*ma|ગુજરાતીમાં)/i.test(prompt)) {
-    return { langName: 'Gujarati', scriptGuidance: 'Respond strictly in authentic, fluent Gujarati using Gujarati script (ગુજરાતી).' };
-  }
-  if (/\b(urdu|اردو)\b/i.test(prompt) || /(?:urdu\s*me|urdu\s*mein|اردو\s*میں)/i.test(prompt)) {
-    return { langName: 'Urdu', scriptGuidance: 'Respond strictly in authentic, polite Urdu using Perso-Arabic script (اردو).' };
-  }
-  if (/\b(kannada|ಕನ್ನಡ)\b/i.test(prompt) || /(?:kannada\s*dalli|ಕನ್ನಡದಲ್ಲಿ)/i.test(prompt)) {
-    return { langName: 'Kannada', scriptGuidance: 'Respond strictly in authentic, fluent Kannada using Kannada script (ಕನ್ನಡ).' };
-  }
-  if (/\b(tamil|தமிழ்)\b/i.test(prompt) || /(?:tamil\s*il|தமிழில்)/i.test(prompt)) {
-    return { langName: 'Tamil', scriptGuidance: 'Respond strictly in authentic, fluent Tamil using Tamil script (தமிழ்).' };
-  }
-  if (/\b(telugu|తెలుగు)\b/i.test(prompt) || /(?:telugu\s*lo|తెలుగులో)/i.test(prompt)) {
-    return { langName: 'Telugu', scriptGuidance: 'Respond strictly in authentic, fluent Telugu using Telugu script (తెలుగు).' };
-  }
-  if (/\b(malayalam|മലയാളം)\b/i.test(prompt) || /(?:malayalam\s*il|മലയാളത്തിൽ)/i.test(prompt)) {
-    return { langName: 'Malayalam', scriptGuidance: 'Respond strictly in authentic, fluent Malayalam using Malayalam script (മലയാളം).' };
-  }
-  if (/\b(punjabi|ਪੰਜਾਬੀ)\b/i.test(prompt) || /(?:punjabi\s*vich|ਪੰਜਾਬੀ\s*ਵਿੱਚ)/i.test(prompt)) {
-    return { langName: 'Punjabi', scriptGuidance: 'Respond strictly in authentic, fluent Punjabi using Gurmukhi script (ਪੰਜਾਬੀ).' };
-  }
-  if (/\b(sanskrit|संस्कृतम्|संस्कृत)\b/i.test(prompt)) {
-    return { langName: 'Sanskrit', scriptGuidance: 'Respond strictly in classical Sanskrit using Devanagari script (संस्कृतम्).' };
-  }
-  if (/\b(nepali|नेपाली)\b/i.test(prompt)) {
-    return { langName: 'Nepali', scriptGuidance: 'Respond strictly in authentic, fluent Nepali using Devanagari script (नेपाली).' };
-  }
-  if (/\b(odia|oriya|ଓଡ଼ିଆ)\b/i.test(prompt)) {
-    return { langName: 'Odia', scriptGuidance: 'Respond strictly in authentic, fluent Odia using Odia script (ଓଡ଼ିଆ).' };
-  }
-  if (/\b(assamese|অসমীয়া)\b/i.test(prompt)) {
-    return { langName: 'Assamese', scriptGuidance: 'Respond strictly in authentic Assamese using Assamese script (অসমীয়া).' };
+  // 1. Explicit Switch to English
+  if (
+    /(?:switch|change|speak|talk|reply|respond|converse)\s+(?:to|in|back to|language to)\s+english\b/i.test(lower) ||
+    /^(?:in\s+english|english\s+please|english\s+only)$/i.test(lower) ||
+    /(?:अंग्रेजी|इंग्लिश)\s*(?:में|मध्ये|बोलो|बोला|करो)/i.test(prompt)
+  ) {
+    return { action: 'switch_english' };
   }
 
-  // Unicode Script inspection for direct native text
+  // 2. Explicit Language Switch Requests (e.g. "Speak in Hindi", "Switch to Marathi")
+  for (const [key, profile] of Object.entries(SUPPORTED_LANGUAGES)) {
+    const nameRegex = new RegExp(`(?:switch|change|speak|talk|reply|respond|converse)\\s+(?:to|in|back to|language to|with\\s+me\\s+in)\\s+${key}\\b`, 'i');
+    if (nameRegex.test(lower)) {
+      return { action: 'set_language', profile };
+    }
+  }
+
+  // 3. Direct Native Unicode Script Inspection
   if (/[\u0980-\u09FF]/.test(prompt)) {
-    return { langName: 'Bengali/Assamese', scriptGuidance: 'The user wrote in Bengali/Assamese. Respond strictly in Bengali using Bengali script.' };
+    return { action: 'set_language', profile: SUPPORTED_LANGUAGES.bengali };
   }
   if (/[\u0A80-\u0AFF]/.test(prompt)) {
-    return { langName: 'Gujarati', scriptGuidance: 'The user wrote in Gujarati. Respond strictly in Gujarati using Gujarati script.' };
+    return { action: 'set_language', profile: SUPPORTED_LANGUAGES.gujarati };
   }
   if (/[\u0A00-\u0A7F]/.test(prompt)) {
-    return { langName: 'Punjabi', scriptGuidance: 'The user wrote in Gurmukhi. Respond strictly in Punjabi using Gurmukhi script.' };
+    return { action: 'set_language', profile: SUPPORTED_LANGUAGES.punjabi };
   }
   if (/[\u0B00-\u0B7F]/.test(prompt)) {
-    return { langName: 'Odia', scriptGuidance: 'The user wrote in Odia. Respond strictly in Odia using Odia script.' };
+    return { action: 'set_language', profile: SUPPORTED_LANGUAGES.odia };
   }
   if (/[\u0600-\u06FF]/.test(prompt)) {
-    return { langName: 'Urdu', scriptGuidance: 'The user wrote in Urdu (Perso-Arabic). Respond strictly in Urdu using Perso-Arabic script.' };
+    return { action: 'set_language', profile: SUPPORTED_LANGUAGES.urdu };
   }
   if (/[\u0C80-\u0CFF]/.test(prompt)) {
-    return { langName: 'Kannada', scriptGuidance: 'The user wrote in Kannada. Respond strictly in Kannada using Kannada script.' };
+    return { action: 'set_language', profile: SUPPORTED_LANGUAGES.kannada };
   }
   if (/[\u0B80-\u0BFF]/.test(prompt)) {
-    return { langName: 'Tamil', scriptGuidance: 'The user wrote in Tamil. Respond strictly in Tamil using Tamil script.' };
+    return { action: 'set_language', profile: SUPPORTED_LANGUAGES.tamil };
   }
   if (/[\u0C00-\u0C7F]/.test(prompt)) {
-    return { langName: 'Telugu', scriptGuidance: 'The user wrote in Telugu. Respond strictly in Telugu using Telugu script.' };
+    return { action: 'set_language', profile: SUPPORTED_LANGUAGES.telugu };
   }
   if (/[\u0D00-\u0D7F]/.test(prompt)) {
-    return { langName: 'Malayalam', scriptGuidance: 'The user wrote in Malayalam. Respond strictly in Malayalam using Malayalam script.' };
+    return { action: 'set_language', profile: SUPPORTED_LANGUAGES.malayalam };
   }
   if (/[\u0900-\u097F]/.test(prompt)) {
-    if (/(?:आहे|नाही|काय|तुम्ही|सांगा|कसे|नमस्कार|झाले)/.test(prompt)) {
-      return { langName: 'Marathi', scriptGuidance: 'The user wrote in Marathi. Respond strictly in Marathi using Devanagari script.' };
+    if (/(?:आहे|नाही|काय|तुम्ही|सांगा|कसे|नमस्कार|झाले|बघा|दाखवा|पहा)/.test(prompt)) {
+      return { action: 'set_language', profile: SUPPORTED_LANGUAGES.marathi };
     }
     if (/(?:छ|छैन|गर्ने|हुने|तपाईं|हुन्छ|नेपाल)/.test(prompt)) {
-      return { langName: 'Nepali', scriptGuidance: 'The user wrote in Nepali. Respond strictly in Nepali using Devanagari script.' };
+      return { action: 'set_language', profile: SUPPORTED_LANGUAGES.nepali };
     }
     if (/(?:अस्ति|भवति|नमः|स्वाहा|अहम्|सुप्रभातम्)/.test(prompt)) {
-      return { langName: 'Sanskrit', scriptGuidance: 'The user wrote in Sanskrit. Respond strictly in Sanskrit using Devanagari script.' };
+      return { action: 'set_language', profile: SUPPORTED_LANGUAGES.sanskrit };
     }
-    return { langName: 'Hindi', scriptGuidance: 'The user wrote in Hindi. Respond strictly in Hindi using Devanagari script.' };
+    return { action: 'set_language', profile: SUPPORTED_LANGUAGES.hindi };
   }
 
-  return null;
+  // 4. Romanized / Phonetic Transliteration Signatures (Hinglish, Manglish, etc.)
+  // e.g. "mudje dekho", "mujhe dekho", "kya haal hai", "kasa ahes", "mala bagha"
+  if (/\b(mudje|mujhe|dekho|kya|kaise|kaun|kahan|mera|meri|mere|aap|tum|karo|batao|suno|accha|theek|hai|hain|nahi|nahin|shakal|chehra|tasveer|pata|chala|padho)\b/i.test(lower)) {
+    return { action: 'set_language', profile: SUPPORTED_LANGUAGES.hindi };
+  }
+  if (/\b(mala|tula|bagha|dakhva|kasa|ahes|kay|challay|ahe|nahi|sang|sanga|kashala|uthva|paha|bolto|bolte)\b/i.test(lower)) {
+    return { action: 'set_language', profile: SUPPORTED_LANGUAGES.marathi };
+  }
+  if (/\b(amake|tumi|kemon|acho|bhalo|dekho|bolo|ki|korcho)\b/i.test(lower)) {
+    return { action: 'set_language', profile: SUPPORTED_LANGUAGES.bengali };
+  }
+  if (/\b(kem|cho|saras|su|chhe|mane|tamne|joi)\b/i.test(lower)) {
+    return { action: 'set_language', profile: SUPPORTED_LANGUAGES.gujarati };
+  }
+  if (/\b(nannu|nodi|hegiddira|yenu|samachara|heli)\b/i.test(lower)) {
+    return { action: 'set_language', profile: SUPPORTED_LANGUAGES.kannada };
+  }
+  if (/\b(ennai|parunga|eppadi|irukkinga|enna|solla)\b/i.test(lower)) {
+    return { action: 'set_language', profile: SUPPORTED_LANGUAGES.tamil };
+  }
+  if (/\b(nannu|chudandi|ela|unnaru|enti|sangathi|cheppandi)\b/i.test(lower)) {
+    return { action: 'set_language', profile: SUPPORTED_LANGUAGES.telugu };
+  }
+  if (/\b(engane|und|sukhamano|parayu)\b/i.test(lower)) {
+    return { action: 'set_language', profile: SUPPORTED_LANGUAGES.malayalam };
+  }
+
+  return { action: 'none' };
 }
 
 export class GeminiService {
@@ -118,6 +228,8 @@ export class GeminiService {
     'models/gemini-3.1-flash-lite',
   ];
   private emotionEngine: EmotionEngine;
+  // Persistent active session language state
+  private currentSessionLanguage: LanguageProfile | null = null;
 
   constructor() {
     this.emotionEngine = new EmotionEngine();
@@ -125,6 +237,15 @@ export class GeminiService {
 
   public getEmotionEngine(): EmotionEngine {
     return this.emotionEngine;
+  }
+
+  public getActiveLanguage(): LanguageProfile | null {
+    return this.currentSessionLanguage;
+  }
+
+  public setSessionLanguage(profile: LanguageProfile | null): void {
+    this.currentSessionLanguage = profile;
+    console.log(`[GeminiService] Session language locked to: ${profile ? profile.langName + ' (' + profile.nativeName + ')' : 'English'}`);
   }
 
   /**
@@ -136,15 +257,31 @@ export class GeminiService {
     const emotionResult = await this.emotionEngine.analyzeText(prompt);
     const emotionPromptContext = this.emotionEngine.getEmotionalPromptContext(emotionResult.emotion);
 
+    // Update Persistent Session Language State
+    const langInspection = inspectPromptLanguage(prompt);
+    if (langInspection.action === 'switch_english') {
+      this.currentSessionLanguage = null;
+      console.log('[GeminiService] Language switch requested: Reverting to English.');
+    } else if (langInspection.action === 'set_language' && langInspection.profile) {
+      this.currentSessionLanguage = langInspection.profile;
+      console.log(`[GeminiService] Language switch / detection: Locked to ${langInspection.profile.langName} (${langInspection.profile.nativeName}) for current and all future turns.`);
+    }
+
+    const activeLang = this.currentSessionLanguage;
+
     // 0. Check for Camera Vision, Object Identification & Facial Recognition
     const isVisionQuery =
       (/\b(look|see|camera|holding|what('s|\s+is)\s+this|what\s+do\s+you\s+see|who\s+am\s+i|recognize\s+me|can\s+you\s+see|my\s+face|posture|read\s+this|examine|surroundings|my\s+room)\b/i.test(lower) ||
-       /(?:देखो|पहचानो|क्या\s*दिख\s*रहा|बघा|ओळखतोस)/i.test(prompt)) &&
+       /\b(mudje\s+dekho|mujhe\s+dekho|dekho|mera\s+photo|kya\s+dikha|kya\s+dekh\s+rahe\s+ho|mera\s+chehra|meri\s+shakal|kasa\s+disto|mala\s+bagha|bagha|dakhva|paha|nannu\s+nodi|ennai\s+paarunga|chudandi)\b/i.test(lower) ||
+       /(?:देखो|पहचानो|क्या\s*दिख\s*रहा|मुझे\s*देखो|बघा|ओळखतोस|दाखवा|पहा)/i.test(prompt)) &&
       !lower.startsWith('search ') && !lower.startsWith('look up ') && !lower.startsWith('find ') && !lower.startsWith('open ') && !lower.includes('code');
 
     if (isVisionQuery) {
-      console.log(`[GeminiService] Activating Camera Eyes & Face Engine for: "${prompt}"...`);
-      const visionResult = await executeTool('see_and_analyze', { prompt });
+      console.log(`[GeminiService] Activating Camera Eyes & Face Engine for: "${prompt}" [Active Lang: ${activeLang?.langName || 'English'}]...`);
+      const visionResult = await executeTool('see_and_analyze', {
+        prompt,
+        languageGuidance: activeLang ? activeLang.scriptGuidance : undefined,
+      });
       return {
         text: visionResult.description,
         verbalSummary: visionResult.verbalSummary,
@@ -294,22 +431,27 @@ export class GeminiService {
       }
     }
 
-    // 3. Language Detection & Strict Mirroring
-    const detectedLang = detectPromptLanguage(prompt);
-    let languageDirective =
-      'CRITICAL LANGUAGE MIRRORING RULE:\n' +
-      'Strictly detect the language used in the user\'s prompt. If the user speaks, prompts, or asks in a specific language (Hindi, Marathi, Bengali, Gujarati, Kannada, Tamil, Telugu, Malayalam, Punjabi, Odia, Assamese, Urdu, Sanskrit, Nepali, English, etc.), you MUST reply 100% in THAT EXACT SAME LANGUAGE using its authentic native script.\n' +
-      'If the user switches languages from a previous message, you MUST immediately switch your response to match the user\'s new language. Never reply in English when prompted in an Indian language.';
-
-    if (detectedLang) {
-      languageDirective += `\n[MANDATORY CURRENT LANGUAGE TARGET: ${detectedLang.langName.toUpperCase()}] -> ${detectedLang.scriptGuidance}`;
+    // 3. Multilingual Persistence & Strict Native Script Mandate
+    let languageDirective = '';
+    if (activeLang) {
+      languageDirective =
+        `[CRITICAL ACTIVE SESSION LANGUAGE: ${activeLang.langName.toUpperCase()} (${activeLang.nativeName})]\n` +
+        `1. The user has locked the conversation language into ${activeLang.langName}. You MUST remain in ${activeLang.langName} for this and all following turns.\n` +
+        `2. If the user's input is in Romanized / Phonetic transliteration (e.g. "mudje dekho", "kya kar rahe ho", "kasa ahes", "tumi kemon acho"), accurately interpret the phonetic meaning into ${activeLang.langName}.\n` +
+        `3. You MUST write your complete response 100% in ${activeLang.langName} using native ${activeLang.scriptName} script (${activeLang.nativeName} लिपि/अक्षर).\n` +
+        `4. DO NOT write your response in Latin/English alphabet (Hinglish/Latinized) - output proper native ${activeLang.scriptName} characters only.\n` +
+        `5. Do NOT switch back to English unless the user explicitly commands you to switch to English.\n` +
+        `Target Guidance: ${activeLang.scriptGuidance}`;
+    } else {
+      languageDirective =
+        'Respond naturally in conversational English unless the user asks in an Indian language or requests an explicit language switch.';
     }
 
     // Try Google Gemini API servers with candidate models
     if (config.geminiApiKey) {
       for (const model of this.candidateModels) {
         try {
-          console.log(`[GeminiService] Analyzing question with Gemini API servers (${model}) [Emotion: ${emotionResult.emotion}, Lang: ${detectedLang?.langName || 'English'}]...`);
+          console.log(`[GeminiService] Analyzing question with Gemini API servers (${model}) [Emotion: ${emotionResult.emotion}, Active Lang: ${activeLang?.langName || 'English'}]...`);
 
           const promptWithWeb = prompt + (webSearchContext ? `\n\nContext from Live Web Search:\n${webSearchContext}` : '');
 
