@@ -56,6 +56,18 @@ app.get('/api/profile', (req, res) => {
   res.json(geminiService.getLearnedProfileEngine().getProfile());
 });
 
+app.post('/api/camera/toggle', (req, res) => {
+  const { action, fps } = req.body || {};
+  if (action === 'open') {
+    visualActivityMonitor.openEyes(fps || 60);
+  } else if (action === 'close') {
+    visualActivityMonitor.closeEyes();
+  } else {
+    visualActivityMonitor.toggleEyes();
+  }
+  res.json({ status: 'ok', ...visualActivityMonitor.getEyesStatus() });
+});
+
 emotionEngine.on('emotionChange', (emotion) => {
   broadcast({ type: 'emotion_update', payload: emotion });
 });
@@ -285,6 +297,37 @@ async function handleUnifiedPrompt(text: string, source: 'voice' | 'text' = 'voi
     },
   });
 
+  const lowerPrompt = clean.toLowerCase();
+
+  // Camera Eyes Wake & Sleep Commands
+  if (lowerPrompt === 'eyes open' || lowerPrompt === 'open eyes' || lowerPrompt === 'camera open' || lowerPrompt === 'open camera' || lowerPrompt === 'eyes on') {
+    visualActivityMonitor.openEyes(60);
+    const msg = 'Eyes open. Real-time 60 FPS camera vision activated.';
+    console.log(`👁️ [Coordinator] Camera wake word recognized: EYES OPEN (60 FPS Stream).`);
+    broadcast({
+      type: 'transcript',
+      payload: { role: 'assistant', text: msg, isFinal: true, timestamp: Date.now() },
+    });
+    setAgentState('speaking', 'Camera eyes opened');
+    await systemSpeaker.speakText(msg, { emotion: 'joy' });
+    setAgentState('passive', 'Speech completed');
+    return;
+  }
+
+  if (lowerPrompt === 'eyes closed' || lowerPrompt === 'close eyes' || lowerPrompt === 'camera closed' || lowerPrompt === 'close camera' || lowerPrompt === 'eyes off') {
+    visualActivityMonitor.closeEyes();
+    const msg = 'Eyes closed. Camera monitoring paused and hardware turned off.';
+    console.log(`🌙 [Coordinator] Camera sleep word recognized: EYES CLOSED.`);
+    broadcast({
+      type: 'transcript',
+      payload: { role: 'assistant', text: msg, isFinal: true, timestamp: Date.now() },
+    });
+    setAgentState('speaking', 'Camera eyes closed');
+    await systemSpeaker.speakText(msg, { emotion: 'calm' });
+    setAgentState('passive', 'Speech completed');
+    return;
+  }
+
   setAgentState('working', `Processing ${source} command`);
 
   try {
@@ -389,6 +432,30 @@ systemMic.on('speech', async (text: string) => {
         timestamp: Date.now(),
       },
     });
+    return;
+  }
+
+  if (lower === 'eyes open' || lower === 'open eyes' || lower === 'camera open' || lower === 'eyes on') {
+    visualActivityMonitor.openEyes(60);
+    const msg = 'Eyes open. Real-time 60 FPS camera vision activated.';
+    console.log(`👁️ [Coordinator] Mic speech camera wake word: EYES OPEN.`);
+    broadcast({
+      type: 'transcript',
+      payload: { role: 'assistant', text: msg, isFinal: true, timestamp: Date.now() },
+    });
+    await systemSpeaker.speakText(msg, { emotion: 'joy' });
+    return;
+  }
+
+  if (lower === 'eyes closed' || lower === 'close eyes' || lower === 'camera closed' || lower === 'eyes off') {
+    visualActivityMonitor.closeEyes();
+    const msg = 'Eyes closed. Camera monitoring paused and hardware turned off.';
+    console.log(`🌙 [Coordinator] Mic speech camera sleep word: EYES CLOSED.`);
+    broadcast({
+      type: 'transcript',
+      payload: { role: 'assistant', text: msg, isFinal: true, timestamp: Date.now() },
+    });
+    await systemSpeaker.speakText(msg, { emotion: 'calm' });
     return;
   }
 

@@ -4,6 +4,7 @@ import { FaceEngine, FaceDetectionResult } from './faceEngine.js';
 import { config } from '../config.js';
 
 export interface VisualContextState {
+  isEyesOpen: boolean;
   isPresent: boolean;
   identifiedUser: string;
   faceCount: number;
@@ -13,6 +14,7 @@ export interface VisualContextState {
   lastSnapshotPath?: string;
   summary: string;
   lastUpdated: number;
+  fps: number;
 }
 
 export interface ActivityMonitorOptions {
@@ -28,6 +30,7 @@ export class VisualActivityMonitor extends EventEmitter {
   private timer: NodeJS.Timeout | null = null;
   private isRunning = false;
   private isProcessingTick = false;
+  private isEyesOpen = false;
 
   private currentContext: VisualContextState;
   private lastPresenceState = false;
@@ -38,28 +41,76 @@ export class VisualActivityMonitor extends EventEmitter {
     super();
     this.cameraService = new CameraService();
     this.faceEngine = new FaceEngine();
-    this.pollingIntervalMs = options.pollingIntervalMs || 4000; // Fast local check every 4s
-    this.ambientVisionCadenceMs = options.ambientVisionCadenceMs || 45000; // Gemini multimodal check every 45s
+    this.pollingIntervalMs = options.pollingIntervalMs || 1000; // 1s high-speed local check when eyes open
+    this.ambientVisionCadenceMs = options.ambientVisionCadenceMs || 30000; // Gemini check every 30s when active
 
     const enrolled = this.faceEngine.getEnrolledUser();
     this.currentContext = {
+      isEyesOpen: false,
       isPresent: false,
       identifiedUser: enrolled.name || 'Ashwin',
       faceCount: 0,
       posture: 'unknown',
       activity: 'Standing by',
       expression: 'Neutral',
-      summary: 'Camera monitor initializing...',
+      summary: 'Camera eyes are closed.',
       lastUpdated: Date.now(),
+      fps: 0,
+    };
+  }
+
+  public openEyes(targetFps = 60): void {
+    if (this.isEyesOpen) return;
+    this.isEyesOpen = true;
+    this.currentContext.isEyesOpen = true;
+    this.currentContext.fps = targetFps;
+    this.currentContext.summary = 'Camera eyes open. Real-time 60 FPS video stream active.';
+
+    console.log(`👁️ [VisualActivityMonitor] EYES OPEN: Activating continuous ${targetFps} FPS camera hardware stream...`);
+    this.cameraService.startStreaming(targetFps);
+    this.start();
+    this.emit('eyesStateChange', { isEyesOpen: true, fps: targetFps });
+  }
+
+  public closeEyes(): void {
+    if (!this.isEyesOpen) return;
+    this.isEyesOpen = false;
+    this.currentContext.isEyesOpen = false;
+    this.currentContext.isPresent = false;
+    this.currentContext.fps = 0;
+    this.currentContext.activity = 'Camera Off';
+    this.currentContext.summary = 'Camera eyes are closed.';
+    this.lastPresenceState = false;
+
+    console.log('🌙 [VisualActivityMonitor] EYES CLOSED: Stopping camera stream & releasing hardware (LED off)...');
+    this.cameraService.stopStreaming();
+    this.stop();
+    this.emit('eyesStateChange', { isEyesOpen: false, fps: 0 });
+  }
+
+  public toggleEyes(): boolean {
+    if (this.isEyesOpen) {
+      this.closeEyes();
+      return false;
+    } else {
+      this.openEyes(60);
+      return true;
+    }
+  }
+
+  public getEyesStatus(): { isEyesOpen: boolean; fps: number; isStreaming: boolean } {
+    return {
+      isEyesOpen: this.isEyesOpen,
+      fps: this.currentContext.fps,
+      isStreaming: this.cameraService.isStreaming(),
     };
   }
 
   public start(): void {
     if (this.isRunning) return;
     this.isRunning = true;
-    console.log(`👁️ [VisualActivityMonitor] Continuous camera monitoring started (Local edge interval: ${this.pollingIntervalMs / 1000}s)...`);
+    console.log(`👁️ [VisualActivityMonitor] Vision Cortex loop started...`);
     
-    // Initial quick snapshot
     this.tick();
     this.timer = setInterval(() => this.tick(), this.pollingIntervalMs);
   }
@@ -71,7 +122,7 @@ export class VisualActivityMonitor extends EventEmitter {
       clearInterval(this.timer);
       this.timer = null;
     }
-    console.log('👁️ [VisualActivityMonitor] Continuous camera monitoring stopped.');
+    console.log('👁️ [VisualActivityMonitor] Vision Cortex loop stopped.');
   }
 
   public getCurrentContext(): VisualContextState {
@@ -79,8 +130,11 @@ export class VisualActivityMonitor extends EventEmitter {
   }
 
   public getFormattedVisualSummary(): string {
+    if (!this.isEyesOpen) {
+      return `Camera eyes are currently closed. Vision monitoring is turned off.`;
+    }
     if (!this.currentContext.isPresent) {
-      return `User is not in front of the laptop camera.`;
+      return `Camera eyes are open (60 FPS stream active). User is currently not in front of the laptop.`;
     }
     return (
       `User ${this.currentContext.identifiedUser} is currently present in front of the laptop.\n` +
@@ -90,12 +144,13 @@ export class VisualActivityMonitor extends EventEmitter {
   }
 
   private async tick(): Promise<void> {
+    if (!this.isEyesOpen) return;
     if (this.isProcessingTick) return;
     this.isProcessingTick = true;
 
     try {
-      // 1. Capture snapshot from native camera
-      const snapshot = await this.cameraService.captureSnapshot();
+      // 1. Fetch zero-lag 60 FPS frame directly from hardware camera stream
+      const snapshot = await this.cameraService.getLatestFrame();
       if (!snapshot.success || !snapshot.filePath || !snapshot.base64) {
         return;
       }

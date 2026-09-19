@@ -181,6 +181,41 @@ async function handleUserInput(text: string) {
     return;
   }
 
+  // Camera Wake / Sleep Commands
+  if (lower === 'eyes open' || lower === 'open eyes' || lower === 'camera open' || lower === 'eyes on') {
+    try {
+      await fetch(`http://${config.host}:${config.port}/api/camera/toggle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'open', fps: 60 }),
+      });
+    } catch {}
+    console.log(`\n${yellow(bold('┌── [JANUARY : CAMERA CORTEX] ───────────────────────────────────────'))}`);
+    console.log(`│ ${green('👁️ EYES OPEN:')} ${white('Continuous 60 FPS hardware video stream activated.')}`);
+    console.log(`│ ${dim('Real-time zero-lag vision tracking is active.')}`);
+    console.log(`${yellow(bold('└────────────────────────────────────────────────────────────────────'))}`);
+    await systemSpeaker.speakText('Eyes open. Real-time 60 FPS camera vision activated.', { emotion: 'joy' });
+    promptUser();
+    return;
+  }
+
+  if (lower === 'eyes closed' || lower === 'close eyes' || lower === 'camera closed' || lower === 'eyes off') {
+    try {
+      await fetch(`http://${config.host}:${config.port}/api/camera/toggle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'close' }),
+      });
+    } catch {}
+    console.log(`\n${yellow(bold('┌── [JANUARY : CAMERA CORTEX] ───────────────────────────────────────'))}`);
+    console.log(`│ ${purple('🌙 EYES CLOSED:')} ${white('Camera hardware process terminated (LED off, 0% CPU).')}`);
+    console.log(`│ ${dim('Camera eyes will remain completely off until commanded to open.')}`);
+    console.log(`${yellow(bold('└────────────────────────────────────────────────────────────────────'))}`);
+    await systemSpeaker.speakText('Eyes closed. Camera monitoring paused.', { emotion: 'calm' });
+    promptUser();
+    return;
+  }
+
   if (lower === 'profile' || lower === 'memory' || lower === 'stats') {
     const profile = geminiService.getLearnedProfileEngine().getProfile();
     const topCoding = Object.entries(profile.preferredCodingLanguages)
