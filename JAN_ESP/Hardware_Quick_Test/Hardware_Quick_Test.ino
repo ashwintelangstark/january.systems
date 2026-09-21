@@ -5,9 +5,17 @@
  * Complete self-contained single-file diagnostic sketch.
  * No external headers needed. Requires only Adafruit_SSD1306 library.
  *
- * Circuit Verification:
- * - 0.96" OLED: VCC->5V/3.3V, GND->GND, SCL->GPIO 22, SDA->GPIO 21
- * - ISD1820:    VCC->5V,      GND->GND, REC->GPIO 4,   PLAYE->GPIO 5
+ * Your OLED Pin Order (GND is Pin 1!):
+ * - Pin 1 (GND) ──> ESP32 GND (Breadboard Negative Rail)
+ * - Pin 2 (VCC) ──> ESP32 3V3 or 5V (Breadboard Positive Rail)
+ * - Pin 3 (SCL) ──> ESP32 GPIO 22 (I2C Clock)
+ * - Pin 4 (SDA) ──> ESP32 GPIO 21 (I2C Data)
+ *
+ * ISD1820 Voice Module:
+ * - VCC ──────────> 5V
+ * - GND ──────────> GND
+ * - REC ──────────> ESP32 GPIO 4
+ * - PLAYE ────────> ESP32 GPIO 5
  * ============================================================================
  */
 
@@ -27,6 +35,9 @@
 #define ISD_PLAYE_PIN  5
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+bool displayInitialized = false;
+unsigned long lastScanRetry = 0;
 
 // Eye Geometry
 const int16_t leftX  = 38;
@@ -67,46 +78,54 @@ void triggerSpeakerPlayback() {
   digitalWrite(ISD_PLAYE_PIN, LOW);
   delay(10);
   digitalWrite(ISD_PLAYE_PIN, HIGH);
-  delay(100);
+  delay(120);
   digitalWrite(ISD_PLAYE_PIN, LOW);
 }
 
-void runRecordAndPlayRoutine() {
-  Serial.println(F("\n🎙️ [Audio Routine] Starting automatic 3-second Mic Record & Speaker Play test..."));
-  
-  // 1. Show Recording prompt on OLED
-  display.clearDisplay();
-  display.drawRoundRect(4, 4, 120, 56, 4, SSD1306_WHITE);
-  display.setCursor(14, 16);
-  display.setTextSize(1);
-  display.print(F("[ 🔴 RECORDING ]"));
-  display.setCursor(14, 34);
-  display.print(F("Speak to Mic now!"));
-  display.display();
+bool tryInitDisplay() {
+  uint8_t addresses[] = {0x3C, 0x3D};
+  uint8_t found = 0;
 
-  // Hold REC pin HIGH for 2.5 seconds to capture voice
-  digitalWrite(ISD_REC_PIN, HIGH);
-  delay(2500);
-  digitalWrite(ISD_REC_PIN, LOW);
-  Serial.println(F("⏹️ [Audio Routine] Recording complete. Saved to ISD1820."));
+  for (uint8_t a : addresses) {
+    Wire.beginTransmission(a);
+    if (Wire.endTransmission() == 0) {
+      found = a;
+      Serial.print(F("✅ [I2C Scan] Found OLED at 0x"));
+      Serial.println(a, HEX);
+      break;
+    }
+  }
 
-  // 2. Show Playback prompt on OLED & pulse PLAYE
-  display.clearDisplay();
-  display.drawRoundRect(4, 4, 120, 56, 4, SSD1306_WHITE);
-  display.setCursor(14, 16);
-  display.setTextSize(1);
-  display.print(F("[ 🔊 PLAYBACK ]"));
-  display.setCursor(14, 34);
-  display.print(F("Playing your voice!"));
-  display.display();
+  if (found == 0) {
+    found = 0x3C; // forced fallback attempt
+  }
 
-  triggerSpeakerPlayback();
-  delay(3000);
+  if (display.begin(SSD1306_SWITCHCAPVCC, found)) {
+    display.dim(false); // Maximum brightness
+    display.clearDisplay();
+    display.setTextColor(SSD1306_WHITE);
+    display.setTextSize(1);
+    
+    // Draw immediate test frame
+    display.drawRoundRect(2, 2, 124, 60, 4, SSD1306_WHITE);
+    display.setCursor(16, 20);
+    display.print(F("JANUARY AI"));
+    display.setCursor(16, 36);
+    display.print(F("OLED CONNECTED!"));
+    display.display();
+    delay(1000);
+
+    displayInitialized = true;
+    Serial.println(F("🎉 [Display] OLED 128x64 INITIALIZED & TEST SCREEN DISPLAYED!"));
+    return true;
+  }
+
+  return false;
 }
 
 void setup() {
   Serial.begin(115200);
-  delay(600);
+  delay(800);
 
   Serial.println(F("\n=================================================="));
   Serial.println(F("⚡ JANUARY AI — OLED FACE & SPEAKER QUICK TEST"));
@@ -118,61 +137,48 @@ void setup() {
   digitalWrite(ISD_REC_PIN, LOW);
   digitalWrite(ISD_PLAYE_PIN, LOW);
 
-  // Initialize I2C Bus at 100kHz for breadboard wire stability
+  // Initialize I2C Bus at 100kHz for breadboard jumper stability
   Wire.begin(SDA_PIN, SCL_PIN);
   Wire.setClock(100000);
 
-  // Scan I2C
-  Serial.println(F("🔍 [I2C Scan] Checking for OLED on SDA=GPIO 21, SCL=GPIO 22..."));
-  uint8_t targetAddr = 0;
-  uint8_t probeAddrs[] = {0x3C, 0x3D};
+  // Immediate Speaker Test on Boot
+  Serial.println(F("🔊 [Boot Test] Pulsing GPIO 5 (PLAYE) to test speaker..."));
+  triggerSpeakerPlayback();
 
-  for (uint8_t a : probeAddrs) {
-    Wire.beginTransmission(a);
-    if (Wire.endTransmission() == 0) {
-      targetAddr = a;
-      Serial.print(F("   ✅ Found I2C display device at 0x"));
-      Serial.println(a, HEX);
-      break;
-    }
+  // Try initial display connect
+  if (!tryInitDisplay()) {
+    Serial.println(F("\n⚠️ [OLED NOT DETECTED YET]"));
+    Serial.println(F("👉 YOUR MODULE IS: [Pin 1: GND] [Pin 2: VCC] [Pin 3: SCL] [Pin 4: SDA]"));
+    Serial.println(F("   Make sure:"));
+    Serial.println(F("   1. Pin 1 (GND) -> Connected to ESP32 GND (NOT 5V!)"));
+    Serial.println(F("   2. Pin 2 (VCC) -> Connected to ESP32 3V3 or 5V (NOT GND!)"));
+    Serial.println(F("   3. Pin 3 (SCL) -> Connected to ESP32 GPIO 22"));
+    Serial.println(F("   4. Pin 4 (SDA) -> Connected to ESP32 GPIO 21"));
+    Serial.println(F("🔄 Auto-detecting in background every 2 seconds... Swap the wires now if reversed!\n"));
   }
 
-  if (targetAddr == 0) {
-    targetAddr = 0x3C; // fallback
-    Serial.println(F("   ⚠️ No ACK received during scan. Attempting forced init on 0x3C..."));
-  }
-
-  // Initialize SSD1306 OLED
-  if (!display.begin(SSD1306_SWITCHCAPVCC, targetAddr)) {
-    Serial.println(F("❌ [Display Error] Could not initialize OLED at 0x3C or 0x3D!"));
-    Serial.println(F("   Troubleshooting checklist:"));
-    Serial.println(F("   1. Check pin order on your OLED module: GND, VCC, SCL, SDA vs VCC, GND, SCL, SDA."));
-    Serial.println(F("   2. Verify SCL is on ESP32 GPIO 22."));
-    Serial.println(F("   3. Verify SDA is on ESP32 GPIO 21."));
-    Serial.println(F("   4. Verify OLED VCC is on 5V (or 3.3V) and GND is connected."));
-  } else {
-    Serial.println(F("✅ [Display] OLED 128x64 initialized successfully!"));
-    display.dim(false); // Max brightness
-  }
-
-  // Run the 3-second Record & Speaker Play test
-  runRecordAndPlayRoutine();
-
-  Serial.println(F("\n✨ Entering continuous interactive January Face loop."));
-  Serial.println(F("💡 Commands you can type in Serial Monitor:"));
-  Serial.println(F("   'play'  -> Trigger speaker playback"));
-  Serial.println(F("   'rec'   -> Record voice for 2.5 seconds"));
-  Serial.println(F("   'blink' -> Force eyelid blink"));
-  Serial.println(F("==================================================\n"));
-  
   lastBlink = millis();
   lastGaze = millis();
+  lastScanRetry = millis();
 }
 
 void loop() {
   unsigned long now = millis();
 
-  // Natural Gaze Shifts
+  // If display wasn't detected on boot, retry automatically
+  if (!displayInitialized) {
+    if (now - lastScanRetry > 2000) {
+      lastScanRetry = now;
+      Serial.println(F("🔍 Scanning I2C bus for OLED on GPIO 21 (SDA) and GPIO 22 (SCL)..."));
+      if (tryInitDisplay()) {
+        Serial.println(F("✨ OLED detected and turned on!"));
+      }
+    }
+    delay(50);
+    return;
+  }
+
+  // 1. Natural Gaze Shifts
   if (now - lastGaze > 3500) {
     lastGaze = now;
     uint8_t r = random(0, 3);
@@ -181,7 +187,7 @@ void loop() {
     else { gazeX = 5; gazeY = 1; }
   }
 
-  // Periodic Natural Blinking
+  // 2. Periodic Natural Blinking
   if (!isBlinking && (now - lastBlink > 3500)) {
     isBlinking = true;
     blinkStep = 1;
@@ -205,14 +211,14 @@ void loop() {
     }
   }
 
-  // Draw Face onto Display
+  // 3. Draw January Animated Face
   display.clearDisplay();
 
   // Left & Right Eyes
   drawEye(leftX, eyeY, eyeW, (int16_t)currentHeight, gazeX, gazeY);
   drawEye(rightX, eyeY, eyeW, (int16_t)currentHeight, gazeX, gazeY);
 
-  // Cute smiling mouth curve
+  // Cute smiling mouth
   for (int8_t t = 0; t < 2; t++) {
     display.drawCircleHelper(64, 46 + t, 10, 0x4 | 0x8, SSD1306_WHITE);
   }
@@ -225,7 +231,7 @@ void loop() {
 
   display.display();
 
-  // Serial Monitor Command Listener
+  // 4. Process Incoming Serial Commands
   if (Serial.available() > 0) {
     String cmd = Serial.readStringUntil('\n');
     cmd.trim();
@@ -234,7 +240,12 @@ void loop() {
     if (cmd == "play") {
       triggerSpeakerPlayback();
     } else if (cmd == "rec") {
-      runRecordAndPlayRoutine();
+      Serial.println(F("🔴 Recording audio for 2.5 seconds... Speak now!"));
+      digitalWrite(ISD_REC_PIN, HIGH);
+      delay(2500);
+      digitalWrite(ISD_REC_PIN, LOW);
+      Serial.println(F("⏹️ Recording saved. Playing back..."));
+      triggerSpeakerPlayback();
     } else if (cmd == "blink") {
       isBlinking = true;
       blinkStep = 1;
