@@ -31,16 +31,35 @@ DisplayEyes::DisplayEyes()
 
 bool DisplayEyes::begin() {
   Wire.begin(OLED_SDA_PIN, OLED_SCL_PIN);
-  Wire.setClock(400000); // 400kHz fast I2C mode for high FPS
+  Wire.setClock(100000); // 100kHz standard mode for breadboard jumper wire stability
 
-  if (!display.begin(SSD1306_SWITCHCAPVCC, OLED_I2C_ADDR)) {
-    // Retry with secondary 0x3D address if 0x3C fails
-    if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3D)) {
-      Serial.println(F("❌ [Display] SSD1306 OLED allocation failed!"));
+  // Scan & test common OLED I2C addresses (0x3C and 0x3D)
+  uint8_t foundAddr = 0;
+  uint8_t probeAddrs[] = {0x3C, 0x3D};
+  
+  for (uint8_t addr : probeAddrs) {
+    Wire.beginTransmission(addr);
+    if (Wire.endTransmission() == 0) {
+      foundAddr = addr;
+      Serial.print(F("🔍 [Display] I2C device detected at address 0x"));
+      Serial.println(addr, HEX);
+      break;
+    }
+  }
+
+  uint8_t targetAddr = (foundAddr != 0) ? foundAddr : OLED_I2C_ADDR;
+
+  if (!display.begin(SSD1306_SWITCHCAPVCC, targetAddr)) {
+    // Retry alternative address
+    uint8_t altAddr = (targetAddr == 0x3C) ? 0x3D : 0x3C;
+    if (!display.begin(SSD1306_SWITCHCAPVCC, altAddr)) {
+      Serial.println(F("❌ [Display] SSD1306 OLED initialization failed at 0x3C and 0x3D!"));
+      Serial.println(F("   💡 Check: 1) VCC connected to 5V / 3.3V, 2) GND connected, 3) SDA=GPIO 21, SCL=GPIO 22"));
       return false;
     }
   }
 
+  display.dim(false); // Maximize display brightness
   display.clearDisplay();
   display.setTextColor(SSD1306_WHITE);
   display.setTextSize(1);
@@ -52,7 +71,7 @@ bool DisplayEyes::begin() {
   display.setCursor(20, 36);
   display.print(F("INITIALIZING..."));
   display.display();
-  delay(1200);
+  delay(800);
 
   lastBlinkTime = millis();
   lastSaccadeTime = millis();

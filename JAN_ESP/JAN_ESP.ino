@@ -166,15 +166,20 @@ void setup() {
   Serial.println(F("=================================================="));
 
   // 1. Initialize 0.96" OLED Vector Eye Engine
-  if (!displayEyes.begin()) {
-    Serial.println(F("❌ Fatal: OLED initialization failed. Halting."));
-    while (1) delay(1000);
+  bool displayOk = displayEyes.begin();
+  if (!displayOk) {
+    Serial.println(F("⚠️ Warning: OLED display not responding. Retrying in background."));
+    Serial.println(F("   Check OLED pins: VCC -> 5V/3.3V, GND -> GND, SCL -> GPIO 22, SDA -> GPIO 21"));
   }
 
   // 2. Initialize ISD1820 Voice Recording & Playback
   audioController.begin();
 
-  // 3. Initialize Wi-Fi & WebSocket Connection
+  // 3. Boot Hardware Audio Test (Pulse PLAYE on boot to verify speaker)
+  Serial.println(F("🔊 [Boot Test] Pulsing PLAYE (GPIO 5) to test speaker playback..."));
+  audioController.playRecording(2000);
+
+  // 4. Initialize Wi-Fi & WebSocket Connection (if enabled in config.h)
   networkClient.onEmotion(onEmotionReceived);
   networkClient.onState(onStateReceived);
   networkClient.onAudioLevel(onAudioLevelReceived);

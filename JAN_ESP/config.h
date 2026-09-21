@@ -30,8 +30,8 @@
 #define SERVER_HOST     "192.168.1.100"
 #define SERVER_PORT     3001
 
-// Set to true to connect to January Server over WebSocket, false for standalone offline mode
-#define ENABLE_WIFI     true
+// Set to true to connect to January Server over WebSocket, false for standalone offline test mode
+#define ENABLE_WIFI     false
 
 // ============================================================================
 // 3. ANIMATION & TIMING CONSTANTS
