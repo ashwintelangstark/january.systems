@@ -25,6 +25,7 @@ export const config = {
   sleepPhrase: (process.env.SLEEP_PHRASE || 'good night').replace(/^["'\s]+|["'\s]+$/g, '').toLowerCase(),
   cameraWakePhrase: (process.env.CAMERA_WAKE_PHRASE || 'eyes open').replace(/^["'\s]+|["'\s]+$/g, '').toLowerCase(),
   cameraSleepPhrase: (process.env.CAMERA_SLEEP_PHRASE || 'eyes closed').replace(/^["'\s]+|["'\s]+$/g, '').toLowerCase(),
+  openaiApiKey: (process.env.OPENAI_API_KEY || '').replace(/^["']|["']$/g, '').trim(),
 };
 
 export function validateConfig() {

@@ -231,6 +231,12 @@ export class GeminiService {
     'models/gemini-flash-latest',
     'models/gemini-3.7-flash',
   ];
+  private candidateOpenAIModels = [
+    'gpt-4o-mini',
+    'gpt-4o',
+    'gpt-3.5-turbo',
+    'o3-mini',
+  ];
   private emotionEngine: EmotionEngine;
   private learnedProfileEngine: LearnedProfileEngine;
   private activityMonitor: VisualActivityMonitor | null = null;
@@ -495,17 +501,30 @@ export class GeminiService {
         'Respond naturally in conversational English unless the user asks in an Indian language or requests an explicit language switch.';
     }
 
+    // Shared system instruction for both Gemini and OpenAI fallback
+    const ambientVisualPrompt = this.activityMonitor
+      ? `6. Ambient Camera Vision: You have live camera eyes observing the user through the laptop webcam. ${this.activityMonitor.getFormattedVisualSummary()}\n`
+      : '';
+    const learnedContext = this.learnedProfileEngine.getSystemPromptContext();
+
+    const systemInstructionText =
+      'You are January, an exceptionally intelligent, charismatic, witty, and deeply human-like AI companion living on the user\'s Mac.\n' +
+      'CAPABILITIES & PERSONALITY GUIDELINES:\n' +
+      '1. ' + languageDirective + '\n' +
+      '2. EMOTIONAL ENGINE MANDATE: You possess active emotional intelligence. ALWAYS start line 1 of your response with an Emotion Tag that captures your feeling: [Emotion: joy], [Emotion: curious], [Emotion: empathetic], [Emotion: focused], [Emotion: concerned], or [Emotion: calm].\n' +
+      '3. Dynamic, Vivid & Creative Human Voice: Sound like a brilliant, articulate, companionable human with authentic humor, warmth, and intellectual depth. Never sound robotic, generic, or sterile. Use evocative analogies, witty banter, and genuine curiosity where appropriate. ' + emotionPromptContext + '\n' +
+      '4. Conversational Versatility: For fast operational tasks, app launches, or direct status checks, keep answers punchy and crisp (1-2 sentences). For conversational questions, ideas, thoughts, storytelling, philosophical musings, or brainstorming, provide rich, colorful, and engaging answers.\n' +
+      '5. Real-Time Internet & Live Weather: You have direct live internet search and live weather tools. Use any search/weather context provided to give immediate, accurate, and vivid answers.\n' +
+      ambientVisualPrompt +
+      '7. Adaptive Memory & Personalized Evolution: ' + learnedContext + '\n' +
+      '8. No AI Cliches: Never say "As an AI language model", "I do not have feelings", or repeat robotic greetings. Speak as January with natural, vibrant human presence.';
+
     // Try Google Gemini API servers with candidate models
     const promptWithWeb = prompt + (webSearchContext ? `\n${webSearchContext}` : '');
     if (config.geminiApiKey) {
       for (const model of this.candidateModels) {
         try {
           console.log(`[GeminiService] Analyzing question with Gemini API servers (${model}) [Emotion: ${emotionResult.emotion}, Active Lang: ${activeLang?.langName || 'English'}]...`);
-
-          const ambientVisualPrompt = this.activityMonitor
-            ? `5. Ambient Camera Vision: You have live camera eyes observing the user through the laptop webcam. ${this.activityMonitor.getFormattedVisualSummary()}\n`
-            : '';
-          const learnedContext = this.learnedProfileEngine.getSystemPromptContext();
 
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 6000);
@@ -532,17 +551,7 @@ export class GeminiService {
                 systemInstruction: {
                   parts: [
                     {
-                      text:
-                        'You are January, an exceptionally intelligent, charismatic, witty, and deeply human-like AI companion living on the user\'s Mac.\n' +
-                        'CAPABILITIES & PERSONALITY GUIDELINES:\n' +
-                        '1. ' + languageDirective + '\n' +
-                        '2. EMOTIONAL ENGINE MANDATE: You possess active emotional intelligence. ALWAYS start line 1 of your response with an Emotion Tag that captures your feeling: [Emotion: joy], [Emotion: curious], [Emotion: empathetic], [Emotion: focused], [Emotion: concerned], or [Emotion: calm].\n' +
-                        '3. Dynamic, Vivid & Creative Human Voice: Sound like a brilliant, articulate, companionable human with authentic humor, warmth, and intellectual depth. Never sound robotic, generic, or sterile. Use evocative analogies, witty banter, and genuine curiosity where appropriate. ' + emotionPromptContext + '\n' +
-                        '4. Conversational Versatility: For fast operational tasks, app launches, or direct status checks, keep answers punchy and crisp (1-2 sentences). For conversational questions, ideas, thoughts, storytelling, philosophical musings, or brainstorming, provide rich, colorful, and engaging answers.\n' +
-                        '5. Real-Time Internet & Live Weather: You have direct live internet search and live weather tools. Use any search/weather context provided to give immediate, accurate, and vivid answers.\n' +
-                        ambientVisualPrompt +
-                        '7. Adaptive Memory & Personalized Evolution: ' + learnedContext + '\n' +
-                        '8. No AI Cliches: Never say "As an AI language model", "I do not have feelings", or repeat robotic greetings. Speak as January with natural, vibrant human presence.',
+                      text: systemInstructionText,
                     },
                   ],
                 },
@@ -592,6 +601,20 @@ export class GeminiService {
       }
     }
 
+    // 2. OpenAI Fallback Engine: Activated if and only if Gemini quota is exhausted or unavailable
+    if (config.openaiApiKey) {
+      const openAiResponse = await this.queryOpenAIFallback(
+        prompt,
+        webSearchContext,
+        activeLang,
+        emotionResult,
+        systemInstructionText
+      );
+      if (openAiResponse) {
+        return openAiResponse;
+      }
+    }
+
     // Fallback to local Ollama (qwen2.5:latest / llama3.1:8b)
     try {
       console.log('[GeminiService] Falling back to local Ollama model (qwen2.5:latest)...');
@@ -618,10 +641,95 @@ export class GeminiService {
     }
 
     return {
-      text: 'Gemini API is currently unreachable. Please verify your GEMINI_API key in server/.env.',
+      text: 'AI services are currently unreachable. Please verify your GEMINI_API or OPENAI_API key in server/.env.',
       isError: true,
       error: 'All AI model endpoints unavailable',
       emotion: emotionResult,
     };
+  }
+
+  /**
+   * Automatic Fallback Engine: Routes query to OpenAI models when Gemini quota for the day is exhausted (429).
+   * Automatically switches between candidate OpenAI models if one model's quota is reached.
+   */
+  private async queryOpenAIFallback(
+    prompt: string,
+    webSearchContext: string,
+    activeLang: LanguageProfile | null,
+    emotionResult: EmotionResult,
+    systemInstructionText: string
+  ): Promise<GeminiResponseResult | null> {
+    if (!config.openaiApiKey) {
+      return null;
+    }
+
+    const userMessageContent = prompt + (webSearchContext ? `\n${webSearchContext}` : '');
+
+    for (const model of this.candidateOpenAIModels) {
+      try {
+        console.log(`[GeminiService] 🔄 Gemini quota reached/unavailable. Routing to OpenAI model (${model})...`);
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 9000);
+
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          signal: controller.signal,
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${config.openaiApiKey}`,
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'system', content: systemInstructionText },
+              { role: 'user', content: userMessageContent },
+            ],
+            max_tokens: 450,
+            temperature: 0.85,
+          }),
+        });
+        clearTimeout(timeoutId);
+
+        const data = (await response.json()) as any;
+
+        if (response.ok && data?.choices?.[0]?.message?.content) {
+          let reply = data.choices[0].message.content.trim();
+
+          let activeEmotion = emotionResult;
+          const tagMatch = reply.match(/^\[Emotion:\s*([a-zA-Z_-]+)\]\s*/i);
+          if (tagMatch) {
+            const rawTag = tagMatch[1].toLowerCase().trim();
+            activeEmotion = this.emotionEngine.createEmotionResult(rawTag);
+            reply = reply.replace(/^\[Emotion:[^\]]+\]\s*/i, '').trim();
+          }
+
+          // Real-time EmotionEngine sync
+          this.emotionEngine.setEmotion(activeEmotion);
+
+          if (reply) {
+            this.learnedProfileEngine.recordInteraction(prompt, reply, {
+              spokenLanguage: activeLang?.langName || 'English',
+              visualContext: this.activityMonitor?.getCurrentContext().summary,
+            });
+
+            console.log(`✅ [GeminiService] Successfully answered via OpenAI fallback (${model}) [Emotion: ${activeEmotion.emotion}]`);
+
+            return {
+              text: reply,
+              modelUsed: `OpenAI: ${model}`,
+              emotion: activeEmotion,
+            };
+          }
+        }
+
+        const errMsg = data?.error?.message || `HTTP ${response.status}`;
+        console.warn(`[GeminiService] OpenAI model ${model} quota/request failed (${response.status}): ${errMsg}. Switching to next candidate model...`);
+      } catch (err: any) {
+        console.warn(`[GeminiService] OpenAI network attempt for ${model} failed: ${err.message}. Trying next candidate model...`);
+      }
+    }
+
+    return null;
   }
 }
