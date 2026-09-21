@@ -54,12 +54,97 @@ export class EmotionEngine extends EventEmitter {
     return result;
   }
 
-  public setEmotion(result: EmotionResult): void {
+  public setEmotion(result: EmotionResult, forceEmit = false): void {
     const changed = this.currentEmotion.emotion !== result.emotion;
     this.currentEmotion = result;
-    if (changed) {
-      this.emit('emotionChange', this.currentEmotion);
+    console.log(`✨ [EmotionEngine] Active Emotion: ${result.emotion.toUpperCase()} (Tone: ${result.tone}, Color: ${result.color})`);
+    this.emit('emotionChange', this.currentEmotion);
+  }
+
+  public createEmotionResult(emotionInput: string): EmotionResult {
+    const norm = (emotionInput || '').toLowerCase().trim();
+
+    if (/\b(joy|happy|excited|cheerful|playful|radiant|enthusiastic|delighted|celebratory)\b/.test(norm)) {
+      return {
+        emotion: 'joy',
+        valence: 0.85,
+        arousal: 0.75,
+        tone: 'cheerful & radiant',
+        pitch: '+4Hz',
+        rate: '+5%',
+        color: '#F59E0B',
+      };
     }
+
+    if (/\b(curious|inquisitive|intrigued|wonder|interested|fascinated|pondering)\b/.test(norm)) {
+      return {
+        emotion: 'curious',
+        valence: 0.5,
+        arousal: 0.65,
+        tone: 'inquisitive & intrigued',
+        pitch: '+2Hz',
+        rate: '+2%',
+        color: '#00F5FF',
+      };
+    }
+
+    if (/\b(empathetic|caring|compassionate|gentle|warm|supportive|kind|comforting)\b/.test(norm)) {
+      return {
+        emotion: 'empathetic',
+        valence: -0.2,
+        arousal: -0.2,
+        tone: 'gentle & comforting',
+        pitch: '-2Hz',
+        rate: '-4%',
+        color: '#10B981',
+      };
+    }
+
+    if (/\b(focused|analytical|thoughtful|serious|coding|sharp|productive|technical|deep)\b/.test(norm)) {
+      return {
+        emotion: 'focused',
+        valence: 0.4,
+        arousal: 0.55,
+        tone: 'sharp & collaborative',
+        pitch: '+0Hz',
+        rate: '+0%',
+        color: '#8B5CF6',
+      };
+    }
+
+    if (/\b(concerned|worried|urgent|protective|troubleshooting|alert|careful)\b/.test(norm)) {
+      return {
+        emotion: 'concerned',
+        valence: -0.3,
+        arousal: 0.6,
+        tone: 'supportive & reassuring',
+        pitch: '+0Hz',
+        rate: '+0%',
+        color: '#EF4444',
+      };
+    }
+
+    if (/\b(calm|peaceful|relaxed|serene|soothing|mellow|zen|quiet)\b/.test(norm)) {
+      return {
+        emotion: 'calm',
+        valence: 0.6,
+        arousal: -0.3,
+        tone: 'serene & grounded',
+        pitch: '-1Hz',
+        rate: '-3%',
+        color: '#06B6D4',
+      };
+    }
+
+    return {
+      emotion: 'curious',
+      valence: 0.4,
+      arousal: 0.5,
+      tone: 'conversational & warm',
+      pitch: '+0Hz',
+      rate: '+0%',
+      color: '#00F5FF',
+    };
   }
 
   /**

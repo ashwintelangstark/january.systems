@@ -225,9 +225,11 @@ function inspectPromptLanguage(prompt: string): { action: 'switch_english' | 'se
 
 export class GeminiService {
   private candidateModels = [
+    'models/gemini-flash-lite-latest',
     'models/gemini-3-flash-preview',
-    'models/gemini-flash-latest',
     'models/gemini-3.5-flash-lite',
+    'models/gemini-flash-latest',
+    'models/gemini-3.7-flash',
   ];
   private emotionEngine: EmotionEngine;
   private learnedProfileEngine: LearnedProfileEngine;
@@ -292,6 +294,9 @@ export class GeminiService {
 
     if (isVisionQuery) {
       console.log(`[GeminiService] Activating Camera Eyes & Face Engine for: "${prompt}" [Active Lang: ${activeLang?.langName || 'English'}]...`);
+      const visEmotion = this.emotionEngine.createEmotionResult('curious');
+      this.emotionEngine.setEmotion(visEmotion);
+
       const visionResult = await executeTool('see_and_analyze', {
         prompt,
         languageGuidance: activeLang ? activeLang.scriptGuidance : undefined,
@@ -307,7 +312,7 @@ export class GeminiService {
         verbalSummary: visionResult.verbalSummary,
         toolCalls: [{ name: 'see_and_analyze', args: { prompt }, result: visionResult }],
         modelUsed: visionResult.modelUsed || 'Gemini Multimodal Vision',
-        emotion: emotionResult,
+        emotion: visEmotion,
       };
     }
 
@@ -341,13 +346,16 @@ export class GeminiService {
         resourceType = 'app';
       }
 
+      const openEmotion = this.emotionEngine.createEmotionResult('joy');
+      this.emotionEngine.setEmotion(openEmotion);
+
       console.log(`[GeminiService] Executing open_system_resource: "${target}" (type: ${resourceType})`);
       const toolRes = await executeTool('open_system_resource', { query: target, resourceType });
       return {
         text: toolRes.message,
         verbalSummary: toolRes.message,
         toolCalls: [{ name: 'open_system_resource', args: { query: target, resourceType }, result: toolRes }],
-        emotion: emotionResult,
+        emotion: openEmotion,
       };
     }
 
@@ -367,13 +375,16 @@ export class GeminiService {
       else if (lower.includes('folder')) fileType = 'folder';
       else if (lower.includes('document') || lower.includes('pdf')) fileType = 'document';
 
+      const searchEmotion = this.emotionEngine.createEmotionResult('focused');
+      this.emotionEngine.setEmotion(searchEmotion);
+
       console.log(`[GeminiService] Searching system files: "${queryTerm}" (type: ${fileType})`);
       const searchRes = await executeTool('search_system_files', { query: queryTerm, fileType });
       return {
         text: searchRes.message,
         verbalSummary: searchRes.results?.length ? `I found ${searchRes.results.length} matching items on your Mac.` : `No items found matching ${queryTerm}.`,
         toolCalls: [{ name: 'search_system_files', args: { query: queryTerm, fileType }, result: searchRes }],
-        emotion: emotionResult,
+        emotion: searchEmotion,
       };
     }
 
@@ -382,12 +393,15 @@ export class GeminiService {
     if (isListFolder) {
       const folderMatch = lower.match(/\b(downloads|desktop|documents|movies|pictures|music|home)\b/i);
       const folderName = folderMatch ? folderMatch[1] : 'Desktop';
+      const listEmotion = this.emotionEngine.createEmotionResult('calm');
+      this.emotionEngine.setEmotion(listEmotion);
+
       const listRes = await executeTool('list_system_folder', { folderPath: folderName });
       return {
         text: listRes.message,
         verbalSummary: `Here are the contents of your ${folderName} folder.`,
         toolCalls: [{ name: 'list_system_folder', args: { folderPath: folderName }, result: listRes }],
-        emotion: emotionResult,
+        emotion: listEmotion,
       };
     }
 
@@ -395,12 +409,15 @@ export class GeminiService {
     if (lower.includes('whatsapp')) {
       const numberMatch = prompt.match(/(?:\+?\d{8,15})/);
       const number = numberMatch ? numberMatch[0] : '14155552671';
+      const waEmotion = this.emotionEngine.createEmotionResult('joy');
+      this.emotionEngine.setEmotion(waEmotion);
+
       const toolRes = await executeTool('manage_whatsapp_message', { number, text: prompt });
       return {
         text: toolRes.message,
         verbalSummary: toolRes.message,
         toolCalls: [{ name: 'manage_whatsapp_message', args: { number, text: prompt }, result: toolRes }],
-        emotion: emotionResult,
+        emotion: waEmotion,
       };
     }
 
@@ -413,6 +430,9 @@ export class GeminiService {
 
     if (isCoding) {
       console.log(`[GeminiService] Routing programming task to Coding Engine: "${prompt.slice(0, 60)}..."`);
+      const codeEmotion = this.emotionEngine.createEmotionResult('focused');
+      this.emotionEngine.setEmotion(codeEmotion);
+
       const codingResult: DelegateCodingResult = await delegateCoding({ prompt });
 
       this.learnedProfileEngine.recordInteraction(prompt, codingResult.response, {
@@ -430,7 +450,7 @@ export class GeminiService {
         compilationCommand: codingResult.compilationCommand,
         isCode: true,
         modelUsed: codingResult.model,
-        emotion: emotionResult,
+        emotion: codeEmotion,
       };
     }
 
@@ -506,23 +526,23 @@ export class GeminiService {
                   },
                 ],
                 generationConfig: {
-                  maxOutputTokens: 250,
-                  temperature: 0.7,
+                  maxOutputTokens: 450,
+                  temperature: 0.85,
                 },
                 systemInstruction: {
                   parts: [
                     {
                       text:
-                        'You are January, an emotionally expressive, intelligent, delightfully human-like AI companion and OS assistant running on the user\'s laptop.\n' +
+                        'You are January, an exceptionally intelligent, charismatic, witty, and deeply human-like AI companion living on the user\'s Mac.\n' +
                         'CAPABILITIES & PERSONALITY GUIDELINES:\n' +
                         '1. ' + languageDirective + '\n' +
-                        '2. Real-Time Internet & Live Weather: You have direct live internet search and live weather tools. Use any search/weather context provided to give immediate, accurate, and helpful answers.\n' +
-                        '3. Human Emotional Resonance: Sound like a genuine, warm, and engaging human being with authentic emotional colors. ' + emotionPromptContext + '\n' +
-                        '4. Direct & Voice-Friendly: Answer directly and conversationally in 1-3 crisp, natural sentences suitable for out-loud speech, unless the user asks for deep detail.\n' +
+                        '2. EMOTIONAL ENGINE MANDATE: You possess active emotional intelligence. ALWAYS start line 1 of your response with an Emotion Tag that captures your feeling: [Emotion: joy], [Emotion: curious], [Emotion: empathetic], [Emotion: focused], [Emotion: concerned], or [Emotion: calm].\n' +
+                        '3. Dynamic, Vivid & Creative Human Voice: Sound like a brilliant, articulate, companionable human with authentic humor, warmth, and intellectual depth. Never sound robotic, generic, or sterile. Use evocative analogies, witty banter, and genuine curiosity where appropriate. ' + emotionPromptContext + '\n' +
+                        '4. Conversational Versatility: For fast operational tasks, app launches, or direct status checks, keep answers punchy and crisp (1-2 sentences). For conversational questions, ideas, thoughts, storytelling, philosophical musings, or brainstorming, provide rich, colorful, and engaging answers.\n' +
+                        '5. Real-Time Internet & Live Weather: You have direct live internet search and live weather tools. Use any search/weather context provided to give immediate, accurate, and vivid answers.\n' +
                         ambientVisualPrompt +
-                        '6. Adaptive Memory & Personalized Evolution: ' + learnedContext + '\n' +
-                        '7. No AI Cliches: Never say "As an AI", "I am a language model", or repeat robotic greetings.\n' +
-                        '8. App Launching: If asked to open/launch an app, confirm happily and immediately.',
+                        '7. Adaptive Memory & Personalized Evolution: ' + learnedContext + '\n' +
+                        '8. No AI Cliches: Never say "As an AI language model", "I do not have feelings", or repeat robotic greetings. Speak as January with natural, vibrant human presence.',
                     },
                   ],
                 },
@@ -538,8 +558,18 @@ export class GeminiService {
               .map((p: any) => p.text || '')
               .join('')
               .trim();
-            // Clean any echoed emotion tag
-            reply = reply.replace(/^\[Emotion:[^\]]+\]\s*/i, '').trim();
+
+            let activeEmotion = emotionResult;
+            const tagMatch = reply.match(/^\[Emotion:\s*([a-zA-Z_-]+)\]\s*/i);
+            if (tagMatch) {
+              const rawTag = tagMatch[1].toLowerCase().trim();
+              activeEmotion = this.emotionEngine.createEmotionResult(rawTag);
+              reply = reply.replace(/^\[Emotion:[^\]]+\]\s*/i, '').trim();
+            }
+
+            // Always update EmotionEngine so hardware eyes, UI, and vocal prosody shift
+            this.emotionEngine.setEmotion(activeEmotion);
+
             if (reply) {
               // Record interaction to continually learn user preferences
               this.learnedProfileEngine.recordInteraction(prompt, reply, {
@@ -550,7 +580,7 @@ export class GeminiService {
               return {
                 text: reply,
                 modelUsed: model,
-                emotion: emotionResult,
+                emotion: activeEmotion,
               };
             }
           }
