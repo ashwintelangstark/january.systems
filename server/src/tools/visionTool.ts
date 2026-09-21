@@ -58,20 +58,25 @@ export async function seeAndAnalyze(args: SeeAndAnalyzeArgs = {}): Promise<Visio
     visionSystemInstruction += `\n\n[MANDATORY LANGUAGE & SCRIPT DIRECTIVE]:\n${args.languageGuidance}`;
   }
 
+  const geminiKeysToTry = [
+    { key: config.geminiApiKey, name: 'Primary Gemini' },
+    { key: config.geminiFallbackApiKey, name: 'Fallback Gemini' },
+  ].filter((item) => !!item.key);
+
   const candidateVisionModels = [
     'models/gemini-flash-lite-latest',
+    'models/gemini-3.5-flash-lite',
     'models/gemini-flash-latest',
     'models/gemini-3.5-flash',
     'models/gemini-3-flash-preview',
-    'models/gemini-3.5-flash-lite',
   ];
 
-  if (config.geminiApiKey) {
+  for (const keyConfig of geminiKeysToTry) {
     for (const model of candidateVisionModels) {
       try {
-        console.log(`[VisionTool] Querying Gemini Vision model (${model})...`);
+        console.log(`[VisionTool] Querying ${keyConfig.name} Vision (${model})...`);
         const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${config.geminiApiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${keyConfig.key}`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -112,13 +117,13 @@ export async function seeAndAnalyze(args: SeeAndAnalyzeArgs = {}): Promise<Visio
               hasFace: faceResult.hasFace,
               identifiedUser: faceResult.identifiedUser,
               snapshotPath: snapshot.filePath,
-              modelUsed: model,
+              modelUsed: `${keyConfig.name}: ${model}`,
             };
           }
         }
-        console.warn(`[VisionTool] Model ${model} returned status ${response.status}:`, data?.error?.message?.slice(0, 80));
+        console.warn(`[VisionTool] ${keyConfig.name} model ${model} returned status ${response.status}:`, data?.error?.message?.slice(0, 80));
       } catch (e: any) {
-        console.warn(`[VisionTool] Network error for ${model}:`, e.message);
+        console.warn(`[VisionTool] Network error for ${keyConfig.name} (${model}):`, e.message);
       }
     }
   }

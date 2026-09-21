@@ -26,6 +26,7 @@ export const config = {
   cameraWakePhrase: (process.env.CAMERA_WAKE_PHRASE || 'eyes open').replace(/^["'\s]+|["'\s]+$/g, '').toLowerCase(),
   cameraSleepPhrase: (process.env.CAMERA_SLEEP_PHRASE || 'eyes closed').replace(/^["'\s]+|["'\s]+$/g, '').toLowerCase(),
   openaiApiKey: (process.env.OPENAI_API_KEY || '').replace(/^["']|["']$/g, '').trim(),
+  geminiFallbackApiKey: (process.env.GEMINI_FALLBACK_API || process.env.GEMINI_FALLBACK_API_KEY || '').replace(/^["']|["']$/g, '').trim(),
 };
 
 export function validateConfig() {

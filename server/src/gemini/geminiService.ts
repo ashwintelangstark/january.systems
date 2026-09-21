@@ -519,18 +519,23 @@ export class GeminiService {
       '7. Adaptive Memory & Personalized Evolution: ' + learnedContext + '\n' +
       '8. No AI Cliches: Never say "As an AI language model", "I do not have feelings", or repeat robotic greetings. Speak as January with natural, vibrant human presence.';
 
-    // Try Google Gemini API servers with candidate models
+    // Try Google Gemini API servers with Primary Key, then Fallback Key, rotating models
     const promptWithWeb = prompt + (webSearchContext ? `\n${webSearchContext}` : '');
-    if (config.geminiApiKey) {
+    const geminiKeysToTry = [
+      { key: config.geminiApiKey, name: 'Primary Gemini' },
+      { key: config.geminiFallbackApiKey, name: 'Fallback Gemini' },
+    ].filter((item) => !!item.key);
+
+    for (const keyConfig of geminiKeysToTry) {
       for (const model of this.candidateModels) {
         try {
-          console.log(`[GeminiService] Analyzing question with Gemini API servers (${model}) [Emotion: ${emotionResult.emotion}, Active Lang: ${activeLang?.langName || 'English'}]...`);
+          console.log(`[GeminiService] Analyzing question with ${keyConfig.name} (${model}) [Emotion: ${emotionResult.emotion}, Active Lang: ${activeLang?.langName || 'English'}]...`);
 
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 6000);
 
           const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${config.geminiApiKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${keyConfig.key}`,
             {
               method: 'POST',
               signal: controller.signal,
@@ -588,15 +593,15 @@ export class GeminiService {
 
               return {
                 text: reply,
-                modelUsed: model,
+                modelUsed: `${keyConfig.name}: ${model}`,
                 emotion: activeEmotion,
               };
             }
           }
 
-          console.warn(`[GeminiService] Model ${model} returned status ${response.status}:`, data?.error?.message?.slice(0, 80));
+          console.warn(`[GeminiService] ${keyConfig.name} model ${model} returned status ${response.status}:`, data?.error?.message?.slice(0, 80));
         } catch (e: any) {
-          console.warn(`[GeminiService] Network attempt failed for ${model}:`, e.message);
+          console.warn(`[GeminiService] Network attempt failed for ${keyConfig.name} (${model}):`, e.message);
         }
       }
     }
