@@ -43,6 +43,7 @@ public:
   void triggerBlink();
   void lookAt(int8_t offsetX, int8_t offsetY); // -10 to +10 range
   void showMessage(const String& title, const String& subtitle, uint16_t durationMs = 2000);
+  void showWeather(const String& city, const String& temp, const String& condition, uint16_t durationMs = 4000);
 
   EyeEmotion getCurrentEmotion() const { return currentEmotion; }
   AgentFaceState getCurrentState() const { return currentState; }

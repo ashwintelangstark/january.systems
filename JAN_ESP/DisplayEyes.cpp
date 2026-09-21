@@ -415,11 +415,19 @@ void DisplayEyes::drawMouthOrStatus() {
   }
 }
 
+void DisplayEyes::showWeather(const String& city, const String& temp, const String& condition, uint16_t durationMs) {
+  messageTitle = city + " " + temp;
+  messageSubtitle = condition;
+  messageExpiryTime = millis() + durationMs;
+}
+
 void DisplayEyes::drawMessageOverlay() {
-  display.drawRoundRect(4, 4, 120, 56, 4, SSD1306_WHITE);
-  display.setCursor(12, 14);
+  display.drawRoundRect(2, 2, 124, 60, 4, SSD1306_WHITE);
+  display.setCursor(10, 14);
   display.setTextSize(1);
   display.print(messageTitle);
-  display.setCursor(12, 34);
+  display.drawFastHLine(10, 26, 108, SSD1306_WHITE);
+  display.setCursor(10, 36);
   display.print(messageSubtitle);
 }
+
