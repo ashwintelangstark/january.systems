@@ -1,8 +1,8 @@
-#include "NetworkClient.h"
+#include "JanNetworkClient.h"
 
-NetworkClient* NetworkClient::instance = nullptr;
+JanNetworkClient* JanNetworkClient::instance = nullptr;
 
-NetworkClient::NetworkClient()
+JanNetworkClient::JanNetworkClient()
   : wifiConnected(false),
     serverConnected(false),
     lastWifiCheck(0),
@@ -14,7 +14,7 @@ NetworkClient::NetworkClient()
   instance = this;
 }
 
-void NetworkClient::begin() {
+void JanNetworkClient::begin() {
   if (!ENABLE_WIFI) {
     Serial.println(F("ℹ️ [Network] Wi-Fi disabled in config. Running in standalone hardware mode."));
     return;
@@ -24,7 +24,7 @@ void NetworkClient::begin() {
   setupWebSocket();
 }
 
-void NetworkClient::connectWiFi() {
+void JanNetworkClient::connectWiFi() {
   Serial.print(F("🌐 [Wi-Fi] Connecting to: "));
   Serial.println(WIFI_SSID);
 
@@ -49,7 +49,7 @@ void NetworkClient::connectWiFi() {
   }
 }
 
-void NetworkClient::setupWebSocket() {
+void JanNetworkClient::setupWebSocket() {
   if (!wifiConnected) return;
 
   Serial.print(F("🔌 [WebSocket] Initializing connection to January Server ws://"));
@@ -62,7 +62,7 @@ void NetworkClient::setupWebSocket() {
   webSocket.setReconnectInterval(5000);
 }
 
-void NetworkClient::handleWebSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
+void JanNetworkClient::handleWebSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
   switch (type) {
     case WStype_DISCONNECTED:
       serverConnected = false;
@@ -91,9 +91,9 @@ void NetworkClient::handleWebSocketEvent(WStype_t type, uint8_t* payload, size_t
   }
 }
 
-void NetworkClient::processJsonMessage(const String& message) {
-  // Parse incoming JSON message from January Server
-  StaticJsonDocument<1024> doc;
+void JanNetworkClient::processJsonMessage(const String& message) {
+  // Parse incoming JSON message from January Server using ArduinoJson 7
+  JsonDocument doc;
   DeserializationError err = deserializeJson(doc, message);
 
   if (err) {
@@ -137,10 +137,10 @@ void NetworkClient::processJsonMessage(const String& message) {
   }
 }
 
-void NetworkClient::sendTextPrompt(const String& prompt) {
+void JanNetworkClient::sendTextPrompt(const String& prompt) {
   if (!serverConnected) return;
 
-  StaticJsonDocument<256> doc;
+  JsonDocument doc;
   doc["type"] = "text_input";
   doc["text"] = prompt;
 
@@ -149,43 +149,44 @@ void NetworkClient::sendTextPrompt(const String& prompt) {
   webSocket.sendTXT(output);
 }
 
-void NetworkClient::sendWakeTrigger() {
+void JanNetworkClient::sendWakeTrigger() {
   if (!serverConnected) return;
   webSocket.sendTXT("{\"type\":\"wake_trigger\",\"source\":\"esp32\"}");
 }
 
-void NetworkClient::sendSleepTrigger() {
+void JanNetworkClient::sendSleepTrigger() {
   if (!serverConnected) return;
   webSocket.sendTXT("{\"type\":\"sleep_trigger\",\"source\":\"esp32\"}");
 }
 
-bool NetworkClient::isConnectedToWifi() const {
-  return WiFi.status() == WL_CONNECTED;
+bool JanNetworkClient::isConnectedToWifi() const {
+  return wifiConnected && (WiFi.status() == WL_CONNECTED);
 }
 
-bool NetworkClient::isConnectedToServer() const {
+bool JanNetworkClient::isConnectedToServer() const {
   return serverConnected;
 }
 
-void NetworkClient::update() {
+void JanNetworkClient::update() {
   if (!ENABLE_WIFI) return;
 
+  // Wi-Fi Auto-Reconnect Check (every 10 seconds)
   unsigned long now = millis();
-
-  // Periodic Wi-Fi reconnection check
   if (now - lastWifiCheck > 10000) {
     lastWifiCheck = now;
     if (WiFi.status() != WL_CONNECTED) {
       wifiConnected = false;
       serverConnected = false;
-      Serial.println(F("🔄 [Wi-Fi] Reconnecting..."));
+      Serial.println(F("🔄 [Wi-Fi] Connection lost. Attempting reconnection..."));
       WiFi.reconnect();
-    } else {
-      wifiConnected = true;
     }
   }
 
-  if (wifiConnected) {
-    webSocket.loop();
+  // Heartbeat ping (every 15 seconds)
+  if (serverConnected && (now - lastPingTime > 15000)) {
+    lastPingTime = now;
+    webSocket.sendTXT("{\"type\":\"ping\"}");
   }
+
+  webSocket.loop();
 }

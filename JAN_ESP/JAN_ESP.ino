@@ -21,12 +21,12 @@
 #include "config.h"
 #include "DisplayEyes.h"
 #include "AudioController.h"
-#include "NetworkClient.h"
+#include "JanNetworkClient.h"
 
 // Core Hardware Engine Singletons
 DisplayEyes displayEyes;
 AudioController audioController;
-NetworkClient networkClient;
+JanNetworkClient networkClient;
 
 // Serial Command Buffer
 String inputCommandBuffer = "";

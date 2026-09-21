@@ -55,6 +55,9 @@ private:
   EyeEmotion targetEmotion;
   AgentFaceState currentState;
 
+  bool isInitialized;
+  unsigned long lastInitRetryTime;
+
   // Eye Geometry & Animation State
   int16_t leftEyeCenterX;
   int16_t rightEyeCenterX;

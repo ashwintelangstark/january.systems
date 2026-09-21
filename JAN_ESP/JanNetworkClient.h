@@ -1,5 +1,5 @@
-#ifndef NETWORK_CLIENT_H
-#define NETWORK_CLIENT_H
+#ifndef JAN_NETWORK_CLIENT_H
+#define JAN_NETWORK_CLIENT_H
 
 #include <Arduino.h>
 #include <WiFi.h>
@@ -13,9 +13,9 @@ typedef void (*StateCallback)(const String& state);
 typedef void (*AudioLevelCallback)(float level);
 typedef void (*TranscriptCallback)(const String& role, const String& text);
 
-class NetworkClient {
+class JanNetworkClient {
 public:
-  NetworkClient();
+  JanNetworkClient();
   void begin();
   void update();
 
@@ -50,7 +50,7 @@ private:
   void handleWebSocketEvent(WStype_t type, uint8_t* payload, size_t length);
   void processJsonMessage(const String& message);
 
-  static NetworkClient* instance;
+  static JanNetworkClient* instance;
   static void staticWebSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
     if (instance) {
       instance->handleWebSocketEvent(type, payload, length);
@@ -58,4 +58,4 @@ private:
   }
 };
 
-#endif // NETWORK_CLIENT_H
+#endif // JAN_NETWORK_CLIENT_H

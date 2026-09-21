@@ -5,6 +5,8 @@ DisplayEyes::DisplayEyes()
     currentEmotion(EMOTION_NEUTRAL),
     targetEmotion(EMOTION_NEUTRAL),
     currentState(FACE_IDLE),
+    isInitialized(false),
+    lastInitRetryTime(0),
     leftEyeCenterX(38),
     rightEyeCenterX(90),
     eyeCenterY(30),
@@ -55,10 +57,12 @@ bool DisplayEyes::begin() {
     if (!display.begin(SSD1306_SWITCHCAPVCC, altAddr)) {
       Serial.println(F("❌ [Display] SSD1306 OLED initialization failed at 0x3C and 0x3D!"));
       Serial.println(F("   💡 Check: 1) VCC connected to 5V / 3.3V, 2) GND connected, 3) SDA=GPIO 21, SCL=GPIO 22"));
+      isInitialized = false;
       return false;
     }
   }
 
+  isInitialized = true;
   display.dim(false); // Maximize display brightness
   display.clearDisplay();
   display.setTextColor(SSD1306_WHITE);
@@ -71,7 +75,7 @@ bool DisplayEyes::begin() {
   display.setCursor(20, 36);
   display.print(F("INITIALIZING..."));
   display.display();
-  delay(800);
+  delay(600);
 
   lastBlinkTime = millis();
   lastSaccadeTime = millis();
@@ -159,6 +163,15 @@ void DisplayEyes::showMessage(const String& title, const String& subtitle, uint1
 
 void DisplayEyes::update() {
   unsigned long now = millis();
+
+  // Auto-recovery if display was not ready at boot
+  if (!isInitialized) {
+    if (now - lastInitRetryTime > 1500) {
+      lastInitRetryTime = now;
+      begin();
+    }
+    return;
+  }
 
   // Enforce target frame rate (e.g. 40 FPS -> 25ms per frame)
   if (now - lastFrameTime < (1000 / ANIMATION_FPS)) {
@@ -431,6 +444,11 @@ void DisplayEyes::drawMouthOrStatus() {
     uint8_t scanX = (millis() / 25) % 40;
     display.drawFastHLine(44, mouthCenterY, 40, SSD1306_WHITE);
     display.fillCircle(44 + scanX, mouthCenterY, 2, SSD1306_WHITE);
+  } else if (currentEmotion != EMOTION_SLEEP) {
+    // Friendly subtle smile arc when idle
+    display.drawPixel(58, mouthCenterY - 1, SSD1306_WHITE);
+    display.drawFastHLine(59, mouthCenterY, 10, SSD1306_WHITE);
+    display.drawPixel(69, mouthCenterY - 1, SSD1306_WHITE);
   }
 }
 
