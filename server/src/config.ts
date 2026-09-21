@@ -16,7 +16,7 @@ export const config = {
   port: parseInt(process.env.PORT || '3001', 10),
   host: process.env.HOST || '0.0.0.0',
   geminiApiKey: (process.env.GEMINI_API || process.env.GEMINI_API_KEY || '').replace(/^["']|["']$/g, '').trim(),
-  geminiModel: process.env.GEMINI_MODEL || 'models/gemini-3.6-flash',
+  geminiModel: process.env.GEMINI_MODEL || 'models/gemini-flash-latest',
   geminiVoice: process.env.GEMINI_VOICE || 'Aoede', // Aoede, Puck, Charon, Kore, Fenrir
   claudeApiKey: (process.env.CLAUDE_CODE_API || process.env.ANTHROPIC_API_KEY || '').replace(/^["']|["']$/g, '').trim(),
   claudeModel: process.env.CLAUDE_MODEL || 'claude-3-7-sonnet-20250219',

@@ -42,53 +42,16 @@ export class EmotionEngine extends EventEmitter {
   }
 
   /**
-   * Analyzes the given text for emotion and sentiment
+   * Analyzes the given text for emotion and sentiment in 0ms (in-memory)
    */
   public async analyzeText(text: string): Promise<EmotionResult> {
     if (!text || !text.trim()) {
       return this.currentEmotion;
     }
 
-    return new Promise((resolve) => {
-      const uvPath = fs.existsSync('/Users/ashwintelangstark/.local/bin/uv')
-        ? '/Users/ashwintelangstark/.local/bin/uv'
-        : 'uv';
-
-      const proc = spawn(
-        uvPath,
-        ['run', 'python3', this.scriptPath, text],
-        { stdio: ['ignore', 'pipe', 'pipe'] }
-      );
-
-      let stdoutData = '';
-
-      proc.stdout.on('data', (data) => {
-        stdoutData += data.toString();
-      });
-
-      proc.on('close', (code) => {
-        if (code === 0 && stdoutData.trim()) {
-          try {
-            const parsed = JSON.parse(stdoutData.trim()) as EmotionResult;
-            this.setEmotion(parsed);
-            resolve(parsed);
-            return;
-          } catch (e) {
-            // fallback below
-          }
-        }
-        // Fallback local heuristic
-        const fallback = this.localFallback(text);
-        this.setEmotion(fallback);
-        resolve(fallback);
-      });
-
-      proc.on('error', () => {
-        const fallback = this.localFallback(text);
-        this.setEmotion(fallback);
-        resolve(fallback);
-      });
-    });
+    const result = this.localFallback(text);
+    this.setEmotion(result);
+    return result;
   }
 
   public setEmotion(result: EmotionResult): void {
@@ -123,7 +86,7 @@ export class EmotionEngine extends EventEmitter {
 
   private localFallback(text: string): EmotionResult {
     const lower = text.toLowerCase();
-    if (/\b(sad|depressed|stress|tired|exhaust|hurt|sorry|worry)\b/.test(lower)) {
+    if (/\b(sad|depressed|stress|tired|exhaust|hurt|sorry|worry|dukh|dard|ro|pareshan|traas)\b/i.test(lower)) {
       return {
         emotion: 'empathetic',
         valence: -0.5,
@@ -134,7 +97,18 @@ export class EmotionEngine extends EventEmitter {
         color: '#10B981',
       };
     }
-    if (/\b(great|awesome|love|happy|yay|hurray|congrat|amazing)\b/.test(lower)) {
+    if (/\b(error|bug|issue|fail|crash|broke|not working|problem|gadbad)\b/i.test(lower)) {
+      return {
+        emotion: 'concerned',
+        valence: -0.2,
+        arousal: 0.5,
+        tone: 'concerned',
+        pitch: '+0Hz',
+        rate: '+0%',
+        color: '#EF4444',
+      };
+    }
+    if (/\b(great|awesome|love|happy|yay|hurray|congrat|amazing|khush|badhiya|mast|sundar|shandar)\b/i.test(lower)) {
       return {
         emotion: 'joy',
         valence: 0.8,
@@ -145,7 +119,7 @@ export class EmotionEngine extends EventEmitter {
         color: '#F59E0B',
       };
     }
-    if (/\b(code|function|class|develop|program|algorithm|calculate)\b/.test(lower)) {
+    if (/\b(code|function|class|develop|program|algorithm|calculate|compile|build|script|debug|python|cpp|c\+\+)\b/i.test(lower)) {
       return {
         emotion: 'focused',
         valence: 0.3,
@@ -154,6 +128,17 @@ export class EmotionEngine extends EventEmitter {
         pitch: '+0Hz',
         rate: '+0%',
         color: '#8B5CF6',
+      };
+    }
+    if (/\b(peace|relax|calm|quiet|sleep|shant|aram)\b/i.test(lower)) {
+      return {
+        emotion: 'calm',
+        valence: 0.5,
+        arousal: -0.2,
+        tone: 'calm',
+        pitch: '-1Hz',
+        rate: '-4%',
+        color: '#06B6D4',
       };
     }
     return {

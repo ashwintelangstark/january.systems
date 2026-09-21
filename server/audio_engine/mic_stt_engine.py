@@ -19,7 +19,7 @@ import numpy as np
 SAMPLE_RATE = 16000
 BLOCK_SIZE = 1024  # ~64ms per block
 VAD_ENERGY_THRESHOLD = 350.0
-SILENCE_DURATION = 0.85  # Seconds of silence to trigger transcription
+SILENCE_DURATION = 0.42  # Fast silence cutoff for real-time responsiveness
 
 audio_queue = queue.Queue()
 is_muted = False
@@ -41,8 +41,8 @@ def stdin_listener():
                     is_muted = True
                     sys.stderr.write("[Mic Engine] Muted (speaker active - suppressing echo)\n")
                 else:
-                    # Add 1200ms cooldown before unmuting to ignore acoustic room reverb and speaker tails
-                    mute_until_time = time.time() + 1.2
+                    # 250ms cooldown before unmuting for rapid conversational back-and-forth
+                    mute_until_time = time.time() + 0.25
                     is_muted = False
                     # Clear any audio queued while speaker was active
                     while not audio_queue.empty():
@@ -50,7 +50,7 @@ def stdin_listener():
                             audio_queue.get_nowait()
                         except Exception:
                             break
-                    sys.stderr.write("[Mic Engine] Unmuted (listening for user with 1200ms reverb guard)\n")
+                    sys.stderr.write("[Mic Engine] Unmuted (listening for user with 250ms guard)\n")
         except Exception:
             pass
 
@@ -133,18 +133,23 @@ def main():
                     speaking = False
                     silence_start = None
 
-                    if len(speech_buffer) < 6:  # Too short (click, pop, or transient noise)
+                    if len(speech_buffer) < 4:  # Too short (transient noise)
                         speech_buffer = []
                         continue
 
                     full_audio = np.concatenate(speech_buffer, axis=0).flatten()
                     speech_buffer = []
 
-                    # Save to temp WAV file for whisper transcription
-                    with tempfile.NamedTemporaryFile(suffix=".wav", delete=True) as tmp:
-                        wavfile.write(tmp.name, SAMPLE_RATE, full_audio)
-                        segments, info = model.transcribe(tmp.name, beam_size=1, language=None)
-                        text = " ".join([seg.text.strip() for seg in segments]).strip()
+                    # In-memory float32 normalized transcription (zero disk I/O)
+                    audio_float = full_audio.astype(np.float32) / 32768.0
+                    segments, info = model.transcribe(
+                        audio_float,
+                        beam_size=1,
+                        language=None,
+                        condition_on_previous_text=False,
+                        vad_filter=True,
+                    )
+                    text = " ".join([seg.text.strip() for seg in segments]).strip()
 
                     if text:
                         lower_text = text.lower()

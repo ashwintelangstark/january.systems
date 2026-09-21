@@ -225,9 +225,9 @@ function inspectPromptLanguage(prompt: string): { action: 'switch_english' | 'se
 
 export class GeminiService {
   private candidateModels = [
+    'models/gemini-3-flash-preview',
+    'models/gemini-flash-latest',
     'models/gemini-3.5-flash-lite',
-    'models/gemini-3.6-flash',
-    'models/gemini-3.1-flash-lite',
   ];
   private emotionEngine: EmotionEngine;
   private learnedProfileEngine: LearnedProfileEngine;
@@ -487,10 +487,14 @@ export class GeminiService {
             : '';
           const learnedContext = this.learnedProfileEngine.getSystemPromptContext();
 
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 6000);
+
           const response = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${config.geminiApiKey}`,
             {
               method: 'POST',
+              signal: controller.signal,
               headers: {
                 'Content-Type': 'application/json',
               },
@@ -501,6 +505,10 @@ export class GeminiService {
                     parts: [{ text: promptWithWeb }],
                   },
                 ],
+                generationConfig: {
+                  maxOutputTokens: 250,
+                  temperature: 0.7,
+                },
                 systemInstruction: {
                   parts: [
                     {
@@ -521,6 +529,7 @@ export class GeminiService {
               }),
             }
           );
+          clearTimeout(timeoutId);
 
           const data = (await response.json()) as any;
 

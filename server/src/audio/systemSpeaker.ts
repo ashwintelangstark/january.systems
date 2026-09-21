@@ -78,8 +78,11 @@ export class SystemSpeaker extends EventEmitter {
     return { speechText: clean, hadCode };
   }
 
+  private speechQueue: Array<{ text: string; options?: { pitch?: string; rate?: string; emotion?: string }; resolve: () => void }> = [];
+  private isProcessingQueue = false;
+
   /**
-   * Speak text out loud through the laptop's physical speakers with emotional prosody
+   * Enqueue a sentence or text chunk for smooth, sequential out-loud speech
    */
   public async speakText(
     text: string,
@@ -90,45 +93,103 @@ export class SystemSpeaker extends EventEmitter {
     const { speechText } = this.sanitizeForSpeech(text);
     if (!speechText || !speechText.trim()) return;
 
-    this.stopPlayback(); // Interrupt any ongoing speech
+    return new Promise((resolve) => {
+      this.speechQueue.push({ text: speechText, options, resolve });
+      if (!this.isProcessingQueue) {
+        this.processQueue();
+      }
+    });
+  }
+
+  private async processQueue(): Promise<void> {
+    if (this.isProcessingQueue || this.speechQueue.length === 0) return;
+    this.isProcessingQueue = true;
+
+    while (this.speechQueue.length > 0) {
+      const item = this.speechQueue.shift();
+      if (!item) break;
+
+      try {
+        await this.playSingleUtterance(item.text, item.options);
+      } catch (err: any) {
+        console.warn('[SystemSpeaker] Utterance playback error:', err.message);
+      }
+      item.resolve();
+    }
+
+    this.isProcessingQueue = false;
+    this.isSpeaking = false;
+    this.emit('end');
+  }
+
+  private async playSingleUtterance(
+    speechText: string,
+    options?: { pitch?: string; rate?: string; emotion?: string }
+  ): Promise<void> {
     this.isSpeaking = true;
     this.emit('start');
+
+    const useEdgeTts = process.env.USE_EDGE_TTS === 'true';
+    const isDevanagari = /[\u0900-\u097F]/.test(speechText);
+    const hasOtherIndianScript = /[\u0980-\u0D7F]/.test(speechText);
+
+    // If native mode (default for real-time responsiveness)
+    if (!useEdgeTts && !hasOtherIndianScript) {
+      const voice = isDevanagari ? 'Lekha' : (process.env.MACOS_VOICE || 'Samantha');
+      const rate = options?.rate?.includes('+') ? '195' : options?.rate?.includes('-') ? '170' : '185';
+
+      console.log(`🔊 [SystemSpeaker:Native] Speaking (${voice}, ${rate} wpm): "${speechText.slice(0, 50)}..."`);
+
+      return new Promise((resolve) => {
+        const proc = spawn('say', ['-v', voice, '-r', rate, speechText]);
+        this.currentProcess = proc;
+
+        proc.on('close', () => {
+          this.currentProcess = null;
+          resolve();
+        });
+
+        proc.on('error', (err) => {
+          console.warn('[SystemSpeaker:Native] say error:', err.message);
+          this.currentProcess = null;
+          resolve();
+        });
+      });
+    }
+
+    // Neural Edge-TTS Mode via persistent venv
+    const pythonPath = fs.existsSync(path.resolve(__dirname, '../../../server/.venv/bin/python3'))
+      ? path.resolve(__dirname, '../../../server/.venv/bin/python3')
+      : fs.existsSync(path.resolve(__dirname, '../../.venv/bin/python3'))
+      ? path.resolve(__dirname, '../../.venv/bin/python3')
+      : 'python3';
 
     const pitch = options?.pitch || '+0Hz';
     const rate = options?.rate || '+0%';
 
-    console.log(`🔊 [SystemSpeaker] Speaking (${options?.emotion || 'natural'}, pitch: ${pitch}, rate: ${rate}): "${speechText.slice(0, 60)}..."`);
+    console.log(`🔊 [SystemSpeaker:Neural] Speaking (pitch: ${pitch}, rate: ${rate}): "${speechText.slice(0, 50)}..."`);
 
     return new Promise((resolve) => {
-      // Use uv to execute tts_engine.py with edge-tts
-      const uvPath = fs.existsSync('/Users/ashwintelangstark/.local/bin/uv')
-        ? '/Users/ashwintelangstark/.local/bin/uv'
-        : 'uv';
-
       const proc = spawn(
-        uvPath,
-        ['run', '--with', 'edge-tts', 'python3', this.ttsScriptPath, speechText, '--pitch', pitch, '--rate', rate],
+        pythonPath,
+        [this.ttsScriptPath, speechText, '--pitch', pitch, '--rate', rate],
         { stdio: ['ignore', 'pipe', 'pipe'] }
       );
 
       this.currentProcess = proc;
 
       proc.on('close', () => {
-        this.isSpeaking = false;
         this.currentProcess = null;
-        this.emit('end');
         resolve();
       });
 
       proc.on('error', (err) => {
-        console.warn('[SystemSpeaker] Error running TTS engine, falling back to native say:', err.message);
-        // Fallback to native macOS say command
-        const sayProc = spawn('say', ['-v', 'Samantha', speechText]);
+        console.warn('[SystemSpeaker] Neural TTS error, falling back to say:', err.message);
+        const fallbackVoice = isDevanagari ? 'Lekha' : 'Samantha';
+        const sayProc = spawn('say', ['-v', fallbackVoice, speechText]);
         this.currentProcess = sayProc;
         sayProc.on('close', () => {
-          this.isSpeaking = false;
           this.currentProcess = null;
-          this.emit('end');
           resolve();
         });
       });
@@ -164,6 +225,11 @@ export class SystemSpeaker extends EventEmitter {
    * Stop any current audio playback immediately (interruption)
    */
   public stopPlayback(): void {
+    // Clear queued sentences
+    this.speechQueue.forEach((item) => item.resolve());
+    this.speechQueue = [];
+    this.isProcessingQueue = false;
+
     if (this.currentProcess) {
       console.log('[SystemSpeaker] Stopping current speaker playback.');
       this.currentProcess.kill('SIGTERM');
