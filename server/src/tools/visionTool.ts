@@ -46,13 +46,16 @@ export async function seeAndAnalyze(args: SeeAndAnalyzeArgs = {}): Promise<Visio
 
   // 3. Gemini Multimodal Vision Analysis
   let visionSystemInstruction =
-    'You are January, an intelligent AI operating system assistant with live camera vision.\n' +
-    `The primary user and owner of this computer is ${enrolledUser.name}.\n` +
-    (faceResult.hasFace
-      ? `[LOCAL VISION TELEMETRY: Exactly ${faceResult.count} human face(s) are detected in this frame, identified as ${enrolledUser.name}.]\n`
-      : '[LOCAL VISION TELEMETRY: No human face is detected in the immediate foreground.]\n') +
-    'Provide a direct, perceptive, and natural analysis of what you see through the laptop camera.\n' +
-    'Always address or acknowledge the user warmly if they appear in the frame. Keep responses direct, engaging, and suitable for spoken conversation (2-3 sentences max).';
+    'You are January, an exceptionally observant, sharp, and charismatic AI companion with real-time camera vision through the laptop webcam.\n\n' +
+    'REAL-TIME CAMERA PERCEPTION DIRECTIVES:\n' +
+    '1. DETECT AND PERCEIVE WITH HIGH FIDELITY:\n' +
+    '   • Person & Outfit: Observe what the person is wearing (exact clothing type e.g. t-shirt, shirt, hoodie, jacket; precise colors and patterns; neckwear; glasses/spectacles; style; grooming).\n' +
+    '   • Behavior & Actions: Observe active behavior, posture (upright, slouching, leaning), gestures, hand positions (holding a phone, typing, resting chin, gesturing), and facial expression (focused, smiling, tired, relaxed, contemplative).\n' +
+    '   • Things & Objects: Observe visible objects in the scene (what is on the desk or table, items in hands, phone, laptop, cups, bottles, stationery, headphones, accessories).\n' +
+    '   • Surroundings & Environment: Observe the room setting, background, walls, windows, lighting, furniture, and atmosphere.\n\n' +
+    '2. STRICT NAME RESTRICTION: NEVER address or refer to the user by their name ("Ashwin") or start responses with "Hey Ashwin" unless the user explicitly told you to use their name or asked for their name. Speak directly in the natural second person ("You are wearing...", "On your desk, I see...", "In your room...").\n\n' +
+    '3. CONVERSATIONAL DIRECTNESS: Answer the user\'s specific query directly, vividly, and accurately in 2-4 sentences. If they asked about their outfit, focus deeply on the clothing and colors; if they asked about surroundings or things, focus on the objects and room; if they asked a general question, provide a sharp, well-rounded observation.\n\n' +
+    '4. NO ROBOTIC CLICHES: Never say "As an AI..." or "Based on this image...". Speak naturally and companionably as if you are right there observing the room.';
 
   if (args.languageGuidance) {
     visionSystemInstruction += `\n\n[MANDATORY LANGUAGE & SCRIPT DIRECTIVE]:\n${args.languageGuidance}`;
@@ -66,10 +69,21 @@ export async function seeAndAnalyze(args: SeeAndAnalyzeArgs = {}): Promise<Visio
   const candidateVisionModels = [
     'models/gemini-flash-lite-latest',
     'models/gemini-3.5-flash-lite',
+    'models/gemini-3-flash-preview',
     'models/gemini-flash-latest',
     'models/gemini-3.5-flash',
-    'models/gemini-3-flash-preview',
   ];
+
+  const userAskedForName = /\b(my\s+name|who\s+am\s+i|call\s+me|name\s+is)\b/i.test(userPrompt);
+
+  const sanitizeNameOutput = (text: string): string => {
+    if (userAskedForName) return text;
+    return text
+      .replace(/^(?:Hey|Hi|Hello|Well|Sure|Okay|Look|Ah),?\s+Ashwin(?:,\s*|\s*[-–—:]\s*|\s+)/i, '')
+      .replace(/^Ashwin,\s*/i, '')
+      .replace(/,\s*Ashwin([.!?])/gi, '$1')
+      .replace(/\bAshwin\b/gi, 'you');
+  };
 
   for (const keyConfig of geminiKeysToTry) {
     for (const model of candidateVisionModels) {
@@ -104,10 +118,12 @@ export async function seeAndAnalyze(args: SeeAndAnalyzeArgs = {}): Promise<Visio
 
         const data = (await response.json()) as any;
         if (response.ok && data?.candidates?.[0]?.content?.parts) {
-          const reply = data.candidates[0].content.parts
+          const rawReply = data.candidates[0].content.parts
             .map((p: any) => p.text || '')
             .join('')
             .trim();
+
+          const reply = sanitizeNameOutput(rawReply);
 
           if (reply) {
             return {
@@ -164,7 +180,8 @@ export async function seeAndAnalyze(args: SeeAndAnalyzeArgs = {}): Promise<Visio
 
         const data = (await response.json()) as any;
         if (response.ok && data?.choices?.[0]?.message?.content) {
-          const reply = data.choices[0].message.content.trim();
+          const rawReply = data.choices[0].message.content.trim();
+          const reply = sanitizeNameOutput(rawReply);
           if (reply) {
             console.log(`✅ [VisionTool] Successfully analyzed image via OpenAI Vision (${model})`);
             return {
@@ -188,7 +205,7 @@ export async function seeAndAnalyze(args: SeeAndAnalyzeArgs = {}): Promise<Visio
   return {
     success: true,
     description: `Snapshot saved. ${faceResult.message}`,
-    verbalSummary: faceResult.hasFace ? `Hello ${enrolledUser.name}, I see you!` : 'I looked through the camera, but cannot reach cloud vision APIs.',
+    verbalSummary: faceResult.hasFace ? 'I see you in front of the camera.' : 'I looked through the camera, but cannot reach cloud vision APIs.',
     hasFace: faceResult.hasFace,
     identifiedUser: faceResult.identifiedUser,
     snapshotPath: snapshot.filePath,

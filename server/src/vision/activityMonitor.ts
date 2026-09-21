@@ -35,6 +35,7 @@ export class VisualActivityMonitor extends EventEmitter {
   private currentContext: VisualContextState;
   private lastPresenceState = false;
   private lastArrivalTimestamp = 0;
+  private lastPresenceCheckTimestamp = 0;
   private lastGeminiPerceptionTimestamp = 0;
 
   constructor(options: ActivityMonitorOptions = {}) {
@@ -131,13 +132,13 @@ export class VisualActivityMonitor extends EventEmitter {
 
   public getFormattedVisualSummary(): string {
     if (!this.isEyesOpen) {
-      return `Camera eyes are currently closed. Vision monitoring is turned off.`;
+      return `Camera eyes are on standby and activate on-demand whenever visual analysis is needed.`;
     }
     if (!this.currentContext.isPresent) {
-      return `Camera eyes are open (60 FPS stream active). User is currently not in front of the laptop.`;
+      return `Camera eyes are actively streaming (60 FPS). The user is currently not in front of the laptop.`;
     }
     return (
-      `User ${this.currentContext.identifiedUser} is currently present in front of the laptop.\n` +
+      `The user is currently present in front of the laptop.\n` +
       `Activity: ${this.currentContext.activity}. Posture: ${this.currentContext.posture}. Expression: ${this.currentContext.expression}.\n` +
       `Context: ${this.currentContext.summary}`
     );
@@ -158,7 +159,6 @@ export class VisualActivityMonitor extends EventEmitter {
       // 2. Fast local OpenCV Face Detection (<20ms)
       const faceResult: FaceDetectionResult = await this.faceEngine.detectFaces(snapshot.filePath);
       const isNowPresent = faceResult.hasFace;
-      const enrolledUser = this.faceEngine.getEnrolledUser();
       const now = Date.now();
 
       this.currentContext.isPresent = isNowPresent;
@@ -170,38 +170,39 @@ export class VisualActivityMonitor extends EventEmitter {
       if (!this.lastPresenceState && isNowPresent) {
         this.lastPresenceState = true;
         this.lastArrivalTimestamp = now;
-        console.log(`🌟 [VisualActivityMonitor] USER ARRIVAL DETECTED! ${enrolledUser.name} is now at the desk.`);
+        console.log(`🌟 [VisualActivityMonitor] USER ARRIVAL DETECTED! The user is now at the desk.`);
 
         this.currentContext.activity = 'Arrived at desk';
-        this.currentContext.summary = `${enrolledUser.name} just sat down at the laptop.`;
+        this.currentContext.summary = `User just sat down at the laptop.`;
 
         // Trigger immediate arrival multimodal vision analysis
         await this.runAmbientMultimodalAnalysis(snapshot.base64, 'arrival');
         this.emit('userArrival', {
-          user: enrolledUser.name,
+          timestamp: now,
           context: this.currentContext,
-          timestamp: now,
         });
       }
-      // 4. State Transition: User Departure (1+ face -> 0 faces)
+      // 4. State Transition: User Departure (1+ face -> 0 faces for >8s)
       else if (this.lastPresenceState && !isNowPresent) {
-        this.lastPresenceState = false;
-        console.log(`👋 [VisualActivityMonitor] USER DEPARTURE: ${enrolledUser.name} stepped away from the desk.`);
-        this.currentContext.activity = 'Away from desk';
-        this.currentContext.posture = 'unknown';
-        this.currentContext.expression = 'None';
-        this.currentContext.summary = `${enrolledUser.name} stepped away.`;
-        this.emit('userDeparture', {
-          user: enrolledUser.name,
-          timestamp: now,
-        });
+        if (now - this.lastPresenceCheckTimestamp > 8000) {
+          this.lastPresenceState = false;
+          console.log('🚶 [VisualActivityMonitor] USER DEPARTURE DETECTED: Desk is empty.');
+          this.currentContext.activity = 'Away from desk';
+          this.currentContext.summary = 'User stepped away from desk.';
+          this.emit('userDeparture', { timestamp: now });
+        }
       }
-      // 5. Periodic Ambient Multimodal Perception while User is Present
-      else if (isNowPresent && now - this.lastGeminiPerceptionTimestamp > this.ambientVisionCadenceMs) {
-        await this.runAmbientMultimodalAnalysis(snapshot.base64, 'periodic');
+
+      if (isNowPresent) {
+        this.lastPresenceCheckTimestamp = now;
+
+        // Periodic ambient multimodal update (every 45s if user is continuously active)
+        if (now - this.lastGeminiPerceptionTimestamp > 45000) {
+          await this.runAmbientMultimodalAnalysis(snapshot.base64, 'periodic');
+        }
       }
     } catch (err: any) {
-      // Non-fatal, retry on next tick
+      console.warn('[VisualActivityMonitor] Tick error:', err.message);
     } finally {
       this.isProcessingTick = false;
     }
@@ -211,13 +212,12 @@ export class VisualActivityMonitor extends EventEmitter {
    * Queries Gemini Vision in the background to inspect activity, posture, and facial expressions
    */
   private async runAmbientMultimodalAnalysis(base64Image: string, reason: 'arrival' | 'periodic'): Promise<void> {
-    if (!config.geminiApiKey) return;
+    if (!config.geminiApiKey && !config.geminiFallbackApiKey) return;
     this.lastGeminiPerceptionTimestamp = Date.now();
 
     const enrolledUser = this.faceEngine.getEnrolledUser();
     const prompt =
       'You are January\'s visual cortex observing the user through the laptop camera.\n' +
-      `The user is ${enrolledUser.name}.\n` +
       'Briefly describe their current posture (upright/slouching/relaxed), primary activity (coding, reading, writing, gesturing, looking at screen, holding an object, drinking coffee), and facial expression (focused, smiling, tired, curious).\n' +
       'Format output strictly as JSON with keys: "posture", "activity", "expression", "briefSummary", "isWaving".';
 
@@ -229,9 +229,9 @@ export class VisualActivityMonitor extends EventEmitter {
     const candidateModels = [
       'models/gemini-flash-lite-latest',
       'models/gemini-3.5-flash-lite',
+      'models/gemini-3-flash-preview',
       'models/gemini-flash-latest',
       'models/gemini-3.5-flash',
-      'models/gemini-3-flash-preview',
     ];
 
     for (const keyConfig of geminiKeysToTry) {

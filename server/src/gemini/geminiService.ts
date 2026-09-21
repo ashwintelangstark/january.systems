@@ -226,10 +226,10 @@ function inspectPromptLanguage(prompt: string): { action: 'switch_english' | 'se
 export class GeminiService {
   private candidateModels = [
     'models/gemini-flash-lite-latest',
-    'models/gemini-3-flash-preview',
     'models/gemini-3.5-flash-lite',
+    'models/gemini-3-flash-preview',
     'models/gemini-flash-latest',
-    'models/gemini-3.7-flash',
+    'models/gemini-3.5-flash',
   ];
   private candidateOpenAIModels = [
     'gpt-4o-mini',
@@ -291,11 +291,11 @@ export class GeminiService {
 
     const activeLang = this.currentSessionLanguage;
 
-    // 0. Check for Camera Vision, Object Identification & Facial Recognition
+    // 0. Check for Camera Vision, Surroundings, Outfit, Things, and Behavior
     const isVisionQuery =
-      (/\b(look|see|camera|holding|what('s|\s+is)\s+this|what\s+do\s+you\s+see|who\s+am\s+i|recognize\s+me|can\s+you\s+see|my\s+face|posture|read\s+this|examine|surroundings|my\s+room)\b/i.test(lower) ||
-       /\b(mudje\s+dekho|mujhe\s+dekho|dekho|mera\s+photo|kya\s+dikha|kya\s+dekh\s+rahe\s+ho|mera\s+chehra|meri\s+shakal|kasa\s+disto|mala\s+bagha|bagha|dakhva|paha|nannu\s+nodi|ennai\s+paarunga|chudandi)\b/i.test(lower) ||
-       /(?:देखो|पहचानो|क्या\s*दिख\s*रहा|मुझे\s*देखो|बघा|ओळखतोस|दाखवा|पहा)/i.test(prompt)) &&
+      (/\b(look|see|camera|eyes|holding|in\s+my\s+hand|in\s+my\s+hands|what('s|\s+is)\s+this|what\s+do\s+you\s+see|who\s+am\s+i|who\s+is\s+(this|here|sitting|in\s+front)|recognize\s+me|can\s+you\s+see|my\s+face|posture|slouching|sitting\s+upright|read\s+this|examine|inspect|scan|surroundings|environment|my\s+room|the\s+room|desk|table|background|behind\s+me|around\s+me|in\s+front\s+of\s+(me|you)|things|objects?|what\s+is\s+around|outfit|wearing|clothes|clothing|shirt|t-?shirt|hoodie|jacket|dress|pant|pants|glasses|spectacles|headphone|accessories|appearance|how\s+do\s+i\s+look|how\s+am\s+i\s+looking|am\s+i\s+(smiling|tired|focused|happy)|expression|facial\s+expression|behaviou?r|what\s+am\s+i\s+doing|what\s+is\s+my\s+activity|am\s+i\s+doing|action|gesture|waving)\b/i.test(lower) ||
+       /\b(mudje\s+dekho|mujhe\s+dekho|dekho|meri\s+taraf|mera\s+photo|kya\s+dikha|kya\s+dekh\s+rahe\s+ho|mera\s+chehra|meri\s+shakal|kya\s+pehna\s+hai|kya\s+pehna|kya\s+pehan\s+rakha|kapde|kapda|mera\s+outfit|outfit\s+kaisa|kya\s+kar\s+raha\s+hu|kya\s+kar\s+rahi\s+hu|hath\s+me\s+kya|haath\s+me\s+kya|aaspas\s+kya|aaspas|aaju\s*baaju|kamre\s+me|kamra|mere\s+piche|piche\s+kya|kasa\s+disto|kashi\s+diste|mala\s+bagha|bagha|dakhva|paha|majhe\s+kapde|kay\s+ghalalay|kay\s+karat\s+ahe|majhya\s+aaspas|hathat\s+kay|kiti\s+lok|nannu\s+nodi|ennai\s+paarunga|chudandi)\b/i.test(lower) ||
+       /(?:देखो|पहचानो|क्या\s*दिख\s*रहा|मुझे\s*देखो|बघा|ओळखतोस|दाखवा|पहा|पहना|कपड़े|कपडे|आउटफिट|कमरा|आसपास|हाथ\s*में|क्या\s*कर\s*रहा|कसा\s*दिसतो|कपडे\s*कसे|काय\s*करतोय)/i.test(prompt)) &&
       !lower.startsWith('search ') && !lower.startsWith('look up ') && !lower.startsWith('find ') && !lower.startsWith('open ') && !lower.includes('code');
 
     if (isVisionQuery) {
@@ -517,7 +517,18 @@ export class GeminiService {
       '5. Real-Time Internet & Live Weather: You have direct live internet search and live weather tools. Use any search/weather context provided to give immediate, accurate, and vivid answers.\n' +
       ambientVisualPrompt +
       '7. Adaptive Memory & Personalized Evolution: ' + learnedContext + '\n' +
-      '8. No AI Cliches: Never say "As an AI language model", "I do not have feelings", or repeat robotic greetings. Speak as January with natural, vibrant human presence.';
+      '8. No AI Cliches: Never say "As an AI language model", "I do not have feelings", or repeat robotic greetings. Speak as January with natural, vibrant human presence.\n' +
+      '9. STRICT USER NAME INSTRUCTION: NEVER address the user as "Ashwin" or insert their name into your responses unless the user explicitly tells you to call them by their name (e.g. "call me Ashwin", "say my name", or "what is my name?"). Address the user directly using natural conversational second-person ("you", "your") without starting with or sprinkling their name into responses.';
+
+    const userAskedForName = /\b(my\s+name|who\s+am\s+i|call\s+me|name\s+is)\b/i.test(prompt);
+    const sanitizeNameOutput = (text: string): string => {
+      if (userAskedForName) return text;
+      return text
+        .replace(/^(?:Hey|Hi|Hello|Well|Sure|Okay|Look|Ah),?\s+Ashwin(?:,\s*|\s*[-–—:]\s*|\s+)/i, '')
+        .replace(/^Ashwin,\s*/i, '')
+        .replace(/,\s*Ashwin([.!?])/gi, '$1')
+        .replace(/\bAshwin\b/gi, 'you');
+    };
 
     // Try Google Gemini API servers with Primary Key, then Fallback Key, rotating models
     const promptWithWeb = prompt + (webSearchContext ? `\n${webSearchContext}` : '');
@@ -583,6 +594,8 @@ export class GeminiService {
 
             // Always update EmotionEngine so hardware eyes, UI, and vocal prosody shift
             this.emotionEngine.setEmotion(activeEmotion);
+
+            reply = sanitizeNameOutput(reply);
 
             if (reply) {
               // Record interaction to continually learn user preferences
@@ -711,6 +724,15 @@ export class GeminiService {
 
           // Real-time EmotionEngine sync
           this.emotionEngine.setEmotion(activeEmotion);
+
+          const userAskedForName = /\b(my\s+name|who\s+am\s+i|call\s+me|name\s+is)\b/i.test(prompt);
+          if (!userAskedForName) {
+            reply = reply
+              .replace(/^(?:Hey|Hi|Hello|Well|Sure|Okay|Look|Ah),?\s+Ashwin(?:,\s*|\s*[-–—:]\s*|\s+)/i, '')
+              .replace(/^Ashwin,\s*/i, '')
+              .replace(/,\s*Ashwin([.!?])/gi, '$1')
+              .replace(/\bAshwin\b/gi, 'you');
+          }
 
           if (reply) {
             this.learnedProfileEngine.recordInteraction(prompt, reply, {

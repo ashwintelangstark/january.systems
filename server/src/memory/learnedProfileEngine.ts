@@ -207,13 +207,13 @@ export class LearnedProfileEngine {
       .join(', ');
 
     return (
-      `\n[ADAPTIVE LEARNED USER PROFILE & MEMORY FOR ${this.profile.userName.toUpperCase()}]:\n` +
-      `• Primary User: ${this.profile.userName} (Total Interactions: ${this.profile.totalInteractions})\n` +
+      `\n[ADAPTIVE LEARNED USER PREFERENCES & MEMORY]:\n` +
       `• Preferred Programming Languages: ${topCodingLangs || 'C++, Python, C'}\n` +
       `• Preferred Communication Languages: ${topSpokenLangs || 'English, Hindi, Marathi'}\n` +
       `• Learned Coding Preferences: ${this.profile.codingStylePreferences.join('; ')}\n` +
       `• Learned Tone & Interaction Style: ${this.profile.communicationStylePreferences.join('; ')}\n` +
       `• Observed Work Habits: ${this.profile.observedHabits.join('; ')}\n` +
+      `• STRICT NAME USAGE: The user's name is ${this.profile.userName}, but you must NEVER address or call the user by their name ("${this.profile.userName}") unless the user explicitly commands you to use their name or asks for their name. Always address them directly in the natural second person ("you", "your").\n` +
       `Use these learned preferences to personalize all responses, code generations, and interactions.`
     );
   }

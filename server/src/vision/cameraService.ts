@@ -88,25 +88,28 @@ export class CameraService {
   public async getLatestFrame(): Promise<CameraSnapshotResult> {
     const now = Date.now();
 
-    // If active 60 FPS stream is running, read latest frame directly from memory-synced file
-    if (this.isStreaming() && fs.existsSync(this.latestFramePath)) {
+    // If latest.jpg exists and was updated within the last 2.5 seconds (from active stream)
+    if (fs.existsSync(this.latestFramePath)) {
       try {
-        const imgBuffer = fs.readFileSync(this.latestFramePath);
-        if (imgBuffer.length > 0) {
-          const res: CameraSnapshotResult = {
-            success: true,
-            base64: imgBuffer.toString('base64'),
-            filePath: this.latestFramePath,
-            byteCount: imgBuffer.length,
-            timestamp: now,
-          };
-          this.cachedSnapshot = res;
-          return res;
+        const stat = fs.statSync(this.latestFramePath);
+        if (now - stat.mtimeMs < 2500 && stat.size > 1000) {
+          const imgBuffer = fs.readFileSync(this.latestFramePath);
+          if (imgBuffer.length > 0) {
+            const res: CameraSnapshotResult = {
+              success: true,
+              base64: imgBuffer.toString('base64'),
+              filePath: this.latestFramePath,
+              byteCount: imgBuffer.length,
+              timestamp: stat.mtimeMs,
+            };
+            this.cachedSnapshot = res;
+            return res;
+          }
         }
       } catch {}
     }
 
-    // Fall back to one-shot capture if streaming is off
+    // Capture an instant fresh hardware snapshot from physical camera
     return this.captureSnapshot(true);
   }
 
@@ -116,12 +119,8 @@ export class CameraService {
   public async captureSnapshot(forceFresh = false): Promise<CameraSnapshotResult> {
     const now = Date.now();
 
-    if (this.isStreaming() && fs.existsSync(this.latestFramePath)) {
-      return this.getLatestFrame();
-    }
-
-    // Cache hit if captured within 3 seconds and fresh frame not demanded
-    if (!forceFresh && this.cachedSnapshot && this.cachedSnapshot.success && now - this.cachedSnapshot.timestamp < 3000) {
+    // Cache hit if captured within 1.5 seconds and fresh frame not demanded
+    if (!forceFresh && this.cachedSnapshot && this.cachedSnapshot.success && now - this.cachedSnapshot.timestamp < 1500) {
       return this.cachedSnapshot;
     }
 
