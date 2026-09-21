@@ -222,64 +222,130 @@ export class VisualActivityMonitor extends EventEmitter {
       'Format output strictly as JSON with keys: "posture", "activity", "expression", "briefSummary", "isWaving".';
 
     const candidateModels = [
+      'models/gemini-flash-lite-latest',
+      'models/gemini-flash-latest',
+      'models/gemini-3.5-flash',
+      'models/gemini-3-flash-preview',
       'models/gemini-3.5-flash-lite',
-      'models/gemini-2.0-flash',
-      'models/gemini-3.1-flash-lite',
     ];
 
-    for (const model of candidateModels) {
-      try {
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${config.geminiApiKey}`,
-          {
+    if (config.geminiApiKey) {
+      for (const model of candidateModels) {
+        try {
+          const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${config.geminiApiKey}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [
+                  {
+                    role: 'user',
+                    parts: [
+                      { text: prompt },
+                      {
+                        inlineData: {
+                          mimeType: 'image/jpeg',
+                          data: base64Image,
+                        },
+                      },
+                    ],
+                  },
+                ],
+              }),
+            }
+          );
+
+          const data = (await response.json()) as any;
+          if (response.ok && data?.candidates?.[0]?.content?.parts) {
+            const text = data.candidates[0].content.parts.map((p: any) => p.text || '').join('').trim();
+            const cleanJson = text.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+            try {
+              const parsed = JSON.parse(cleanJson);
+              if (parsed.posture) this.currentContext.posture = parsed.posture;
+              if (parsed.activity) this.currentContext.activity = parsed.activity;
+              if (parsed.expression) this.currentContext.expression = parsed.expression;
+              if (parsed.briefSummary) this.currentContext.summary = parsed.briefSummary;
+
+              console.log(`👁️ [VisualActivityMonitor] Visual Context: [Activity: ${this.currentContext.activity} | Posture: ${this.currentContext.posture} | Mood: ${this.currentContext.expression}]`);
+
+              if (parsed.isWaving) {
+                this.emit('gesture', { type: 'wave', user: enrolledUser.name });
+              }
+
+              this.emit('activityUpdate', this.currentContext);
+              return;
+            } catch {
+              // If raw text returned
+              this.currentContext.summary = text.slice(0, 150);
+              return;
+            }
+          }
+        } catch {
+          // Fallback to next candidate model
+        }
+      }
+    }
+
+    // 2. OpenAI Multimodal Vision Fallback: Activated if Gemini is quota-exhausted or unavailable
+    if (config.openaiApiKey) {
+      const candidateOpenAiVision = ['gpt-4o-mini', 'gpt-4o'];
+      for (const model of candidateOpenAiVision) {
+        try {
+          const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${config.openaiApiKey}`,
+            },
             body: JSON.stringify({
-              contents: [
+              model,
+              messages: [
                 {
                   role: 'user',
-                  parts: [
-                    { text: prompt },
+                  content: [
+                    { type: 'text', text: prompt },
                     {
-                      inlineData: {
-                        mimeType: 'image/jpeg',
-                        data: base64Image,
+                      type: 'image_url',
+                      image_url: {
+                        url: `data:image/jpeg;base64,${base64Image}`,
                       },
                     },
                   ],
                 },
               ],
+              max_tokens: 250,
+              temperature: 0.3,
             }),
-          }
-        );
+          });
 
-        const data = (await response.json()) as any;
-        if (response.ok && data?.candidates?.[0]?.content?.parts) {
-          const text = data.candidates[0].content.parts.map((p: any) => p.text || '').join('').trim();
-          const cleanJson = text.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
-          try {
-            const parsed = JSON.parse(cleanJson);
-            if (parsed.posture) this.currentContext.posture = parsed.posture;
-            if (parsed.activity) this.currentContext.activity = parsed.activity;
-            if (parsed.expression) this.currentContext.expression = parsed.expression;
-            if (parsed.briefSummary) this.currentContext.summary = parsed.briefSummary;
+          const data = (await response.json()) as any;
+          if (response.ok && data?.choices?.[0]?.message?.content) {
+            const text = data.choices[0].message.content.trim();
+            const cleanJson = text.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+            try {
+              const parsed = JSON.parse(cleanJson);
+              if (parsed.posture) this.currentContext.posture = parsed.posture;
+              if (parsed.activity) this.currentContext.activity = parsed.activity;
+              if (parsed.expression) this.currentContext.expression = parsed.expression;
+              if (parsed.briefSummary) this.currentContext.summary = parsed.briefSummary;
 
-            console.log(`👁️ [VisualActivityMonitor] Visual Context: [Activity: ${this.currentContext.activity} | Posture: ${this.currentContext.posture} | Mood: ${this.currentContext.expression}]`);
+              console.log(`👁️ [VisualActivityMonitor:OpenAI] Visual Context: [Activity: ${this.currentContext.activity} | Posture: ${this.currentContext.posture} | Mood: ${this.currentContext.expression}]`);
 
-            if (parsed.isWaving) {
-              this.emit('gesture', { type: 'wave', user: enrolledUser.name });
+              if (parsed.isWaving) {
+                this.emit('gesture', { type: 'wave', user: enrolledUser.name });
+              }
+
+              this.emit('activityUpdate', this.currentContext);
+              return;
+            } catch {
+              this.currentContext.summary = text.slice(0, 150);
+              return;
             }
-
-            this.emit('activityUpdate', this.currentContext);
-            return;
-          } catch {
-            // If raw text returned
-            this.currentContext.summary = text.slice(0, 150);
-            return;
           }
+        } catch {
+          // Fallback to next OpenAI model
         }
-      } catch {
-        // Fallback to next candidate model
       }
     }
   }

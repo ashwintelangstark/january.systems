@@ -59,81 +59,131 @@ export async function seeAndAnalyze(args: SeeAndAnalyzeArgs = {}): Promise<Visio
   }
 
   const candidateVisionModels = [
+    'models/gemini-flash-lite-latest',
+    'models/gemini-flash-latest',
+    'models/gemini-3.5-flash',
+    'models/gemini-3-flash-preview',
     'models/gemini-3.5-flash-lite',
-    'models/gemini-2.0-flash',
-    'models/gemini-3.1-flash-lite',
   ];
 
-  if (!config.geminiApiKey) {
-    return {
-      success: true,
-      description: `Camera snapshot captured. Face detector: ${faceResult.message}`,
-      verbalSummary: faceResult.hasFace ? `I see you, ${enrolledUser.name}.` : 'I took a photo, but no face was detected.',
-      hasFace: faceResult.hasFace,
-      identifiedUser: faceResult.identifiedUser,
-      snapshotPath: snapshot.filePath,
-    };
+  if (config.geminiApiKey) {
+    for (const model of candidateVisionModels) {
+      try {
+        console.log(`[VisionTool] Querying Gemini Vision model (${model})...`);
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${config.geminiApiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [
+                {
+                  role: 'user',
+                  parts: [
+                    { text: userPrompt },
+                    {
+                      inlineData: {
+                        mimeType: 'image/jpeg',
+                        data: snapshot.base64,
+                      },
+                    },
+                  ],
+                },
+              ],
+              systemInstruction: {
+                parts: [{ text: visionSystemInstruction }],
+              },
+            }),
+          }
+        );
+
+        const data = (await response.json()) as any;
+        if (response.ok && data?.candidates?.[0]?.content?.parts) {
+          const reply = data.candidates[0].content.parts
+            .map((p: any) => p.text || '')
+            .join('')
+            .trim();
+
+          if (reply) {
+            return {
+              success: true,
+              description: reply,
+              verbalSummary: reply,
+              hasFace: faceResult.hasFace,
+              identifiedUser: faceResult.identifiedUser,
+              snapshotPath: snapshot.filePath,
+              modelUsed: model,
+            };
+          }
+        }
+        console.warn(`[VisionTool] Model ${model} returned status ${response.status}:`, data?.error?.message?.slice(0, 80));
+      } catch (e: any) {
+        console.warn(`[VisionTool] Network error for ${model}:`, e.message);
+      }
+    }
   }
 
-  for (const model of candidateVisionModels) {
-    try {
-      console.log(`[VisionTool] Querying Gemini Vision model (${model})...`);
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${config.geminiApiKey}`,
-        {
+  // 4. OpenAI Vision Fallback: Activated if Gemini is quota-exhausted or unavailable
+  if (config.openaiApiKey) {
+    const candidateOpenAiVision = ['gpt-4o-mini', 'gpt-4o'];
+    for (const model of candidateOpenAiVision) {
+      try {
+        console.log(`[VisionTool] 🔄 Gemini Vision unavailable. Querying OpenAI Vision fallback (${model})...`);
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${config.openaiApiKey}`,
+          },
           body: JSON.stringify({
-            contents: [
+            model,
+            messages: [
+              { role: 'system', content: visionSystemInstruction },
               {
                 role: 'user',
-                parts: [
-                  { text: userPrompt },
+                content: [
+                  { type: 'text', text: userPrompt },
                   {
-                    inlineData: {
-                      mimeType: 'image/jpeg',
-                      data: snapshot.base64,
+                    type: 'image_url',
+                    image_url: {
+                      url: `data:image/jpeg;base64,${snapshot.base64}`,
                     },
                   },
                 ],
               },
             ],
-            systemInstruction: {
-              parts: [{ text: visionSystemInstruction }],
-            },
+            max_tokens: 300,
+            temperature: 0.7,
           }),
-        }
-      );
+        });
 
-      const data = (await response.json()) as any;
-      if (response.ok && data?.candidates?.[0]?.content?.parts) {
-        const reply = data.candidates[0].content.parts
-          .map((p: any) => p.text || '')
-          .join('')
-          .trim();
-
-        if (reply) {
-          return {
-            success: true,
-            description: reply,
-            verbalSummary: reply,
-            hasFace: faceResult.hasFace,
-            identifiedUser: faceResult.identifiedUser,
-            snapshotPath: snapshot.filePath,
-            modelUsed: model,
-          };
+        const data = (await response.json()) as any;
+        if (response.ok && data?.choices?.[0]?.message?.content) {
+          const reply = data.choices[0].message.content.trim();
+          if (reply) {
+            console.log(`✅ [VisionTool] Successfully analyzed image via OpenAI Vision (${model})`);
+            return {
+              success: true,
+              description: reply,
+              verbalSummary: reply,
+              hasFace: faceResult.hasFace,
+              identifiedUser: faceResult.identifiedUser,
+              snapshotPath: snapshot.filePath,
+              modelUsed: `OpenAI: ${model}`,
+            };
+          }
         }
+        console.warn(`[VisionTool] OpenAI Vision ${model} failed (${response.status}):`, data?.error?.message?.slice(0, 80));
+      } catch (err: any) {
+        console.warn(`[VisionTool] OpenAI Vision network error for ${model}:`, err.message);
       }
-      console.warn(`[VisionTool] Model ${model} returned status ${response.status}:`, data?.error?.message?.slice(0, 80));
-    } catch (e: any) {
-      console.warn(`[VisionTool] Network error for ${model}:`, e.message);
     }
   }
 
   return {
     success: true,
     description: `Snapshot saved. ${faceResult.message}`,
-    verbalSummary: faceResult.hasFace ? `Hello ${enrolledUser.name}, I see you!` : 'I looked through the camera, but cannot reach the vision API.',
+    verbalSummary: faceResult.hasFace ? `Hello ${enrolledUser.name}, I see you!` : 'I looked through the camera, but cannot reach cloud vision APIs.',
     hasFace: faceResult.hasFace,
     identifiedUser: faceResult.identifiedUser,
     snapshotPath: snapshot.filePath,
