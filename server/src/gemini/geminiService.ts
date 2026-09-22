@@ -507,6 +507,34 @@ export class GeminiService {
       : '';
     const learnedContext = this.learnedProfileEngine.getSystemPromptContext();
 
+    // Dynamic Live Date, Time & Location Context
+    const now = new Date();
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata';
+    const dateFormatted = now.toLocaleDateString('en-IN', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      timeZone,
+    });
+    const timeFormatted = now.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
+      timeZone,
+    });
+    const currentHour = now.getHours();
+    const timeOfDay = currentHour < 12 ? 'Morning' : currentHour < 17 ? 'Afternoon' : currentHour < 21 ? 'Evening' : 'Night';
+
+    const temporalContext =
+      `10. LIVE DATE, TIME & LOCATION AWARENESS:\n` +
+      `   • Current Local Date: ${dateFormatted}\n` +
+      `   • Current Local Time: ${timeFormatted} (${timeZone}, India Standard Time / IST, UTC+5:30)\n` +
+      `   • Time of Day: ${timeOfDay}\n` +
+      `   • Location: Mac workstation in India (${timeZone})\n` +
+      `   Whenever the user asks for the time, date, day of week, or makes time-sensitive remarks, ALWAYS use this live local temporal context.`;
+
     const systemInstructionText =
       'You are January, an exceptionally intelligent, charismatic, witty, and deeply human-like AI companion living on the user\'s Mac.\n' +
       'CAPABILITIES & PERSONALITY GUIDELINES:\n' +
@@ -518,7 +546,8 @@ export class GeminiService {
       ambientVisualPrompt +
       '7. Adaptive Memory & Personalized Evolution: ' + learnedContext + '\n' +
       '8. No AI Cliches: Never say "As an AI language model", "I do not have feelings", or repeat robotic greetings. Speak as January with natural, vibrant human presence.\n' +
-      '9. STRICT USER NAME INSTRUCTION: NEVER address the user as "Ashwin" or insert their name into your responses unless the user explicitly tells you to call them by their name (e.g. "call me Ashwin", "say my name", or "what is my name?"). Address the user directly using natural conversational second-person ("you", "your") without starting with or sprinkling their name into responses.';
+      '9. STRICT USER NAME INSTRUCTION: NEVER address the user as "Ashwin" or insert their name into your responses unless the user explicitly tells you to call them by their name (e.g. "call me Ashwin", "say my name", or "what is my name?"). Address the user directly using natural conversational second-person ("you", "your") without starting with or sprinkling their name into responses.\n' +
+      temporalContext;
 
     const userAskedForName = /\b(my\s+name|who\s+am\s+i|call\s+me|name\s+is)\b/i.test(prompt);
     const sanitizeNameOutput = (text: string): string => {

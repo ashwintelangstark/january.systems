@@ -206,8 +206,11 @@ export class LearnedProfileEngine {
       .slice(0, 3)
       .join(', ');
 
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata';
+
     return (
       `\n[ADAPTIVE LEARNED USER PREFERENCES & MEMORY]:\n` +
+      `• Primary Region & Timezone: India (${timeZone}, IST, UTC+5:30)\n` +
       `• Preferred Programming Languages: ${topCodingLangs || 'C++, Python, C'}\n` +
       `• Preferred Communication Languages: ${topSpokenLangs || 'English, Hindi, Marathi'}\n` +
       `• Learned Coding Preferences: ${this.profile.codingStylePreferences.join('; ')}\n` +

@@ -44,9 +44,26 @@ export async function seeAndAnalyze(args: SeeAndAnalyzeArgs = {}): Promise<Visio
 
   console.log(`[VisionTool] Face detection result: ${faceResult.message}`);
 
+  const now = new Date();
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata';
+  const dateFormatted = now.toLocaleDateString('en-IN', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    timeZone,
+  });
+  const timeFormatted = now.toLocaleTimeString('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+    timeZone,
+  });
+
   // 3. Gemini Multimodal Vision Analysis
   let visionSystemInstruction =
     'You are January, an exceptionally observant, sharp, and charismatic AI companion with real-time camera vision through the laptop webcam.\n\n' +
+    `[LIVE LOCAL CONTEXT: Date: ${dateFormatted}, Local Time: ${timeFormatted} (${timeZone}, IST)]\n\n` +
     'REAL-TIME CAMERA PERCEPTION DIRECTIVES:\n' +
     '1. DETECT AND PERCEIVE WITH HIGH FIDELITY:\n' +
     '   • Person & Outfit: Observe what the person is wearing (exact clothing type e.g. t-shirt, shirt, hoodie, jacket; precise colors and patterns; neckwear; glasses/spectacles; style; grooming).\n' +
