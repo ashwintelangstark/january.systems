@@ -433,7 +433,8 @@ async function handleUserInput(text: string) {
     }
     console.log(`│`);
     console.log(`${purple(bold('└────────────────────────────────────────────────────────────────────'))}`);
-    await systemSpeaker.speakText(geminiResult.text, {
+    const spokenText = geminiResult.verbalSummary || geminiResult.text;
+    await systemSpeaker.speakText(spokenText, {
       pitch: emotion?.pitch,
       rate: emotion?.rate,
       emotion: emotion?.emotion,

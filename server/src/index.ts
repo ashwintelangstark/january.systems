@@ -491,8 +491,9 @@ async function handleUnifiedPrompt(text: string, source: 'voice' | 'text' = 'voi
       },
     });
 
+    const spokenText = result.verbalSummary || result.text;
     setAgentState('speaking', 'Speaking voice response');
-    await systemSpeaker.speakText(result.text, {
+    await systemSpeaker.speakText(spokenText, {
       pitch: result.emotion?.pitch,
       rate: result.emotion?.rate,
       emotion: result.emotion?.emotion,

@@ -19,8 +19,9 @@ export class SystemSpeaker extends EventEmitter {
   }
 
   /**
-   * Sanitize text for speech: Strips code blocks, syntax tokens, and HTML tags
-   * so physical speakers never read out raw code or programming tokens.
+   * Sanitize text for speech: Strips code blocks, syntax tokens, HTML tags,
+   * and raw filesystem paths so physical speakers speak naturally and never
+   * read out long system directory paths or export listings.
    */
   public sanitizeForSpeech(text: string): { speechText: string; hadCode: boolean } {
     if (!text) return { speechText: '', hadCode: false };
@@ -46,11 +47,24 @@ export class SystemSpeaker extends EventEmitter {
       clean = clean.replace(/<[^>]+>/g, '');
     }
 
-    // Strip common programming boilerplate lines if present
+    // Strip lines that are code syntax or file export listings
     clean = clean
       .split('\n')
       .filter((line) => {
         const trimmed = line.trim();
+        // If line is a bullet or heading for an exported/saved file (e.g. "- .blend: /...", "- .obj Mesh: /...", "• [FILE] ... (/...)")
+        if (
+          /^[-*•]?\s*(?:\.(?:blend|obj|mtl|glb|gltf|fbx|stl|dae|py|c|cpp|h|ts|js|json|png|jpg|jpeg|webp|pdf|txt|csv)|\b(?:blend|file|export|output|saved\s+to|path|project|mesh|realtime)\b)/i.test(trimmed) &&
+          /(?:\/|\\|\.[a-zA-Z0-9]{2,4}\b)/.test(trimmed)
+        ) {
+          return false;
+        }
+
+        // If line is primarily a filesystem path
+        if (/^(?:[-*•]\s*)?(?:[a-zA-Z]:\\|\/|~\/|\.\.?\/)(?:[^\s:]+\/)*[^\s:]+\.[a-zA-Z0-9]+$/i.test(trimmed)) {
+          return false;
+        }
+
         // If line looks like code syntax, filter it out
         if (/^(?:import|export|const|let|var|function|class|def|return|public|private)\b/.test(trimmed)) {
           hadCode = true;
@@ -64,6 +78,24 @@ export class SystemSpeaker extends EventEmitter {
       .join(' ')
       .trim();
 
+    // Strip parenthesized file paths: e.g. "report.pdf (/Users/.../report.pdf)" -> "report.pdf"
+    clean = clean.replace(/\s*\((?:[a-zA-Z]:\\|\/|~\/|\.\.?\/)[^)]+\)/g, '');
+
+    // Strip inline absolute Unix paths: e.g. "/Users/.../file.ext"
+    clean = clean.replace(/(?:^|\s)(?:\/(?:Users|home|Volumes|private|tmp|bin|usr|System|Library|var|etc|opt)\/[^\s,;:)]+)/g, ' ');
+
+    // Strip inline Windows paths: e.g. "C:\Users\..."
+    clean = clean.replace(/(?:^|\s)(?:[a-zA-Z]:\\[^\s,;:)]+)/g, ' ');
+
+    // Strip relative or project export paths: e.g. "server/data/exports/3d/model.blend"
+    clean = clean.replace(/(?:^|\s)(?:(?:\.|\.\.|~)?\/[a-zA-Z0-9_.-]+)+(?:\/[a-zA-Z0-9_.-]+)*\.[a-zA-Z0-9]+/g, ' ');
+
+    // Clean up residual path introductions (e.g. "saved to :", "saved to .", "at /", "saved as :")
+    clean = clean.replace(/\b(?:saved\s+(?:to|at)|exported\s+to|file\s+path\s+is)\s*[:.]?/gi, 'saved.');
+    clean = clean.replace(/\bto\s+and\b/gi, 'and');
+    clean = clean.replace(/\bsaved\s+to\s+and\b/gi, 'saved and');
+    clean = clean.replace(/\s*:\s*\./g, '.');
+
     // Clean up multiple spaces and markdown symbols (#, *, _, >)
     clean = clean
       .replace(/[#*_~>`]/g, '')
@@ -73,6 +105,11 @@ export class SystemSpeaker extends EventEmitter {
     // If text was primarily code and left empty, provide a clean verbal confirmation
     if (hadCode && (!clean || clean.length < 5)) {
       clean = "I've generated the code and loaded the live interactive preview for you on screen.";
+    }
+
+    // If text was primarily file paths and left empty, provide a clean verbal confirmation
+    if (!clean || clean.length < 3) {
+      clean = "I have created and saved the file for you on your system.";
     }
 
     return { speechText: clean, hadCode };
@@ -265,3 +302,5 @@ export class SystemSpeaker extends EventEmitter {
     return buffer;
   }
 }
+
+export const systemSpeaker = new SystemSpeaker();

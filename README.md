@@ -758,6 +758,7 @@ january-ai/
 │           ├── test_plan_to_3d.ts  # 2D Floor Plan to 3D BIM test suite (14/14 passed)
 │           ├── test_precision_3d.ts # High-Precision Real-World 3D Engine (18/18 passed)
 │           ├── test_universal_3d.ts # Universal arbitrary 3D model test suite (9/9 passed)
+│           ├── test_speech_path_sanitization.ts # Speech Path Sanitization test suite (13/13 passed)
 │           └── test_gemini_3d_intent.ts # Conversational intent test suite
 ```
 
@@ -897,6 +898,9 @@ npx tsx server/src/tests/test_precision_3d.ts
 
 # Test 5: Universal 3D Object Synthesis Engine (9/9 Passed)
 npx tsx server/src/tests/test_universal_3d.ts
+
+# Test 6: Speech Path Sanitization (No File Paths Spoken) (13/13 Passed)
+npx tsx server/src/tests/test_speech_path_sanitization.ts
 ```
 
 ---
