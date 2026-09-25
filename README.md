@@ -239,6 +239,55 @@ flowchart TD
 
 ---
 
+## ✈️ Real-World High-Precision 3D Engineering & Aerodynamic Kernel (Phase 1 & 2)
+
+When asked to model specific real-world machines, aircraft, or industrial designs (e.g. **Boeing 787-9 Dreamliner**, **Lockheed Martin F-22 Raptor**, **Concorde**, **Supermarine Spitfire**, **Cessna 172**), January activates its **Phase 1 Technical Grounding Engine** and **Phase 2 BMesh Aerodynamic Kernel** to produce CAD-grade, mathematically lofted 3D replicas with exact physical dimensions.
+
+```mermaid
+flowchart TD
+    UserQuery["User Prompt / Voice:<br/>'January, make a 3D model of a Boeing 787-9 Dreamliner in Blender'"] --> IntentCheck{"GeminiService 3D Intent Routing"}
+
+    IntentCheck -->|Precision Request| SpecEngine["TechnicalSpecEngine (Phase 1 Grounding)"]
+
+    subgraph "Phase 1: Technical Grounding"
+        SpecEngine --> CuratedDB{"Curated Iconic Catalog?"}
+        CuratedDB -->|Match: Boeing 787-9, F-22, Concorde, Spitfire, Cessna| ExactSpec["Load Exact Metric Dimensions, NACA Profile, Engines & Materials"]
+        CuratedDB -->|Unknown Subject| WebSearch["DuckDuckGo/Wikipedia Technical Telemetry Scraper"]
+        WebSearch --> ExtractSpec["Extract Length, Wingspan, Height & Nacelle Specs"]
+        ExactSpec --> NormalizedSpec["Normalized EngineeringSpec Schema"]
+        ExtractSpec --> NormalizedSpec
+    end
+
+    subgraph "Phase 2: BMesh Precision Lofting Kernel (Blender 5.2.2 LTS)"
+        NormalizedSpec --> BMeshEngine["BMeshLoftingEngine (Python Script Synthesizer)"]
+        BMeshEngine --> Stations["Fuselage Cross-Section Station Lofting (bmesh Station Skinning)"]
+        BMeshEngine --> Airfoils["Aerodynamic Wings (NACA 4-Digit & Supercritical Camber Curves)"]
+        BMeshEngine --> AeroParams["Sweep Angle, Dihedral Angle, Washout Twist & Raked Wingtips"]
+        BMeshEngine --> Empennage["Vertical Tailfin & Horizontal Stabilizers (Symmetric NACA 0012)"]
+        BMeshEngine --> Turbofans["Turbofan Nacelles: Intake Lip, Twisted Blades, Spinner & Chevrons"]
+        BMeshEngine --> Cockpit["Cockpit Windscreen Glazing & Passenger Window Belts"]
+        BMeshEngine --> PBRShaders["Principled BSDF v2 PBR Shaders (Gloss Enamel, Titanium, Glass, Aluminum)"]
+        BMeshEngine --> Studio["Daylight Solar Sun + Ambient Sky Lighting + 50mm Camera Framing"]
+    end
+
+    subgraph "Asset Export & Presentation"
+        BMeshEngine --> SaveBlend[".blend Project (server/data/exports/3d/)"]
+        BMeshEngine --> SaveOBJ[".obj Mesh + .mtl Materials"]
+        BMeshEngine --> SaveGLB[".glb Realtime Model"]
+        SaveBlend --> LaunchApp["open -a Blender & Bring to Front on macOS"]
+    end
+```
+
+### 🔬 High-Precision Engineering Capabilities
+1. **Mathematical NACA & Supercritical Airfoils**: Calculates exact aerofoil thickness distributions and camber lines:
+   $$y_t(x) = 5 \cdot t \cdot c \cdot \left(0.2969\sqrt{\frac{x}{c}} - 0.1260\left(\frac{x}{c}\right) - 0.3516\left(\frac{x}{c}\right)^2 + 0.2843\left(\frac{x}{c}\right)^3 - 0.1015\left(\frac{x}{c}\right)^4\right)$$
+2. **Parametric Station Lofting**: Skins fuselage cross-sections in `bmesh` with clean quad topology, calculating outward surface normals without non-manifold geometry.
+3. **Aerodynamic Wing Synthesis**: Accounts for spanwise sweep angle ($\Lambda$), dihedral angle ($\Gamma$), geometric washout twist ($\theta$), and raked wingtips or sharklets.
+4. **Turbofan Nacelles with Chevron Serrations**: Features intake lips, central spinner cones, arrays of twisted titanium fan blades, and noise-attenuating sawtooth chevrons (such as on the Rolls-Royce Trent 1000 / GEnx).
+5. **Photorealistic PBR Materials**: Multi-layer aircraft polyurethane gloss enamel with clearcoat, burnt titanium/inconel jet exhaust, dielectric cockpit glass ($IOR = 1.52$), and polished de-icing aluminum leading edges.
+
+---
+
 ## 🏛️ 2D Architectural Plan & Blueprint to 3D Blender BIM Engine
 
 January can visually inspect any 2D architectural building floor plan, CAD blueprint, or hand-drawn sketch (either held up in front of the camera or from a local file), extract the structural layout, and construct an interactive, fully-furnished 3D architectural model in Blender.
@@ -622,9 +671,12 @@ january-ai/
 │       │   └── keyboardController.ts # Natural typing & keyboard shortcut chords
 │       ├── gui/                   # macOS Window Management
 │       │   └── windowManager.ts   # AppleScript window focus, bounds, and placement
-│       ├── blender/               # Blender 3D & BIM Bridges
+│       ├── blender/               # Blender 3D, Precision Engineering & BIM Bridges
 │       │   ├── blenderBridge.ts   # Procedural 3D model generator & Blender GUI launcher
-│       │   └── architecturalBridge.ts # 2D Blueprint to 3D BIM procedural builder
+│       │   ├── architecturalBridge.ts # 2D Blueprint to 3D BIM procedural builder
+│       │   └── advanced/          # High-Precision Real-World 3D Engine
+│       │       ├── technicalSpecEngine.ts # Web grounding & dimensional telemetry scraper
+│       │       └── bmeshLoftingEngine.ts  # Mathematical NACA airfoils & bmesh station skinning
 │       ├── vision/                # Vision Cortex & Blueprint Perception
 │       │   ├── activityMonitor.ts # Continuous ambient camera monitor & gesture detector
 │       │   ├── cameraService.ts   # Swift camera snapshot invoker & frame cache
@@ -654,6 +706,7 @@ january-ai/
 │       └── tests/                 # Automated Verification Test Suites
 │           ├── test_cua_blender.ts # CUA & Blender 3D test suite (17/17 passed)
 │           ├── test_plan_to_3d.ts  # 2D Floor Plan to 3D BIM test suite (14/14 passed)
+│           ├── test_precision_3d.ts # High-Precision Real-World 3D Engine (18/18 passed)
 │           └── test_gemini_3d_intent.ts # Conversational intent test suite
 ```
 
@@ -672,6 +725,9 @@ january-ai/
 | **3D Modeling** | *"Make a 3D model of a cyber sword in Blender"* | Generates procedural sword, PBR shaders, studio lights, exports `.blend`, and launches Blender GUI |
 | **3D Modeling** | *"Build a 3D model of a sports car in Blender"* | Generates aerodynamic car chassis, wheels, canopy, and opens Blender |
 | **3D Modeling** | *"Create a 3D coffee mug in Blender"* | Generates beveled ceramic coffee mug and opens Blender |
+| **Precision 3D Engineering** | *"Make a 3D model of a Boeing 787-9 Dreamliner in Blender"* | Grounds engineering dimensions (62.8m length, 60.1m wingspan), lofts supercritical wings with raked tips, builds Rolls-Royce Trent 1000 turbofans with chevrons, and opens Blender |
+| **Precision 3D Engineering** | *"Build an exact 3D model of an F-22 Raptor in Blender"* | Grounds stealth diamond-delta wings, twin canted rudders (28°), faceted chine fuselage, and opens Blender |
+| **Precision 3D Engineering** | *"Create a 3D model of Concorde in Blender"* | Grounds ogival gothic delta wings, droop nose visor, 4 Olympus turbojets, and opens Blender |
 | **2D Plan to 3D BIM** | *"Look at this building plan and convert it into 3D in Blender"* | Analyzes blueprint from webcam, builds foundation, PBR floors, 3m walls, openings, furniture, and opens Blender |
 | **2D Plan to 3D BIM** | *"Convert floorplan modern_villa.png to 3D architectural model"* | Reads local file, extracts structural BIM topology, and constructs 3D building |
 | **CUA Actuation** | *"Move mouse to 500, 300 and click"* | Moves cursor with quadratic Bezier smoothing and executes left click |
@@ -781,6 +837,9 @@ npx tsx server/src/tests/test_plan_to_3d.ts
 
 # Test 3: Conversational 3D Intent Routing
 npx tsx server/src/tests/test_gemini_3d_intent.ts
+
+# Test 4: Real-World Precision 3D Engine & Aerodynamic Kernel (18/18 Passed)
+npx tsx server/src/tests/test_precision_3d.ts
 ```
 
 ---

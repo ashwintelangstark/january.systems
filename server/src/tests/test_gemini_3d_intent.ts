@@ -11,7 +11,7 @@ async function testGeminiServiceIntent() {
   console.log('--- Testing GeminiService 3D Intent Routing ---');
   const service = new GeminiService();
 
-  const prompt = 'January, build a 3d model of a low poly sports car in blender';
+  const prompt = 'January, build a 3d model of a Boeing 787-9 Dreamliner in blender';
   console.log(`Prompt: "${prompt}"`);
 
   const response = await service.analyzeAndRespond(prompt);
@@ -20,7 +20,7 @@ async function testGeminiServiceIntent() {
   console.log('Response text:', response.text);
 
   if (response.modelUsed === 'Blender 5.2 Native Engine' && response.toolCalls?.[0]?.name === 'create_3d_model') {
-    console.log('✅ [PASS] GeminiService routed 3D modeling intent directly to Blender Engine!');
+    console.log('✅ [PASS] GeminiService routed 3D modeling intent directly to Precision Blender Engine!');
   } else {
     console.error('❌ [FAIL] GeminiService did not route to Blender Engine:', response);
     process.exit(1);

@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { windowManager } from '../gui/windowManager.js';
+import { bmeshLoftingEngine } from './advanced/bmeshLoftingEngine.js';
 
 const execAsync = promisify(exec);
 const __filename = fileURLToPath(import.meta.url);
@@ -287,6 +288,41 @@ except Exception as e:
         message: 'Blender is not installed at /Applications/Blender.app.',
         verbalSummary: 'I could not find Blender in your Applications folder.',
         error: 'Blender application not found',
+      };
+    }
+
+    const lower = options.prompt.toLowerCase();
+    const isAerodynamicOrPrecision =
+      lower.includes('airplane') ||
+      lower.includes('aeroplane') ||
+      lower.includes('plane') ||
+      lower.includes('aircraft') ||
+      lower.includes('jet') ||
+      lower.includes('fighter') ||
+      lower.includes('boeing') ||
+      lower.includes('airbus') ||
+      lower.includes('raptor') ||
+      lower.includes('concorde') ||
+      lower.includes('spitfire') ||
+      lower.includes('cessna') ||
+      lower.includes('skyhawk') ||
+      lower.includes('supersonic') ||
+      lower.includes('dreamliner') ||
+      lower.includes('stealth') ||
+      lower.includes('flight');
+
+    if (isAerodynamicOrPrecision) {
+      console.log(`[BlenderBridge] ✈️ Delegating to BMeshLoftingEngine for high-precision aerodynamic model: "${options.prompt}"...`);
+      const precisionResult = await bmeshLoftingEngine.buildModel(options.prompt, options.openInBlender !== false);
+      return {
+        success: precisionResult.success,
+        modelName: precisionResult.spec.name,
+        blendFilePath: precisionResult.blendFilePath,
+        objFilePath: precisionResult.objFilePath,
+        glbFilePath: precisionResult.glbFilePath,
+        message: precisionResult.message,
+        verbalSummary: precisionResult.verbalSummary,
+        error: precisionResult.error,
       };
     }
 
