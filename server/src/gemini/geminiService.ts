@@ -346,12 +346,48 @@ export class GeminiService {
       }
     }
 
-    // 0. Check for Camera Vision, Surroundings, Outfit, Things, and Behavior
+    // 0. Check for 2D Building Plan / Blueprint to 3D Blender Pipeline
+    const isFloorPlanTo3D =
+      (/\b(building\s+plan|floor\s+plan|blueprint|architectural\s+(?:plan|drawing|sketch)|cad\s+(?:plan|file|drawing)|autocad|house\s+plan|room\s+plan)\b/i.test(lower) &&
+       /\b(3d|blender|convert|turn|make|build|create|generate|model|extrude|mesh)\b/i.test(lower)) ||
+      /\b(convert|turn)\s+(?:this\s+)?(?:plan|blueprint|drawing)\s+(?:in|into|to)\s+(?:a\s+)?3d\b/i.test(lower);
+
+    if (isFloorPlanTo3D) {
+      console.log(`[GeminiService] 🏛️ 2D Floor Plan to 3D BIM pipeline triggered for: "${prompt}"...`);
+      const archEmotion = this.emotionEngine.createEmotionResult('focused');
+      this.emotionEngine.setEmotion(archEmotion);
+
+      // Check if camera should be used or if a specific image file was mentioned
+      const fileMatch = prompt.match(/\b(?:file|path|from|image)\s+([^\s,;]+\.(?:png|jpg|jpeg|webp|dxf|pdf))\b/i);
+      const imagePath = fileMatch ? fileMatch[1] : undefined;
+      const mentionsCamera = /\b(camera|holding|in\s+my\s+hand|printout|look\s+at\s+this|see\s+this|on\s+screen)\b/i.test(lower);
+      const fromCamera = !imagePath || mentionsCamera;
+
+      const result = await executeTool('convert_floorplan_to_3d', {
+        imagePath,
+        fromCamera,
+        userPrompt: prompt,
+        openInBlender: true,
+      });
+
+      const finishedEmotion = this.emotionEngine.createEmotionResult(result.success ? 'joy' : 'concerned');
+      this.emotionEngine.setEmotion(finishedEmotion);
+
+      return {
+        text: result.message,
+        verbalSummary: result.verbalSummary,
+        toolCalls: [{ name: 'convert_floorplan_to_3d', args: { imagePath, fromCamera, userPrompt: prompt }, result }],
+        modelUsed: 'Blender 5.2 BIM Engine',
+        emotion: finishedEmotion,
+      };
+    }
+
+    // 0.1 Check for Camera Vision, Surroundings, Outfit, Things, and Behavior
     const isVisionQuery =
       (/\b(look|see|camera|eyes|holding|in\s+my\s+hand|in\s+my\s+hands|what('s|\s+is)\s+this|what\s+do\s+you\s+see|who\s+am\s+i|who\s+is\s+(this|here|sitting|in\s+front)|recognize\s+me|can\s+you\s+see|my\s+face|posture|slouching|sitting\s+upright|read\s+this|examine|inspect|scan|surroundings|environment|my\s+room|the\s+room|desk|table|background|behind\s+me|around\s+me|in\s+front\s+of\s+(me|you)|things|objects?|what\s+is\s+around|outfit|wearing|clothes|clothing|shirt|t-?shirt|hoodie|jacket|dress|pant|pants|glasses|spectacles|headphone|accessories|appearance|how\s+do\s+i\s+look|how\s+am\s+i\s+looking|am\s+i\s+(smiling|tired|focused|happy)|expression|facial\s+expression|behaviou?r|what\s+am\s+i\s+doing|what\s+is\s+my\s+activity|am\s+i\s+doing|action|gesture|waving)\b/i.test(lower) ||
        /\b(mudje\s+dekho|mujhe\s+dekho|dekho|meri\s+taraf|mera\s+photo|kya\s+dikha|kya\s+dekh\s+rahe\s+ho|mera\s+chehra|meri\s+shakal|kya\s+pehna\s+hai|kya\s+pehna|kya\s+pehan\s+rakha|kapde|kapda|mera\s+outfit|outfit\s+kaisa|kya\s+kar\s+raha\s+hu|kya\s+kar\s+rahi\s+hu|hath\s+me\s+kya|haath\s+me\s+kya|aaspas\s+kya|aaspas|aaju\s*baaju|kamre\s+me|kamra|mere\s+piche|piche\s+kya|kasa\s+disto|kashi\s+diste|mala\s+bagha|bagha|dakhva|paha|majhe\s+kapde|kay\s+ghalalay|kay\s+karat\s+ahe|majhya\s+aaspas|hathat\s+kay|kiti\s+lok|nannu\s+nodi|ennai\s+paarunga|chudandi)\b/i.test(lower) ||
        /(?:देखो|पहचानो|क्या\s*दिख\s*रहा|मुझे\s*देखो|बघा|ओळखतोस|दाखवा|पहा|पहना|कपड़े|कपडे|आउटफिट|कमरा|आसपास|हाथ\s*में|क्या\s*कर\s*रहा|कसा\s*दिसतो|कपडे\s*कसे|काय\s*करतोय)/i.test(prompt)) &&
-      !lower.startsWith('search ') && !lower.startsWith('look up ') && !lower.startsWith('find ') && !lower.startsWith('open ') && !lower.includes('code');
+      !lower.startsWith('search ') && !lower.startsWith('look up ') && !lower.startsWith('find ') && !lower.startsWith('open ') && !lower.includes('code') && !lower.includes('3d') && !lower.includes('blender');
 
     if (isVisionQuery) {
       console.log(`[GeminiService] Activating Camera Eyes & Face Engine for: "${prompt}" [Active Lang: ${activeLang?.langName || 'English'}]...`);

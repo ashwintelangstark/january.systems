@@ -7,6 +7,7 @@ import { seeAndAnalyze } from './visionTool.js';
 import { manageAiModel } from './manageModel.js';
 import { create3DModelTool } from './blenderTool.js';
 import { executeCuaAction } from './cuaTool.js';
+import { convertPlanTo3D } from './architectureTool.js';
 
 export const GEMINI_TOOLS_DECLARATION = [
   {
@@ -249,6 +250,35 @@ export const GEMINI_TOOLS_DECLARATION = [
           required: ['action'],
         },
       },
+      {
+        name: 'convert_floorplan_to_3d',
+        description: 'Analyze a 2D building floor plan, blueprint, architectural drawing, or AutoCAD plan from the camera or a local file, extract rooms and walls, and construct an interactive 3D model in Blender.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            imagePath: {
+              type: 'STRING',
+              description: 'Optional path to a local floor plan image, CAD export, or blueprint drawing file.',
+            },
+            fromCamera: {
+              type: 'BOOLEAN',
+              description: 'True if capturing a physical drawing or printout held up in front of the camera.',
+            },
+            userPrompt: {
+              type: 'STRING',
+              description: 'Instructions, building style, or specific architectural context (e.g. "modern 2-bedroom villa", "minimalist apartment").',
+            },
+            style: {
+              type: 'STRING',
+              description: 'Architectural aesthetic style: "modern", "minimalist", "industrial", or "classic".',
+            },
+            openInBlender: {
+              type: 'BOOLEAN',
+              description: 'Whether to visibly launch Blender with the 3D building model on screen (default true).',
+            },
+          },
+        },
+      },
     ],
   },
 ];
@@ -295,6 +325,9 @@ export async function executeTool(name: string, args: Record<string, any>): Prom
 
     case 'execute_cua_action':
       return await executeCuaAction(args as any);
+
+    case 'convert_floorplan_to_3d':
+      return await convertPlanTo3D(args as any);
 
     default:
       console.warn(`[ToolsDispatcher] Unknown tool called: ${name}`);
