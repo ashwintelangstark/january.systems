@@ -1,123 +1,296 @@
 # ⚡ January AI (`january.systems`)
-> **An emotionally expressive, local autonomous AI companion and OS assistant running on macOS, powered by Google Gemini Multimodal Vision, Anthropic Claude, Python/C/C++ Coding Engine, AVFoundation Native Camera, and open-source neural audio engines.**
+> **The emotionally expressive, local autonomous AI companion, Computer-Using Agent (CUA), and 3D Generative Engine running natively on macOS. Powered by Dynamic AI Model Routing (458+ Models), Google Gemini Multimodal Vision, Native Blender 3D BIM Synthesis, Anthropic Claude, AVFoundation 60 FPS Camera Eyes, and Open-Source Neural Audio.**
 
 ---
 
-## 🌟 Overview
+## 🌟 Executive Overview
 
-**January** is an intelligent, emotionally attuned operating system agent designed to run autonomously on your laptop. It listens directly to your MacBook's physical microphone using local **Faster-Whisper** speech-to-text, sees through your native Mac webcam with **AVFoundation** and sub-20ms **local face detection**, reasons with **Google Gemini Multimodal Vision**, generates robust **Python, C, and C++** code with instant Claude & Gemini fallback, queries real-time internet search and live weather data, and vocalizes warm, human-like responses through your physical laptop speakers using **Microsoft Edge-TTS** neural voices.
+**January** is an advanced, emotionally attuned, autonomous operating system agent engineered to run directly on your Mac hardware. It listens through your MacBook's physical microphone using local **Faster-Whisper** speech-to-text, sees through your native Mac webcam with **AVFoundation 60 FPS hardware streaming** and sub-20ms **local edge face detection**, reasons across **458+ AI models** via a **Dynamic Multi-Tier Model Router**, acts on your desktop as an autonomous **Computer-Using Agent (CUA)**, creates interactive **3D models and architectural BIM buildings in Blender**, generates production-grade **Python, C, and C++** code, queries real-time internet and weather data, and speaks aloud through physical laptop speakers with emotionally modulated **Microsoft Edge-TTS** neural voices.
 
-January operates in two seamless modes:
-1. **Autonomous Background Daemon (`npm run dev`)**: Runs headlessly in the background, listening for wake phrases (**"Rise"**) and voice commands in the room even with no windows open.
-2. **Interactive Terminal CLI (`npm run cli`)**: A dual-section REPL (`[ME]` & `[JANUARY]`) that automatically pauses the background microphone while you interact and resumes background listening upon exit.
+January operates across two seamless modes:
+1. **Autonomous Background Daemon (`npm run dev`)**: Runs headlessly in the background, listening for wake phrases (**"Rise"**) and spoken commands in the room with no open windows required.
+2. **Interactive Terminal CLI (`npm run cli`)**: A dual-section REPL (`[ME]` & `[JANUARY]`) that automatically pauses the background microphone during keyboard interaction and resumes room listening upon exit.
 
 ---
 
-## 🏛️ System Architecture Flowchart
+## 🏛️ Master System Architecture
 
 ```mermaid
 flowchart TD
-    subgraph Inputs ["🎙️ & 📷 Physical Inputs & User Interfaces"]
+    subgraph Inputs ["🎙️ & 📷 Physical Inputs & Perceptions"]
         MIC["🎙️ MacBook Microphone<br/>(16kHz PCM sounddevice)"]
-        CAM["📷 MacBook Camera Eyes<br/>(Native AVFoundation Swift Binary)"]
+        CAM["📷 MacBook Camera Eyes<br/>(Native AVFoundation 60 FPS Swift Binary)"]
         CLI["💻 Interactive Terminal CLI<br/>([ME] Input REPL)"]
+        BLUEPRINT["📐 2D Floor Plan / Blueprint<br/>(Camera Snapshot or CAD/Image File)"]
     end
 
-    subgraph Daemon ["⚡ Core Daemon & Coordination"]
+    subgraph Daemon ["⚡ Core Daemon & State Coordination"]
         VAD["⚡ Voice Activity Detection<br/>(Energy Threshold + 1.2s Reverb Guard)"]
         STT["🗣️ Faster-Whisper<br/>(Local Multilingual tiny Model)"]
         SW["⏸️ / 🔔 CLI Auto-Switching Coordinator<br/>(Pauses mic on CLI attach, resumes on exit)"]
         STATE["🧠 Agent State Machine<br/>[PASSIVE] ⇋ [LISTENING] ⇋ [WORKING] ⇋ [SPEAKING]<br/>⇋ [SLEEPING] ('good night' / 'Rise')"]
+        MEM["🧠 Continuous Adaptive Self-Learning Memory<br/>(Local learned_profile.json + interactions.jsonl)"]
     end
 
-    subgraph VisionEngine ["👁️ Native Computer Vision & Face Engine"]
-        SNAP["⚡ Swift Camera Snap Engine<br/>(1080p JPEG in ~0.6s via AVFoundation)"]
-        FACE["👤 Local Face & Presence Detector<br/>(OpenCV Haar-Cascade in <20ms)"]
-        PROF["📁 Local Profile Storage<br/>(server/data/faces/profile.json)"]
+    subgraph VisionEngine ["👁️ Native Computer Vision & Perception"]
+        SNAP["⚡ Swift Camera Snap Engine<br/>(1080p Frame Capture <0.6s / 60 FPS Stream)"]
+        FACE["👤 Local Face & Presence Detector<br/>(OpenCV Haar-Cascade <20ms)"]
+        ACT_MON["📊 Continuous Ambient Activity Monitor<br/>(Arrival Greetings, Posture, Wave Gestures)"]
+        PLAN_AI["🏛️ Multimodal Architectural Plan Analyzer<br/>(Structural Topology & Room Decomposition)"]
     end
 
-    subgraph Intelligence ["🧠 Multi-Tier Intelligence & Fallback Pipeline"]
+    subgraph CUA_3D ["🤖 CUA Actuation & Blender 3D Engine"]
+        SAFETY["🛑 SafetyInterlock<br/>(Bounds Clamping + Emergency Halt Corner 0,0)"]
+        MOUSE["🖱️ Humanized Mouse Controller<br/>(Quadratic Bezier Curves & Cliclick Strokes)"]
+        KEYB["⌨️ Natural Keyboard Controller<br/>(Humanized Typing & Shortcut Chords)"]
+        BLENDER_PROC["🎨 Blender 3D Bridge<br/>(Procedural Swords, Cars, Cups, Torus Knots)"]
+        BIM_PROC["🏛️ Procedural BIM Construction<br/>(Foundation, PBR Floors, 3m Walls, Windows, Furniture)"]
+        BLENDER_APP["🚀 Native Blender 5.2 GUI<br/>(Automatic Launch & Focus on macOS)"]
+    end
+
+    subgraph Intelligence ["🧠 Dynamic AI Brain & Multi-Tier Router"]
+        ROUTER["🌐 Dynamic AI Model Router<br/>(458+ OpenRouter / OmniRoute Catalog)"]
         EMO["🎭 Local Emotion Engine<br/>(7 Mood Archetypes & Prosody Attunement)"]
-        WEB["🌐 Real-Time Internet & Weather<br/>(DuckDuckGo Search + wttr.in Live Weather)"]
+        WEB["🌐 Real-Time Internet & Live Weather<br/>(DuckDuckGo Search + wttr.in Weather)"]
         CODE["💻 Python / C / C++ Coding Engine<br/>(Claude 3.7 ➜ Instant Gemini Fallback)"]
-        GEM["✨ Google Gemini Multimodal Vision<br/>(Reasoning, Object & Face Analysis, Indian Languages)"]
-        FALLBACK["🔄 Multi-Tier Fallback Loop<br/>(Gemini 3.5 ➜ Gemini 2.0 ➜ Offline Ollama)"]
+        
+        subgraph RoutingTiers ["Tier Fallback & Capability Pools"]
+            T1["Tier 1: Primary Gemini Flash / Pro"]
+            T2["Tier 2: Fallback Gemini Flash"]
+            T3["Tier 3: Dynamic Model Cascade (458+ Models)<br/>• Coding: Qwen Coder, DeepSeek Coder<br/>• Vision: Gemini, Llama Vision, Qwen VL<br/>• Reasoning: DeepSeek R1, LiquidAI<br/>• Fast/Free: 22 Zero-Cost Models"]
+        end
     end
 
     subgraph Synthesis ["🔊 Vocal Synthesis & Physical Output"]
-        ROUTER["🔤 Unicode Script & Language Classifier<br/>(Hindi, Marathi, Bengali, Gujarati, Urdu, etc.)"]
+        LANG_ROUTER["🔤 Unicode Script & Language Classifier<br/>(English + 15 Indian Languages)"]
         TTS["🗣️ Microsoft Edge-TTS Neural Voice Engine<br/>(Emotionally Modulated Pitch & Rate)"]
         SPEAKER["🔊 MacBook Physical Speaker<br/>(macOS afplay with Echo Muting)"]
     end
 
     MIC --> VAD --> STT --> STATE
-    CAM --> SNAP --> FACE --> PROF
-    FACE --> GEM
+    CAM --> SNAP --> FACE --> ACT_MON
+    BLUEPRINT --> PLAN_AI --> BIM_PROC
     CLI <--> SW <--> VAD
     CLI --> STATE
+    STATE <--> MEM
     STATE --> EMO
     STATE --> WEB
     STATE --> CODE
-    STATE --> GEM
-    GEM --> FALLBACK
-    EMO -.-> GEM
-    WEB -.-> GEM
-    CODE -.-> ROUTER
-    GEM --> ROUTER
-    ROUTER --> TTS --> SPEAKER
+    STATE --> ROUTER
+    ROUTER --> T1
+    T1 -->|429/Error| T2
+    T2 -->|429/Error| T3
+    
+    STATE --> SAFETY
+    SAFETY --> MOUSE
+    SAFETY --> KEYB
+    STATE --> BLENDER_PROC --> BLENDER_APP
+    BIM_PROC --> BLENDER_APP
+    
+    ROUTER --> LANG_ROUTER
+    CODE -.-> LANG_ROUTER
+    LANG_ROUTER --> TTS --> SPEAKER
 
     classDef primary fill:#1e1e2e,stroke:#89b4fa,stroke-width:2px,color:#cdd6f4;
     classDef highlight fill:#313244,stroke:#f9e2af,stroke-width:2px,color:#f9e2af;
     classDef visionBox fill:#1e1e2e,stroke:#a6e3a1,stroke-width:2px,color:#a6e3a1;
+    classDef cuaBox fill:#181825,stroke:#cba6f7,stroke-width:2px,color:#cdd6f4;
     class Inputs,Synthesis primary;
     class Daemon,Intelligence highlight;
     class VisionEngine visionBox;
+    class CUA_3D cuaBox;
 ```
 
 ---
 
-## 👁️ Native Computer Vision & Local Face Recognition
+## 🌐 Dynamic AI Model Router (458+ Models)
 
-January has native **vision capabilities** powered by macOS hardware acceleration, local edge face detection, and Google Gemini's multimodal models.
+January features a **Dynamic AI Model Router** connecting to an extensive catalog of **458+ models** via OpenRouter / OmniRoute with automatic capability indexing, task-based auto-routing, and on-the-fly voice model switching.
 
 ```mermaid
 flowchart TD
-    A["👤 User Voice / CLI Command<br/>('What do you see?', 'Look at what I am holding', 'Who am I?', 'देखो मैं क्या पकड़ा हूँ')"] --> B{"Visual Intent Router<br/>(geminiService.ts)"}
+    UserQuery["User Request / Voice Command"] --> IntentCheck{"Intent Detection"}
     
-    B -->|"Visual Question Detected"| C["⚡ Native Camera Snap Engine<br/>(server/camera_engine/camera_snap.swift)"]
-    
-    C --> D["📸 1920x1080 Frame Captured<br/>(Saved to server/data/captures/latest.jpg in ~0.6s)"]
-    
-    D --> E["👤 Local Face & Presence Detector<br/>(server/camera_engine/face_detect.py in <20ms)"]
-    
-    E --> F{"Face Detected in Frame?"}
-    F -->|"Yes"| G["Match with Enrolled Profile<br/>('Recognized Ashwin' from profile.json)"]
-    F -->|"No"| H["Telemetry: No Face in Foreground"]
-    
-    G --> I["✨ Multimodal Gemini Vision Payload<br/>(Base64 Frame + Local Telemetry + Prompt)"]
-    H --> I
-    
-    I --> J["🧠 Gemini Multimodal Vision Model<br/>(Identifies objects, clothing, documents, room context)"]
-    
-    J --> K["🖥️ Terminal / Web Output:<br/>Detailed Visual Description"]
-    J --> L["🗣️ Speaker Audio Output:<br/>Crisp, warm 1-2 sentence spoken summary with emotion"]
+    IntentCheck -->|'Switch model to X'| LockModel["Lock Session Model in ModelRouter"]
+    IntentCheck -->|'Reset model'| ResetModel["Restore Dynamic Auto-Routing"]
+    IntentCheck -->|'What model are you using?'| StatusCheck["Return Active Model Status"]
+    IntentCheck -->|'List models'| ListModels["Query Catalog by Category"]
 
-    classDef visionNode fill:#1e1e2e,stroke:#a6e3a1,stroke-width:2px,color:#cdd6f4;
-    class A,C,D,E,I,J,K,L visionNode;
+    IntentCheck -->|Normal Query / Chat| ExecPath{"Is Session Model Locked?"}
+    
+    ExecPath -->|Yes| DirectQuery["Query Locked Model directly via OpenRouter"]
+    ExecPath -->|No (Default Auto)| PrimaryTier["Tier 1: Primary Gemini Key"]
+    
+    PrimaryTier -->|429 Quota Exhausted| FallbackGemini["Tier 2: Fallback Gemini Key"]
+    FallbackGemini -->|429 Quota Exhausted| DynamicRouter["Tier 3: Dynamic Model Router"]
+    
+    subgraph "Dynamic Capability Router"
+        DynamicRouter -->|Coding Task| CodingPool["Qwen Coder / DeepSeek Coder / Claude"]
+        DynamicRouter -->|Vision / Camera| VisionPool["Gemini / Llama Vision / Qwen VL"]
+        DynamicRouter -->|Reasoning / Math| ReasoningPool["DeepSeek R1 / LiquidAI"]
+        DynamicRouter -->|Casual Chat| FastPool["LiquidAI / Gemma / OpenRouter Auto"]
+    end
 ```
 
-### 🔑 Vision Features & Privacy Architecture
-1. **Zero Cloud Image Leaks**: Snapshots and video frames are processed locally at [`server/data/captures/latest.jpg`](file:///Users/ashwintelangstark/Desktop/dot.files/PVT.PROJECTS/JANUARY/january-ai/server/data/captures/latest.jpg). Every frame overwrites the previous frame atomically in memory with zero disk bloat.
-2. **60 FPS Real-Time Hardware Streaming Engine**: Written in Swift (`AVFoundation` + `AVCaptureVideoDataOutput`), unlocking high-performance 60 FPS (or camera hardware maximum) continuous video capture with **<0.2ms zero-lag frame retrieval**.
-3. **Camera Wake Word Control ("eyes open" / "eyes closed")**:
-   - Spoken or typed **"eyes open"** activates the 60 FPS continuous camera stream. January confirms out loud: *"Eyes open. Real-time 60 FPS camera vision activated."*
-   - Spoken or typed **"eyes closed"** completely terminates the camera process and hardware session (camera LED off, 0% CPU, 0% battery usage). January confirms out loud: *"Eyes closed. Camera monitoring paused."*
-4. **Edge Face Recognition**: Runs a multi-scale Haar-Cascade face detector in <20ms directly on your Mac CPU before contacting any AI model.
-5. **Natural Spoken Perception**: Understands objects you are holding (e.g. tools, mugs, phones), reads handwritten or printed text on paper, checks your sitting posture, and acknowledges you by name.
+### 📊 Capability Breakdown & Catalog Index
+
+| Category | Model Count | Example Models | Purpose |
+| :--- | :--- | :--- | :--- |
+| **Free Models** | **22** | `liquid/lfm-2.5-2.6b:free`, `google/gemma-2-9b-it:free`, `meta-llama/llama-3.3-70b-instruct:free` | Zero-cost general chatting, reasoning & fallback |
+| **Coding** | **135** | `qwen/qwen-2.5-coder-32b-instruct`, `deepseek/deepseek-coder`, `anthropic/claude-3.7-sonnet` | Specialized code synthesis (C++, Python, C, TS) |
+| **Vision** | **287** | `google/gemini-2.0-flash-001`, `meta-llama/llama-3.2-11b-vision-instruct`, `qwen/qwen-2-vl-72b-instruct` | Camera perception, OCR, blueprint analysis |
+| **Reasoning** | **197** | `deepseek/deepseek-r1`, `openai/o3-mini`, `liquid/lfm-7b` | Mathematical reasoning, complex logic, planning |
+| **Fast / Realtime**| **153** | `meta-llama/llama-3.1-8b-instruct`, `liquid/lfm-2.5-2.6b:free`, `google/gemini-flash-1.5` | Sub-second latency responses |
+| **Total Catalog** | **458+** | Indexed in [`server/data/models/catalog.json`](file:///Users/ashwintelangstark/Desktop/dot.files/PVT.PROJECTS/JANUARY/january-ai/server/data/models/catalog.json) & [`openrouter_models.csv`](file:///Users/ashwintelangstark/Desktop/dot.files/PVT.PROJECTS/JANUARY/january-ai/openrouter_models.csv) | Universal model coverage |
+
+### 🗣️ Model Control Voice & Text Commands
+
+| Voice / Chat Command | Action Performed |
+| :--- | :--- |
+| **"Switch model to DeepSeek R1"** | Locks session model to `deepseek/deepseek-r1-0528` |
+| **"Switch model to Liquid"** | Locks session model to `liquid/lfm-2.5-2.6b:free` |
+| **"Switch model to Qwen Coder"** | Locks session model to `qwen/qwen-2.5-coder-32b-instruct` |
+| **"Switch model to GPT-4o"** | Locks session model to `openai/gpt-4o` |
+| **"What model are you using?"** | Reports active model name, token context window, and pricing status |
+| **"List free models"** | Lists top zero-cost free models |
+| **"Reset model"** | Clears session lock and restores automatic dynamic routing |
 
 ---
 
-## 👁️‍🗨️ Continuous Ambient Camera Eyes & Adaptive Self-Learning System
+## 🤖 Computer-Using Agent (CUA) Actuation Layer (Phase 1)
+
+January includes an **OS-level Computer-Using Agent (CUA)** actuation layer that translates natural language intentions into physical mouse, keyboard, and application actions on macOS.
+
+```mermaid
+flowchart TD
+    Prompt["User Command:<br/>'Move cursor to top right and type search query'"] --> ToolCall["executeTool('execute_cua_action')"]
+
+    subgraph "Safety & Interlock Layer"
+        ToolCall --> Interlock["SafetyInterlock Controller"]
+        Interlock --> CheckHalt{"Emergency Halt Corner?<br/>(x <= 10 && y <= 10)"}
+        CheckHalt -->|Yes| Abort["🛑 Global Halt & Abort Action"]
+        CheckHalt -->|No| Clamp["Screen Bounds Clamping<br/>(0 to Display Width/Height)"]
+    end
+
+    subgraph "Actuation Layer"
+        Clamp --> Mouse["MouseController (/opt/homebrew/bin/cliclick)"]
+        Clamp --> Keyboard["KeyboardController"]
+        Clamp --> Window["WindowManager (AppleScript)"]
+        
+        Mouse --> Bezier["Quadratic Bezier Curve Interpolation<br/>(Smooth humanized acceleration)"]
+        Mouse --> Clicks["Physical Clicks, Double Clicks, Right Clicks, Drag Strokes"]
+        Keyboard --> Typing["Humanized Per-Character Delay Typing"]
+        Keyboard --> Shortcuts["Shortcut Chords (cmd+s, cmd+n, cmd+shift+p)"]
+        Window --> Focus["Bring App Window to Front & Center"]
+    end
+```
+
+### 🛡️ Safety Interlocks & Features
+1. **Emergency Fail-Safe Corner**: Moving the mouse to the top-left corner `(x <= 10, y <= 10)` or pressing `Ctrl+C` immediately aborts all running CUA actions.
+2. **Screen Coordinate Clamping**: Clamps every coordinate against native display resolution to prevent out-of-bounds pointer exceptions.
+3. **Humanized Bezier Trajectories**: Instead of teleporting the cursor, January calculates quadratic Bezier curves with randomized micro-deviations to simulate human motor movement.
+4. **Natural Keyboard Strokes**: Types text with randomized per-character cadence (10–35ms) and executes complex keyboard shortcuts (`cmd+shift+p`, `cmd+s`, etc.).
+
+---
+
+## 🎨 Native Blender 3D Bridge & GUI Launcher (Phase 2)
+
+January communicates directly with `/Applications/Blender.app` (Blender 5.2.2 LTS) to procedurally generate 3D scenes, apply PBR shaders, position studio lighting and cameras, export universal 3D assets, and launch the Blender GUI on screen.
+
+```mermaid
+flowchart TD
+    Voice["Voice Command:<br/>'January, build a 3D model of a cyber sword in Blender'"] --> Intent{"3D Intent Detection"}
+    
+    Intent --> Bridge["BlenderBridge (bpy Headless Script Generation)"]
+    
+    subgraph "Procedural 3D Mesh Synthesis"
+        Bridge --> MeshTypes{"Target Preset / Custom"}
+        MeshTypes -->|Cyber Sword| Sword["Dual-tone metallic blade, neon edge, carbon hilt, glowing pommel"]
+        MeshTypes -->|Coffee Mug| Mug["Hollowed cylinder with solidify modifier, torus handle, beveled lip"]
+        MeshTypes -->|Sports Car| Car["Low-poly aerodynamic chassis, tinted cockpit glass, 4 rubber wheels"]
+        MeshTypes -->|Minimalist Chair| Chair["Wood seat & backrest, 4 polished steel legs"]
+        MeshTypes -->|Porcelain Vase| Vase["Subdivision surface rotational silhouette with ceramic glaze"]
+        MeshTypes -->|Torus Sculpture| Knot["Parametric mathematical torus knot with iridescent shader"]
+    end
+
+    subgraph "PBR Shading & Studio Lighting"
+        Sword & Mug & Car & Chair & Vase & Knot --> Shaders["PBR Principled BSDF Shaders<br/>(Metallic, Roughness, Specular, Neon Emission)"]
+        Shaders --> Lights["3-Point Studio Lighting<br/>(Key Sun Light + Rim Point Light + Fill)"]
+        Lights --> Cam["35mm Isometric Presentation Camera"]
+    end
+
+    subgraph "Export & Native GUI Launch"
+        Cam --> BlendFile["Save .blend Project (server/data/exports/3d/)"]
+        Cam --> OBJFile["Export Universal .obj + .mtl Mesh"]
+        Cam --> GLBFile["Export Web/Realtime .glb Binary"]
+        BlendFile --> OpenBlender["macOS Exec: open -a Blender '<filepath>'"]
+        OpenBlender --> FocusApp["WindowManager: Bring Blender to Front & Center"]
+    end
+```
+
+### 📦 3D Generation Capabilities & Presets
+- **Cyberpunk Plasma Swords**: Dual-tone metallic blade, neon plasma emissive edge, carbon fiber crossguard, wrapped hilt, glowing pommel.
+- **Ceramic Coffee Mugs**: Solidified cylinder geometry, smooth beveled lip, extruded torus handle, porcelain PBR glaze.
+- **Low-Poly Sports Cars**: Aerodynamic chassis, tinted cockpit glass canopy, 4 distinct rubber wheels with silver rims.
+- **Modern Minimalist Chairs**: Solid wood seat and backrest with four brushed-steel legs.
+- **Porcelain Vases**: Organic curved silhouette with subdivision surface smoothing.
+- **Mathematical Torus Knot Sculptures**: Parametric (p=2, q=3) knot with iridescent metallic sheen.
+- **Universal Formats**: Every generation automatically writes `.blend` (Blender project), `.obj` + `.mtl` (Universal 3D mesh), and `.glb` (glTF binary).
+
+---
+
+## 🏛️ 2D Architectural Plan & Blueprint to 3D Blender BIM Engine
+
+January can visually inspect any 2D architectural building floor plan, CAD blueprint, or hand-drawn sketch (either held up in front of the camera or from a local file), extract the structural layout, and construct an interactive, fully-furnished 3D architectural model in Blender.
+
+```mermaid
+flowchart TD
+    Input["👤 Input: Physical Blueprint on Camera OR Local CAD/Image File"] --> PlanAI["Multimodal PlanAnalyzer (Gemini / OpenRouter Vision)"]
+
+    subgraph "1. Structural Topology Extraction"
+        PlanAI --> Schema["ArchitecturalBlueprint JSON Schema"]
+        Schema --> Dims["Building Footprint (e.g. 14.0m x 10.0m x 3.0m)"]
+        Schema --> Rooms["Room Decomposition (Living, Kitchen, Master Bed, Guest Bed, Bath)"]
+        Schema --> Walls["Perimeter & Partition Wall Coordinate Segments"]
+        Schema --> Openings["Doorways, Panoramic Windows, Sill Heights"]
+        Schema --> Finishes["PBR Floor Materials (Hardwood, Marble, Ceramic Tile)"]
+    end
+
+    subgraph "2. Procedural BIM Construction (Blender 5.2.2 Engine)"
+        Schema --> BIM["ArchitecturalBridge (Blender bpy Script)"]
+        BIM --> Foundation["Concrete Foundation Base Slab (15cm)"]
+        BIM --> RoomFloors["Room-Specific Flooring Slabs with PBR Shaders"]
+        BIM --> WallsExtrude["Extrude 3.0m Perimeter & Partition Walls"]
+        BIM --> Cutouts["Boolean/Mesh Openings for Windows & Doors"]
+        BIM --> WindowsDoors["Install Glass Panes, Window Frames & Door Leaves"]
+        BIM --> Furniture["Place Low-Poly Architectural Block-outs<br/>(Sectional Sofa, Coffee Table, Bed, Kitchen Island)"]
+        BIM --> SolarLighting["Solar Daylight Sun + Sky Fill Lighting"]
+        BIM --> PresCam["Isometric Architectural Perspective Camera"]
+    end
+
+    subgraph "3. Export & Presentation"
+        BIM --> SaveBlend[".blend Project (server/data/exports/3d/)"]
+        BIM --> SaveOBJ[".obj Mesh + .mtl Materials"]
+        BIM --> SaveGLB[".glb Realtime Model"]
+        SaveBlend --> LaunchApp["open -a Blender & Bring to Front on macOS"]
+    end
+```
+
+### 🏗️ Blueprint-to-BIM Workflow
+1. **Multimodal Plan Perception**: The `PlanAnalyzer` analyzes blueprint images from the camera or local disk and detects outer walls, partition walls, room categories, doors, and panoramic windows.
+2. **Foundation & Flooring**: Creates a concrete base foundation and assigns custom PBR flooring materials per room:
+   - **Living Room / Corridors**: Parquet European oak hardwood (`Roughness: 0.35`).
+   - **Kitchen & Bathrooms**: Polished ceramic/porcelain tile (`Roughness: 0.15`).
+   - **Bedrooms**: Calacatta marble slab (`Roughness: 0.10`).
+3. **Wall Extrusion & Cutouts**: Extrudes walls to exact 3.0m ceiling heights and cuts openings for doors and windows.
+4. **Architectural Glazing & Doors**: Installs dark metal window frames with transparent dielectric glass and semi-open door leaves.
+5. **Interior Furniture Block-outs**: Automatically positions stylized architectural furniture placeholders (sectional sofas, coffee tables, master beds, and kitchen island counters).
+6. **Daylight & Presentation**: Configures solar daylight lighting and positions an isometric 35mm camera framing the entire building.
+7. **Native macOS Activation**: Saves `.blend`, `.obj`, and `.glb` files and immediately launches Blender on screen.
+
+---
+
+## 👁️ Continuous Ambient Camera Eyes & Adaptive Self-Learning System
 
 January runs a background **Continuous Ambient Visual Cortex** and **Adaptive Self-Learning Memory System** that continuously monitors your desk presence, reads gestures, understands posture and emotions, and continuously evolves its coding and interaction models based on your habits.
 
@@ -161,98 +334,49 @@ flowchart TD
 
     UPDATE_CTX --> INJECT
     PROACTIVE_GREET --> INJECT
-
-    classDef visionBox fill:#1e1e2e,stroke:#a6e3a1,stroke-width:2px,color:#cdd6f4;
-    classDef memBox fill:#181825,stroke:#f9e2af,stroke-width:2px,color:#cdd6f4;
-    class Controls,EdgeWatch,StateEvents,Cortex visionBox;
-    class MemoryEngine memBox;
 ```
 
 ### 🎯 Key Visual & Memory Innovations
 1. **60 FPS Hardware Streaming & Camera Wake Words**:
    - The camera remains **OFF by default** until commanded with the wake word **"eyes open"**.
-   - Upon saying or typing **"eyes open"**, January spawns a high-speed `AVCaptureVideoDataOutput` hardware stream running at 60 FPS with **0ms startup delay** for subsequent frame retrievals.
-   - Saying or typing **"eyes closed"** immediately kills the Swift process and releases the camera hardware (camera LED off, 0% CPU usage).
+   - Spawning the native `AVCaptureVideoDataOutput` stream delivers 60 FPS video capture with **<0.2ms zero-lag frame retrieval**.
+   - Saying or typing **"eyes closed"** immediately terminates the process and releases camera hardware (camera LED off, 0% CPU).
 2. **Two-Tier Smart Sampling**:
-   - Ultra-light local OpenCV face/motion check executes on the native Mac CPU at high frequency (<20ms CPU, 0 cloud bandwidth).
-   - Rich multimodal Gemini cloud inspection is invoked strictly upon state changes (such as user desk arrival) or at a gentle ambient cadence when active.
+   - Local OpenCV face and motion detection runs on native Mac CPU at high frequency (<20ms CPU, 0 cloud bandwidth).
+   - Rich multimodal cloud inspection is invoked strictly upon state transitions (such as user desk arrival) or at a gentle ambient cadence.
 3. **Proactive Arrival & Gesture Attunement**:
-   - When you sit down at your laptop while eyes are open, January detects your arrival and offers a warm, context-aware greeting (*"Good morning, Ashwin! Good to see you back. What are we building today?"*).
-   - Includes an intelligent **8-minute cooldown guard** so you are never spammed with repetitive greetings, and remains completely silent in sleep mode.
-   - Waving at the webcam triggers immediate, friendly recognition (*"Hey Ashwin, I saw you wave! What can I help you with?"*).
-4. **Adaptive Self-Learning Memory (No External Cloud Database)**:
-   - Stores all learned habits locally in [`server/data/memory/learned_profile.json`](file:///Users/ashwintelangstark/Desktop/dot.files/PVT.PROJECTS/JANUARY/january-ai/server/data/memory/learned_profile.json) and [`interactions.jsonl`](file:///Users/ashwintelangstark/Desktop/dot.files/PVT.PROJECTS/JANUARY/january-ai/server/data/memory/interactions.jsonl).
-   - Tracks your preferred coding languages (modern C++20, Python 3.10+, C), natural communication dialects, and hourly activity rhythms.
-   - Directly injects your personalized profile into Gemini's system instruction, ensuring all code generation matches your exact paradigms without having to repeat instructions.
-5. **Interactive CLI & REST Inspection**:
-   - Type `eyes open` or `eyes closed` in the CLI to activate/deactivate 60 FPS camera eyes on demand.
-   - Type `memory` or `profile` in the CLI to inspect your learned profile metrics.
-   - Type `eyes` or `vision` to view current ambient posture, mood, and presence telemetry.
-   - Query `POST /api/camera/toggle` or `GET /api/health` from any browser or client.
+   - Detects when you sit down at your desk and offers a contextual greeting (*"Good morning, Ashwin! Good to see you back. What are we building today?"*).
+   - Guarded by an **8-minute cooldown** to avoid repetitive spam, and stays silent during sleep mode.
+   - Waving at the webcam triggers friendly recognition (*"Hey Ashwin, I saw you wave! What can I help you with?"*).
+4. **Adaptive Self-Learning Memory**:
+   - Stores learned preferences in [`server/data/memory/learned_profile.json`](file:///Users/ashwintelangstark/Desktop/dot.files/PVT.PROJECTS/JANUARY/january-ai/server/data/memory/learned_profile.json) and [`interactions.jsonl`](file:///Users/ashwintelangstark/Desktop/dot.files/PVT.PROJECTS/JANUARY/january-ai/server/data/memory/interactions.jsonl).
+   - Tracks preferred coding languages (modern C++20, Python 3.10+, C), natural communication dialects, and hourly activity rhythms.
+   - Automatically injects learned context into Gemini's system prompts.
 
 ---
 
-## 🔄 Multi-Tier Fallback Engine Loop
+## 🖥️ macOS System Control Engine
 
-January is built with an **automatic multi-tier resilience loop** that prevents downtime from API rate limits, daily quotas (RPD/RPM), or network drops.
-
-```mermaid
-flowchart TD
-    REQ["👤 User Request<br/>(Text / Voice / Vision / Coding)"] --> T1
-
-    subgraph Tier1 ["Tier 1: High-Speed Primary Models"]
-        T1["✨ Primary Gemini Model<br/>(gemini-3.5-flash-lite / gemini-3.6-flash)<br/>or Claude 3.7 for Coding"]
-    end
-
-    T1 -->|"200 OK Response"| SUCCESS["✅ Instant Response Delivered"]
-    T1 -->|"HTTP 429 (Rate Limit / Daily Quota Reached) or Network Error"| T2
-
-    subgraph Tier2 ["Tier 2: Alternative Free-Tier Gemini Cascade"]
-        T2["🔄 Switch to Secondary Gemini Model<br/>(gemini-2.0-flash / gemini-3.1-flash-lite)<br/>Separate Quota Bucket on Same Free API Key"]
-    end
-
-    T2 -->|"200 OK Response"| SUCCESS
-    T2 -->|"All Cloud Quotas Exhausted / Offline"| T3
-
-    subgraph Tier3 ["Tier 3: Local Offline Safety Net (Zero Internet)"]
-        T3["💻 Local Ollama Engine<br/>(qwen2.5:latest / llama3.1:8b / qwen2.5-coder)<br/>Runs 100% locally on your Mac hardware"]
-    end
-
-    T3 --> SUCCESS
-
-    classDef successNode fill:#1e1e2e,stroke:#a6e3a1,stroke-width:2px,color:#cdd6f4;
-    classDef tierNode fill:#313244,stroke:#89b4fa,stroke-width:2px,color:#cdd6f4;
-    class REQ,SUCCESS successNode;
-    class T1,T2,T3 tierNode;
-```
-
----
-
-## 🖥️ macOS System Control Engine: IDEs, Softwares, Videos, Documents & Folders
-
-January has deep **macOS OS integration** with the ability to launch any IDE, software, or developer tool, search and play video files, open documents and spreadsheets, explore folders, and read file contents.
+January has deep macOS integration to launch applications, search and play video files, open documents and spreadsheets, explore Finder directories, and preview file contents.
 
 ```mermaid
 flowchart TD
-    CMD["👤 User Voice / CLI Command<br/>('Open VS Code', 'Launch Safari', 'Play project demo.mp4',<br/>'Open resume.pdf', 'Show Downloads folder', 'VS Code खोलो', 'video प्ले करा')"] --> PARSE{"Intent & Resource Classifier<br/>(geminiService.ts)"}
+    CMD["👤 User Voice / CLI Command<br/>('Open VS Code', 'Launch Safari', 'Play demo.mp4',<br/>'Open resume.pdf', 'Show Downloads folder', 'VS Code खोलो')"] --> PARSE{"Intent & Resource Classifier"}
 
-    PARSE -->|"IDE / Software"| APP_LOOKUP{"Known App & Alias Dictionary<br/>(KNOWN_APP_ALIASES)"}
+    PARSE -->|"IDE / Software"| APP_LOOKUP{"Known App & Alias Dictionary"}
     PARSE -->|"Video / Movie"| SPOT_VID["🎬 Spotlight Video Search<br/>(mdfind public.movie / *.mp4 / *.mov / *.mkv)"]
     PARSE -->|"Document / File"| SPOT_DOC["📄 Spotlight Document Search<br/>(mdfind public.document / *.pdf / *.docx / *.txt)"]
-    PARSE -->|"Folder / Directory"| FOLDER_LOOKUP["📁 System Path & Shortcut Resolver<br/>(~/Downloads, ~/Desktop, ~/Documents, ~/Movies)"]
+    PARSE -->|"Folder / Directory"| FOLDER_LOOKUP["📁 System Path Resolver<br/>(~/Downloads, ~/Desktop, ~/Documents, ~/Movies)"]
 
-    APP_LOOKUP -->|"Known Alias Match"| EXEC_APP["🚀 /usr/bin/open -a '<App>'<br/>(Instant Launch)"]
-    APP_LOOKUP -->|"Custom App"| SPOT_APP["🔍 Spotlight Application Finder<br/>(mdfind kMDItemKind == 'Application')"]
+    APP_LOOKUP -->|"Known Match"| EXEC_APP["🚀 /usr/bin/open -a '<App>'"]
+    APP_LOOKUP -->|"Custom App"| SPOT_APP["🔍 Spotlight Application Finder"]
     SPOT_APP --> EXEC_APP
 
-    SPOT_VID --> PLAY_VID["🎥 Launch Default Video Player / VLC<br/>(/usr/bin/open '<VideoPath>')"]
-    SPOT_DOC --> OPEN_DOC["📖 Open in Default App / Preview<br/>(/usr/bin/open '<DocPath>')"]
-    FOLDER_LOOKUP --> OPEN_FOLDER["📂 Open in macOS Finder<br/>(/usr/bin/open '<FolderPath>')"]
+    SPOT_VID --> PLAY_VID["🎥 Launch Default Video Player / VLC"]
+    SPOT_DOC --> OPEN_DOC["📖 Open in Default App / Preview"]
+    FOLDER_LOOKUP --> OPEN_FOLDER["📂 Open in macOS Finder"]
 
-    EXEC_APP & PLAY_VID & OPEN_DOC & OPEN_FOLDER --> CONFIRM["🗣️ Speaker Audio & Terminal Output:<br/>'Opened Visual Studio Code on your Mac.' / 'Playing demo.mp4'"]
-
-    classDef sysNode fill:#1e1e2e,stroke:#cba6f7,stroke-width:2px,color:#cdd6f4;
-    class CMD,EXEC_APP,PLAY_VID,OPEN_DOC,OPEN_FOLDER,CONFIRM sysNode;
+    EXEC_APP & PLAY_VID & OPEN_DOC & OPEN_FOLDER --> CONFIRM["🗣️ Speaker Audio & Terminal Confirmation"]
 ```
 
 ### 🎯 Supported System Actions & Examples
@@ -260,11 +384,11 @@ flowchart TD
 | Category | Examples & Supported Targets | Voice / Text Command Examples |
 | :--- | :--- | :--- |
 | **IDEs & Editors** | VS Code, Cursor, Antigravity IDE, Xcode, PyCharm, IntelliJ IDEA, WebStorm, Android Studio, Sublime Text, CLion, Zed, Neovim | *"Open VS Code"*, *"Launch Cursor"*, *"Start Xcode"*, *"VS Code खोलो"* |
-| **Softwares & Apps** | Safari, Chrome, Brave, Arc, Firefox, Slack, Discord, WhatsApp, Spotify, VLC, Zoom, Teams, Docker, Postman, Notes, Calculator, Finder | *"Open Spotify"*, *"Launch Docker Desktop"*, *"Open Calculator"*, *"Safari ओपन करा"* |
-| **Videos & Movies** | `.mp4`, `.mov`, `.mkv`, `.avi`, `.webm` across `~/Movies`, `~/Downloads`, `~/Desktop`, and whole disk | *"Play my project demo video"*, *"Open vacation.mp4"*, *"video चलाओ"* |
+| **Softwares & Apps** | Safari, Chrome, Brave, Arc, Firefox, Slack, Discord, WhatsApp, Spotify, VLC, Zoom, Teams, Docker, Postman, Notes, Calculator, Blender | *"Open Spotify"*, *"Launch Docker Desktop"*, *"Open Calculator"*, *"Safari ओपन करा"* |
+| **Videos & Movies** | `.mp4`, `.mov`, `.mkv`, `.avi`, `.webm` across whole disk | *"Play my project demo video"*, *"Open vacation.mp4"*, *"video चलाओ"* |
 | **Documents & Files** | `.pdf`, `.docx`, `.xlsx`, `.pptx`, `.txt`, `.md`, `.json`, `.csv` | *"Open resume.pdf"*, *"Show report.docx"*, *"Open document"* |
 | **Folders & Directories**| `Downloads`, `Desktop`, `Documents`, `Movies`, `Pictures`, `Music`, custom project folders | *"Open Downloads folder"*, *"Show Desktop"*, *"Downloads फोल्डर उघडा"* |
-| **System File Search** | Spotlight fast index search across the entire Mac storage | *"Find all mp4 files on my Mac"*, *"Search for presentation PDF"* |
+| **System File Search** | Spotlight fast index search across entire Mac storage | *"Find all mp4 files on my Mac"*, *"Search for presentation PDF"* |
 | **Read File Contents** | Direct terminal file preview without opening external windows | *"Read notes.txt"*, *"Show contents of package.json"* |
 
 ---
@@ -273,11 +397,11 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A["👤 User Code Request<br/>(e.g., 'write a quicksort in python', 'code a thread-safe queue in c++')"] --> B{"Language Detection<br/>Regex & Lexical Parser"}
+    A["👤 User Code Request<br/>('write a quicksort in python', 'code a thread-safe queue in c++')"] --> B{"Language Detection Regex & Lexical Parser"}
     
-    B -->|"Python"| LP["🐍 Python Target<br/>(Python 3.10+, Type Hints, Docstrings, Main Block)"]
-    B -->|"C"| LC["⚙️ C Target<br/>(C99/C11, Standard Headers, Malloc/Free, gcc main.c)"]
-    B -->|"C++"| LCPP["🚀 C++ Target<br/>(C++17/20, STL, RAII, Smart Pointers, g++ main.cpp)"]
+    B -->|"Python"| LP["🐍 Python Target (Python 3.10+, Type Hints, Docstrings, Main Block)"]
+    B -->|"C"| LC["⚙️ C Target (C99/C11, Standard Headers, Malloc/Free, gcc main.c)"]
+    B -->|"C++"| LCPP["🚀 C++ Target (C++17/20, STL, RAII, Smart Pointers, g++ main.cpp)"]
 
     LP --> T1
     LC --> T1
@@ -286,87 +410,40 @@ flowchart TD
     subgraph Pipeline ["⚡ Multi-Tier Coding Pipeline"]
         T1{"Tier 1: Anthropic Claude API<br/>(claude-3-7-sonnet)"}
         T2{"Tier 2: Google Gemini API<br/>(gemini-3.6-flash / 3.5-flash-lite)"}
-        T3{"Tier 3: Local Coding Model<br/>(qwen2.5-coder / Ollama)"}
+        T3{"Tier 3: Dynamic Coding Models<br/>(qwen/qwen-2.5-coder-32b-instruct)"}
     end
 
-    T1 -->|"Key Valid & Online"| RES["✨ Clean Formatted Code + Explanation + Run Command"]
-    T1 -->|"Unavailable / Quota / Timeout"| T2
+    T1 -->|"Key Valid & Online"| RES["✨ Formatted Code Box + Compilation Command + Verbal Summary"]
+    T1 -->|"Unavailable / Quota"| T2
     T2 -->|"Primary High-Speed Inference"| RES
     T2 -->|"Offline Fallback"| T3
     T3 --> RES
 
-    RES --> OUT1["🖥️ Terminal / Web Output:<br/>Syntax-Highlighted Code Box + Run Command"]
-    RES --> OUT2["🗣️ Speaker Audio Output:<br/>1-Sentence Verbal Confirmation (Never recites code lines aloud)"]
-
-    classDef codeNode fill:#1e1e2e,stroke:#89dceb,stroke-width:2px,color:#cdd6f4;
-    class A,RES,OUT1,OUT2 codeNode;
+    RES --> OUT1["🖥️ Terminal / Web Output: Syntax-Highlighted Code Box + Run Command"]
+    RES --> OUT2["🗣️ Speaker Audio Output: 1-Sentence Verbal Confirmation (Never recites raw code)"]
 ```
 
 ---
 
-## 🔄 End-to-End Voice Lifecycle & Reverb Guard (Sequence Flow)
+## 🎭 Local Emotion Engine & Prosody Attunement
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User as 👤 User (Room / Hardware)
-    participant Mic as 🎙️ System Mic & Whisper
-    participant Daemon as ⚡ January Core Daemon
-    participant Emotion as 🎭 Emotion Engine
-    participant Web as 🌐 Web Search / Weather
-    participant Gemini as ✨ Gemini / Claude AI
-    participant TTS as 🗣️ Edge-TTS Neural Engine
-    participant Speaker as 🔊 MacBook Speakers
+January features a **100% free, local Emotion Engine** running in under 1ms on your Mac. It analyzes conversational valence, arousal, and intent to attune January's responses and vocal prosody to your mood:
 
-    User->>Mic: Speaks: "Rise, whats the weather in Hubli?"
-    Mic->>Daemon: Transcribes text ("Rise, whats the weather in Hubli?")
-    Daemon->>Daemon: Detects "Rise" -> Transitions to [WORKING]
-    
-    par Parallel Analysis
-        Daemon->>Emotion: Analyze User Sentiment / Emotion
-        Emotion-->>Daemon: Detected: "Curious" (Pitch: +2Hz, Rate: +2%)
-    and Live Internet Query
-        Daemon->>Web: Query live weather for "Hubli"
-        Web-->>Daemon: Current: Overcast 20°C, Feels 19°C, Wind 24km/h
-    end
-
-    Daemon->>Gemini: Prompt + Weather Context + Emotion Guidance
-    Gemini-->>Daemon: Spoken Response: "It's currently an overcast 20°C in Hubli..."
-    
-    Daemon->>Mic: 🔕 Mute Physical Mic (Echo Cancellation)
-    Daemon->>TTS: Synthesize Speech (Voice: en-US / hi-IN, Pitch: +2Hz, Rate: +2%)
-    TTS-->>Speaker: Play audio via /usr/bin/afplay
-    Speaker-->>User: 🔊 Speaks out loud in the room
-    
-    Speaker->>Daemon: Playback finished
-    Daemon->>Mic: 🔔 Unmute Physical Mic (+1.2s Reverb Guard Cooldown)
-    Daemon->>Daemon: Transition to [PASSIVE] standby
-```
+| Emotion | Tone / Context | Voice Modulation | Visual Glow Aura |
+| :--- | :--- | :--- | :--- |
+| **Joy** | Upbeat, witty, celebrating wins | Pitch: `+4Hz`, Rate: `+5%` | Golden Amber (`#F59E0B`) |
+| **Curious** | Inquisitive, reasoning, exploratory | Pitch: `+2Hz`, Rate: `+2%` | Neon Cyan (`#00F5FF`) |
+| **Empathetic** | Supportive, comforting, gentle | Pitch: `-2Hz`, Rate: `-5%` | Mint Emerald (`#10B981`) |
+| **Focused** | Analytical, coding, technical execution | Pitch: `+0Hz`, Rate: `+0%` | Electric Violet (`#8B5CF6`) |
+| **Calm / Sleep** | Soothing, peaceful, bedtime standby | Pitch: `-3Hz`, Rate: `-7%` | Deep Indigo (`#6366F1`) |
+| **Concerned** | Alert, cautious, debugging errors | Pitch: `-1Hz`, Rate: `-3%` | Coral Red (`#EF4444`) |
+| **Neutral** | Direct, balanced conversational mode | Pitch: `+0Hz`, Rate: `+0%` | Crystal White (`#E2E8F0`) |
 
 ---
 
-## 💻 Terminal CLI & Background Daemon Auto-Switching Flow
+## 🇮🇳 Multilingual Indian Language Routing & Session Locking
 
-```mermaid
-flowchart TD
-    DAEMON["⚡ Background Daemon Active (npm run dev)<br/>🎙️ Hardware Mic ACTIVE & Listening in room"] 
-    USER_START["👤 User runs 'npm run cli'"] --> ATTACH["🔌 CLI connects via WebSocket / REST<br/>Sends 'cli_attach' Handshake"]
-    
-    ATTACH --> PAUSE["🔕 DAEMON AUTOMATICALLY PAUSES BACKGROUND MIC<br/>(Prevents double-hearing, echo, and voice loops)"]
-    PAUSE --> CLI_SESSION["💻 Interactive Dual Terminal CLI Ready<br/>[ME] ➜ User types prompts, questions, or code<br/>[JANUARY] ➜ Real-time ANSI responses + Speaker Audio"]
-    
-    CLI_SESSION --> USER_EXIT["👤 User exits CLI ('exit', 'quit', or Ctrl+C)"]
-    USER_EXIT --> DETACH["🔌 CLI sends 'cli_detach' signal"]
-    DETACH --> RESUME["🔔 DAEMON AUTOMATICALLY RESUMES BACKGROUND MIC<br/>(January seamlessly returns to room voice listening)"]
-    RESUME --> DAEMON
-
-    classDef cliBox fill:#1e1e2e,stroke:#cba6f7,stroke-width:2px,color:#cdd6f4;
-    class DAEMON,PAUSE,CLI_SESSION,RESUME cliBox;
-```
-
----
-
-## 🇮🇳 Multilingual Indian Language Routing Flow
+January speaks and understands **English** and **15 major Indian languages** natively with authentic regional pronunciation, grammar, and official script:
 
 ```mermaid
 flowchart TD
@@ -395,135 +472,23 @@ flowchart TD
     V_MR & V_NE & V_SA & V_HI & V_BN & V_GU & V_PA & V_OR & V_UR & V_EN --> MOD["🎭 Apply Emotional Prosody (Pitch & Rate)"]
     MOD --> SYNTH["🗣️ Microsoft Edge-TTS Synthesis"]
     SYNTH --> PLAY["🔊 Output via macOS /usr/bin/afplay"]
-
-    classDef langBox fill:#181825,stroke:#f38ba8,stroke-width:2px,color:#cdd6f4;
-    class TEXT,MOD,SYNTH,PLAY langBox;
 ```
-
----
-
-## 🛠️ Tech Stack
-
-| Component | Technology | Purpose |
-| :--- | :--- | :--- |
-| **Runtime & Backend** | Node.js 22+, TypeScript, Express, `ws` (WebSockets) | Core state coordination, process daemon, and IPC routing |
-| **Continuous Ambient Visual Cortex** | `VisualActivityMonitor` (Two-tier sampling: 4s edge + 45s cloud) | Real-time presence, arrival greetings, wave gesture recognition, posture & expression tracking |
-| **Adaptive Self-Learning Memory** | `LearnedProfileEngine` + Local JSON/JSONL Storage | Dynamic profile adaptation for C++/Python/C preferences, spoken languages, and work habits |
-| **Computer Vision Engine** | macOS `AVFoundation` (Swift Binary) + OpenCV Haar Cascade | ~0.6s 1080p native camera capture & sub-20ms local face detection |
-| **Multimodal Vision Reasoning** | Google Gemini Multimodal Vision (`gemini-3.5-flash-lite`, `gemini-2.0-flash`) | Real-time object recognition, document reading, posture analysis |
-| **Multi-Tier Fallback Loop** | Gemini Cascade ➜ Local Ollama (`qwen2.5` / `llama3.1`) | Zero-downtime resilience against cloud rate limits & offline use |
-| **Python, C & C++ Coding Engine** | Anthropic Claude 3.7 Sonnet + Google Gemini Fallback | Clean, compilable Python 3, C (C99/C11), and modern C++ (C++17/20) with run instructions |
-| **Local Speech-to-Text** | Faster-Whisper (`tiny` multilingual model), `sounddevice` | Zero-latency local microphone listening & transcription |
-| **Neural Voice Synthesis** | Microsoft Edge-TTS, macOS Native `/usr/bin/afplay` | Free high-fidelity neural voice synthesis with emotional prosody |
-| **Emotion Engine** | Python 3.11+, Valence-Arousal NLP Classifier | Real-time emotion classification across 7 archetypes |
-| **Real-Time Internet Access** | DuckDuckGo Instant API, DuckDuckGo HTML, Wikipedia API | Real-time search with zero API key dependency |
-| **Live Weather Engine** | `wttr.in` JSON API & Open-Meteo Geocoding | Instant global live weather, humidity, wind & forecast |
-| **System Access & Resource Search** | Native macOS Spotlight `mdfind` + AppleScript + `open` | Instant file, folder, movie, video, and app opening |
-| **Terminal CLI** | Node.js `readline`, ANSI Color Utilities | Dual-section interactive console (`[ME]` / `[JANUARY]`) |
-
----
-
-## 📂 Project Structure
-
-```
-january-ai/
-├── package.json               # Root scripts (dev, cli, build, start)
-├── README.md                  # Comprehensive system documentation & architecture diagrams
-├── .gitignore                 # Protected secret and build filters
-├── server/
-│   ├── .env                   # API keys & network configuration (ignored from git)
-│   ├── .env.example           # Example environment variables template
-│   ├── package.json           # Server dependencies & scripts
-│   ├── tsconfig.json          # TypeScript compiler configuration
-│   ├── data/                  # Local data & state persistence (No cloud DB required)
-│   │   ├── captures/          # Local camera frame cache (latest.jpg auto-overwritten)
-│   │   ├── faces/             # Enrolled user identity profiles (profile.json)
-│   │   └── memory/            # Continuous self-learning user memory (learned_profile.json, interactions.jsonl)
-│   ├── camera_engine/         # Native vision & face recognition engines
-│   │   ├── camera_snap.swift  # Swift AVFoundation native camera snapshot tool
-│   │   ├── camera_snap        # High-performance compiled native binary
-│   │   └── face_detect.py     # Sub-20ms OpenCV Haar-cascade presence detector
-│   ├── audio_engine/          # Local Python audio & emotion engines
-│   │   ├── emotion_engine.py  # 100% free local emotion & sentiment classifier
-│   │   ├── mic_stt_engine.py  # sounddevice + Faster-Whisper microphone daemon
-│   │   └── tts_engine.py      # Edge-TTS multilingual synthesis & voice router
-│   └── src/
-│       ├── index.ts           # Core daemon coordinator & WebSocket server
-│       ├── cli.ts             # Dual-section interactive Terminal CLI
-│       ├── config.ts          # Environment variables validation & defaults
-│       ├── types.ts           # State machine, WebSocket & tool type definitions
-│       ├── memory/
-│       │   └── learnedProfileEngine.ts # Adaptive self-learning profile engine & prompt injector
-│       ├── vision/
-│       │   ├── activityMonitor.ts # Continuous ambient camera monitor & gesture detector
-│       │   ├── cameraService.ts # Swift camera snapshot invoker & frame cache
-│       │   └── faceEngine.ts  # Face detection manager & profile loader
-│       ├── emotions/
-│       │   └── emotionEngine.ts # TypeScript emotional memory & prompt injector
-│       ├── audio/
-│       │   ├── systemMic.ts   # Node.js wrapper managing Python STT engine
-│       │   └── systemSpeaker.ts # Node.js wrapper for neural TTS & afplay
-│       ├── wake/
-│       │   ├── wakeDetector.ts # Wake/Sleep phrase lifecycle manager
-│       │   └── wakeWordWorker.ts # Worker thread monitoring audio stream
-│       ├── gemini/
-│       │   ├── geminiService.ts # Gemini API caller with search context, memory & prompt
-│       │   └── liveClient.ts  # Multimodal Live API client & dispatcher
-│       └── tools/
-│           ├── index.ts       # Central tool registry & function declarations
-│           ├── visionTool.ts  # Multimodal camera & face analysis tool (see_and_analyze)
-│           ├── systemAccess.ts # Spotlight file, video, folder & app opener
-│           ├── webSearch.ts   # DuckDuckGo, Wikipedia & live weather fetcher
-│           ├── delegateCoding.ts # Python, C & C++ coding engine with Gemini fallback
-│           ├── launchApp.ts   # macOS native application opener
-│           └── whatsapp.ts    # macOS WhatsApp composer automation
-```
-
----
-
-## 🎭 Emotion Engine in Detail
-
-January features a **100% free, local Emotion Engine** running in under 1ms on your Mac. It analyzes conversational valence, arousal, and intent to attune January's responses to your mood:
-
-### 1. The 7 Emotional Archetypes
-
-| Emotion | Tone / Context | Voice Modulation | Visual Glow Aura |
-| :--- | :--- | :--- | :--- |
-| **Joy** | Upbeat, witty, celebrating wins | Pitch: `+4Hz`, Rate: `+5%` | Golden Amber (`#F59E0B`) |
-| **Curious** | Inquisitive, reasoning, exploratory | Pitch: `+2Hz`, Rate: `+2%` | Neon Cyan (`#00F5FF`) |
-| **Empathetic** | Supportive, comforting, gentle | Pitch: `-2Hz`, Rate: `-5%` | Mint Emerald (`#10B981`) |
-| **Focused** | Analytical, coding, technical execution | Pitch: `+0Hz`, Rate: `+0%` | Electric Violet (`#8B5CF6`) |
-| **Calm / Sleep** | Soothing, peaceful, bedtime standby | Pitch: `-3Hz`, Rate: `-7%` | Deep Indigo (`#6366F1`) |
-| **Concerned** | Alert, cautious, debugging errors | Pitch: `-1Hz`, Rate: `-3%` | Coral Red (`#EF4444`) |
-| **Neutral** | Direct, balanced conversational mode | Pitch: `+0Hz`, Rate: `+0%` | Crystal White (`#E2E8F0`) |
-
-### 2. Conversational Memory & Prompt Attunement
-When you speak or type to January, the emotion engine classifies your sentiment and injects emotional directives directly into Gemini's system instructions. January naturally mirrors your mood with human warmth instead of robotic phrasing.
-
----
-
-## 🇮🇳 Multilingual Language Support & Persistent Session Locking
-
-January speaks and understands **English** and **15 major Indian languages** natively with authentic regional pronunciation, grammar, and official script:
 
 ### 🔒 Persistent Session Language & Phonetic Transliteration
-1. **Multi-Turn Language Locking**: When you ask January to speak in a specific language (e.g. *"Speak in Hindi"*, *"मराठीत बोला"*), January **locks into that language for all future questions and turns** until you explicitly command it to switch back (e.g. *"Switch to English"*).
-2. **Phonetic / Romanized Input Decoding**: If you speak or type in Romanized Hinglish/Manglish (e.g. *"mudje dekho"*, *"aap kaun ho"*, *"kasa ahes"*), January automatically interprets your phonetic intent into the target language and replies strictly in the **authentic native script** (e.g. Devanagari हिंदी / मराठी) with regional voice inflection.
-3. **Explicit Switching Commands**:
-   - Switch to Indian Language: *"Speak in Hindi"*, *"Talk in Marathi"*, *"Switch language to Gujarati"*, *"कन्नडमध्ये बोला"*
-   - Switch back to English: *"Switch to English"*, *"Speak in English"*, *"English please"*
+1. **Multi-Turn Language Locking**: Spoken or typed requests to speak in a language (e.g. *"Speak in Hindi"*, *"मराठीत बोला"*) lock January into that language across all future turns until commanded otherwise (*"Switch to English"*).
+2. **Phonetic / Romanized Decoding**: Romanized phonetic input (e.g. *"mudje dekho"*, *"aap kaun ho"*, *"kasa ahes"*) is automatically interpreted into authentic native script (हिंदी / मराठी) with regional voice inflections.
 
 | Language | Script | Native Neural Voice (Edge-TTS) | Regional Tone & Phonetic Interpretation |
 | :--- | :--- | :--- | :--- |
-| **Hindi** (हिंदी) | Devanagari | `hi-IN-SwaraNeural` / `hi-IN-MadhurNeural` | Natural conversational Hindi & Hinglish ("mudje dekho" ➜ "मुझे देखो") |
+| **Hindi** (हिंदी) | Devanagari | `hi-IN-SwaraNeural` / `hi-IN-MadhurNeural` | Conversational Hindi & Hinglish ("mudje dekho" ➜ "मुझे देखो") |
 | **Marathi** (मराठी) | Devanagari | `mr-IN-AarohiNeural` / `mr-IN-ManoharNeural` | Fluent native Marathi ("kasa ahes" ➜ "कसा आहेस") |
-| **Bengali** (বাংলা) | Bengali | `bn-IN-TanishaaNeural` / `bn-IN-BashkarNeural` | Expressive West Bengal Bengali ("kemon acho" ➜ "কেমন আছো") |
-| **Gujarati** (ગુજરાતી) | Gujarati | `gu-IN-DhwaniNeural` / `gu-IN-NiranjanNeural` | Fluent native Gujarati ("kem cho" ➜ "કેમ છો") |
+| **Bengali** (বাংলা) | Bengali | `bn-IN-TanishaaNeural` / `bn-IN-BashkarNeural` | Expressive Bengali ("kemon acho" ➜ "কেমন আছো") |
+| **Gujarati** (ગુજરાતી) | Gujarati | `gu-IN-DhwaniNeural` / `gu-IN-NiranjanNeural` | Fluent Gujarati ("kem cho" ➜ "કેમ છો") |
 | **Kannada** (ಕನ್ನಡ) | Kannada | `kn-IN-SapnaNeural` | Native Kannada ("hegiddira" ➜ "ಹೇಗಿದ್ದೀರಾ") |
 | **Tamil** (தமிழ்) | Tamil | `ta-IN-PallaviNeural` | Fluent Tamil ("eppadi irukkinga" ➜ "எப்படி இருக்கிறீர்கள்") |
 | **Telugu** (తెలుగు) | Telugu | `te-IN-ShrutiNeural` | Native Telugu ("ela unnaru" ➜ "ఎలా ఉన్నారు") |
 | **Malayalam** (മലയാളം) | Malayalam | `ml-IN-SobhanaNeural` | Expressive Malayalam ("engane und" ➜ "എങ്ങനെയുണ്ട്") |
-| **Punjabi** (ਪੰਜਾਬੀ) | Gurmukhi | `hi-IN-SwaraNeural` / `pa-IN` | Authentic Punjabi ("ki haal" ➜ "ਕੀ ਹਾਲ ਹੈ") |
+| **Punjabi** (ਪੰਜਾਬੀ) | Gurmukhi | `hi-IN-SwaraNeural` / `pa-IN` | Authentic Punjabi ("ki haal" ➜ "ਕੀ ਹಾಲ ਹੈ") |
 | **Odia** (ଓଡ଼ିଆ) | Odia | `hi-IN-SwaraNeural` / `or-IN` | Odia regional pronunciation ("kemiti achhanti" ➜ "କେମିତି ଅଛନ୍ତି") |
 | **Assamese** (অসমীয়া) | Assamese | `bn-IN-TanishaaNeural` | Northeastern Assamese inflection |
 | **Maithili** (मैथिली) | Devanagari | `hi-IN-SwaraNeural` | Bihari Maithili cadence |
@@ -538,35 +503,213 @@ January speaks and understands **English** and **15 major Indian languages** nat
 
 ---
 
-## ⚡ What All January Can Do
+## 🔄 End-to-End Voice Lifecycle & Reverb Guard
 
-1. **Native Computer Vision & Facial Recognition**:
-   - Ask: *"What do you see?"*, *"Look at what I'm holding"*, *"Who am I?"*, *"Read this note on my desk"*, or *"Check my posture"*.
-   - Uses native Swift `AVFoundation` camera capture and local OpenCV presence detection to analyze your environment with Google Gemini Vision.
-2. **Python, C, and C++ Systems Programming**:
-   - Ask: *"Write a quicksort in Python with type hints"*, *"Code a linked list with malloc in C"*, or *"Write a thread-safe queue in modern C++"*.
-   - Generates clean, robust, compilable code with exact compilation commands (`gcc`, `g++`, `python3`) and provides a concise verbal summary over audio without reading raw code syntax aloud.
-   - Powered by Claude with instant, seamless **Google Gemini fallback** if Claude is unavailable.
-3. **Autonomous Room Voice Interaction**:
-   - Speak into your laptop room: *"Rise, what are the top news headlines today?"*
-   - January wakes up, searches the web, and speaks the answer aloud through your laptop speakers.
-4. **macOS System File, Folder, Video & App Control**:
-   - Say: *"Open Safari"*, *"Open Downloads folder"*, *"Play my project demo video"*, or *"Find all PDF files on my Mac"*.
-5. **Real-Time Live Web Search & Global Weather**:
-   - Ask: *"What is the weather in Hubli?"* or *"Who won the latest cricket match?"*
-   - Fetches live temperature, weather conditions, wind, humidity, and web answers instantly with zero API keys.
-6. **Smart Sleep & Standby**:
-   - Say: *"Good night"* or *"Go to sleep"*. January enters silent standby until you say *"Rise"*.
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as 👤 User (Room / Hardware)
+    participant Mic as 🎙️ System Mic & Whisper
+    participant Daemon as ⚡ January Core Daemon
+    participant Emotion as 🎭 Emotion Engine
+    participant Router as 🌐 Dynamic Model Router
+    participant TTS as 🗣️ Edge-TTS Neural Engine
+    participant Speaker as 🔊 MacBook Speakers
+
+    User->>Mic: Speaks: "Rise, whats the weather in Hubli?"
+    Mic->>Daemon: Transcribes text ("Rise, whats the weather in Hubli?")
+    Daemon->>Daemon: Detects "Rise" -> Transitions to [WORKING]
+    
+    par Parallel Analysis
+        Daemon->>Emotion: Analyze User Sentiment / Emotion
+        Emotion-->>Daemon: Detected: "Curious" (Pitch: +2Hz, Rate: +2%)
+    and Model Selection
+        Daemon->>Router: Resolve optimal AI Model for task
+        Router-->>Daemon: Selected: Gemini 3.6 Flash / OpenRouter
+    end
+
+    Daemon->>Router: Dispatch prompt + context + emotion guidance
+    Router-->>Daemon: Spoken Response: "It's currently an overcast 20°C in Hubli..."
+    
+    Daemon->>Mic: 🔕 Mute Physical Mic (Echo Cancellation)
+    Daemon->>TTS: Synthesize Speech (Voice: en-US / hi-IN, Pitch: +2Hz, Rate: +2%)
+    TTS-->>Speaker: Play audio via /usr/bin/afplay
+    Speaker-->>User: 🔊 Speaks out loud in the room
+    
+    Speaker->>Daemon: Playback finished
+    Daemon->>Mic: 🔔 Unmute Physical Mic (+1.2s Reverb Guard Cooldown)
+    Daemon->>Daemon: Transition to [PASSIVE] standby
+```
+
+---
+
+## 💻 Terminal CLI & Background Daemon Auto-Switching Flow
+
+```mermaid
+flowchart TD
+    DAEMON["⚡ Background Daemon Active (npm run dev)<br/>🎙️ Hardware Mic ACTIVE & Listening in room"] 
+    USER_START["👤 User runs 'npm run cli'"] --> ATTACH["🔌 CLI connects via WebSocket / REST<br/>Sends 'cli_attach' Handshake"]
+    
+    ATTACH --> PAUSE["🔕 DAEMON AUTOMATICALLY PAUSES BACKGROUND MIC<br/>(Prevents double-hearing, echo, and voice loops)"]
+    PAUSE --> CLI_SESSION["💻 Interactive Dual Terminal CLI Ready<br/>[ME] ➜ User types prompts, questions, or code<br/>[JANUARY] ➜ Real-time ANSI responses + Speaker Audio"]
+    
+    CLI_SESSION --> USER_EXIT["👤 User exits CLI ('exit', 'quit', or Ctrl+C)"]
+    USER_EXIT --> DETACH["🔌 CLI sends 'cli_detach' signal"]
+    DETACH --> RESUME["🔔 DAEMON AUTOMATICALLY RESUMES BACKGROUND MIC<br/>(January seamlessly returns to room voice listening)"]
+    RESUME --> DAEMON
+```
+
+---
+
+## 🛠️ Complete Tech Stack
+
+| Subsystem | Technology | Purpose |
+| :--- | :--- | :--- |
+| **Runtime & Backend** | Node.js 22+, TypeScript, Express, `ws` (WebSockets) | Core state coordination, process daemon, and IPC routing |
+| **AI Model Router** | OpenRouter / OmniRoute API (`458+ models`), Fuzzy Matcher | Dynamic task-based auto-routing & natural language model switching |
+| **3D & BIM Engine** | Blender 5.2.2 LTS (`bpy` procedural scripting), macOS `open -a Blender` | Procedural 3D mesh synthesis, PBR shaders, 2D blueprint to 3D BIM conversion |
+| **Computer-Using Agent** | `SafetyInterlock`, `cliclick` native binary, AppleScript | OS cursor Bezier navigation, mouse clicks, keyboard chords, window management |
+| **Architectural Vision** | `PlanAnalyzer` + Multimodal Gemini / OpenRouter Vision | Structural decomposition of 2D floor plans into normalized JSON BIM schemas |
+| **Continuous Ambient Cortex**| `VisualActivityMonitor` (Two-tier sampling: 4s edge + 45s cloud) | Real-time presence, arrival greetings, wave gesture recognition, posture tracking |
+| **Self-Learning Memory** | `LearnedProfileEngine` + Local JSON/JSONL Storage | Dynamic profile adaptation for C++/Python/C preferences, spoken languages, and work habits |
+| **Camera Hardware Stream** | macOS `AVFoundation` (Swift Binary) + OpenCV Haar Cascade | 60 FPS zero-lag hardware camera stream & sub-20ms local face detection |
+| **Speech-to-Text** | Faster-Whisper (`tiny` multilingual model), `sounddevice` | Zero-latency local microphone listening & transcription |
+| **Neural Voice Synthesis** | Microsoft Edge-TTS, macOS Native `/usr/bin/afplay` | Free high-fidelity neural voice synthesis with emotional prosody |
+| **Emotion Engine** | Python 3.11+, Valence-Arousal NLP Classifier | Real-time emotion classification across 7 archetypes |
+| **Real-Time Web & Weather**| DuckDuckGo Instant API, Wikipedia API, `wttr.in` | Real-time web knowledge and global live weather |
+| **System Resource Search** | Native macOS Spotlight `mdfind` + AppleScript + `open` | Instant file, folder, movie, video, and app opening |
+
+---
+
+## 📂 Project Structure
+
+```
+january-ai/
+├── package.json                   # Root build & execution scripts
+├── README.md                      # Comprehensive system documentation
+├── openrouter_models.csv          # Complete catalog export of 458+ AI models
+├── .gitignore                     # Git filter rules
+├── server/
+│   ├── .env                       # API keys & configuration
+│   ├── .env.example               # Template environment configuration
+│   ├── package.json               # Server dependencies & scripts
+│   ├── tsconfig.json              # TypeScript compiler configuration
+│   ├── data/                      # Local data & persistence
+│   │   ├── captures/              # Local camera frame cache (latest.jpg auto-overwritten)
+│   │   ├── faces/                 # Enrolled user identity profiles (profile.json)
+│   │   ├── memory/                # Self-learning memory (learned_profile.json, interactions.jsonl)
+│   │   ├── models/                # AI model catalog cache (catalog.json)
+│   │   └── exports/3d/            # Generated .blend, .obj, .glb 3D files & BIM scenes
+│   ├── camera_engine/             # Native vision & face recognition engines
+│   │   ├── camera_snap.swift      # Swift AVFoundation 60 FPS camera snapshot & stream tool
+│   │   ├── camera_snap            # Compiled native macOS arm64 binary
+│   │   └── face_detect.py         # Sub-20ms OpenCV Haar-cascade presence detector
+│   ├── audio_engine/              # Local Python audio & emotion engines
+│   │   ├── emotion_engine.py      # 100% free local emotion & sentiment classifier
+│   │   ├── mic_stt_engine.py      # sounddevice + Faster-Whisper microphone daemon
+│   │   └── tts_engine.py          # Edge-TTS multilingual synthesis & voice router
+│   └── src/
+│       ├── index.ts               # Core daemon coordinator & WebSocket server
+│       ├── cli.ts                 # Dual-section interactive Terminal CLI
+│       ├── config.ts              # Environment variables validation & defaults
+│       ├── types.ts               # State machine, WebSocket & tool type definitions
+│       ├── models/                # Dynamic AI Model Router
+│       │   ├── modelRegistry.ts   # Live OpenRouter catalog sync & fuzzy search
+│       │   └── modelRouter.ts     # Task-based auto-router & session locker
+│       ├── cua/                   # Computer-Using Agent Actuation Layer
+│       │   ├── safetyInterlock.ts # Emergency halt corner (0,0) & bounds clamp
+│       │   ├── mouseController.ts # Humanized quadratic Bezier mouse motion & clicks
+│       │   └── keyboardController.ts # Natural typing & keyboard shortcut chords
+│       ├── gui/                   # macOS Window Management
+│       │   └── windowManager.ts   # AppleScript window focus, bounds, and placement
+│       ├── blender/               # Blender 3D & BIM Bridges
+│       │   ├── blenderBridge.ts   # Procedural 3D model generator & Blender GUI launcher
+│       │   └── architecturalBridge.ts # 2D Blueprint to 3D BIM procedural builder
+│       ├── vision/                # Vision Cortex & Blueprint Perception
+│       │   ├── activityMonitor.ts # Continuous ambient camera monitor & gesture detector
+│       │   ├── cameraService.ts   # Swift camera snapshot invoker & frame cache
+│       │   ├── faceEngine.ts      # Face detection manager & profile loader
+│       │   └── planAnalyzer.ts    # Multimodal 2D floor plan structural analyzer
+│       ├── memory/
+│       │   └── learnedProfileEngine.ts # Adaptive self-learning profile engine
+│       ├── emotions/
+│       │   └── emotionEngine.ts   # Emotional memory & prompt injector
+│       ├── audio/
+│       │   ├── systemMic.ts       # Python STT process manager
+│       │   └── systemSpeaker.ts   # Neural TTS & afplay player
+│       ├── wake/
+│       │   ├── wakeDetector.ts    # Wake/Sleep phrase lifecycle manager
+│       │   └── wakeWordWorker.ts  # Worker thread monitoring audio stream
+│       ├── gemini/
+│       │   ├── geminiService.ts   # AI Dispatcher with search context, memory & tools
+│       │   └── liveClient.ts      # Multimodal Live API client
+│       ├── tools/                 # Tool Registry & Function Declarations
+│       │   ├── index.ts           # Central tool registry
+│       │   ├── architectureTool.ts # 2D blueprint to 3D Blender tool
+│       │   ├── manageModel.ts     # Dynamic model switcher tool
+│       │   ├── visionTool.ts      # Camera & face analysis tool
+│       │   ├── systemAccess.ts    # Spotlight file, video, folder & app opener
+│       │   ├── webSearch.ts       # DuckDuckGo, Wikipedia & weather fetcher
+│       │   └── delegateCoding.ts  # Python, C & C++ coding engine
+│       └── tests/                 # Automated Verification Test Suites
+│           ├── test_cua_blender.ts # CUA & Blender 3D test suite (17/17 passed)
+│           ├── test_plan_to_3d.ts  # 2D Floor Plan to 3D BIM test suite (14/14 passed)
+│           └── test_gemini_3d_intent.ts # Conversational intent test suite
+```
+
+---
+
+## ⚡ Natural Language Command Master Reference
+
+| Intent / Category | Spoken or Typed Command | System Action |
+| :--- | :--- | :--- |
+| **Model Switching** | *"Switch model to DeepSeek R1"* | Locks active model to DeepSeek R1 across all queries |
+| **Model Switching** | *"Switch model to Liquid"* | Locks active model to zero-cost LiquidAI |
+| **Model Switching** | *"Switch model to Qwen Coder"* | Locks active model to Qwen 2.5 Coder 32B |
+| **Model Status** | *"What model are you using?"* | Displays active model, token limit, and pricing status |
+| **Model Catalog** | *"List free models"* | Queries and lists top 22 zero-cost models |
+| **Model Reset** | *"Reset model"* | Restores automatic dynamic model cascade routing |
+| **3D Modeling** | *"Make a 3D model of a cyber sword in Blender"* | Generates procedural sword, PBR shaders, studio lights, exports `.blend`, and launches Blender GUI |
+| **3D Modeling** | *"Build a 3D model of a sports car in Blender"* | Generates aerodynamic car chassis, wheels, canopy, and opens Blender |
+| **3D Modeling** | *"Create a 3D coffee mug in Blender"* | Generates beveled ceramic coffee mug and opens Blender |
+| **2D Plan to 3D BIM** | *"Look at this building plan and convert it into 3D in Blender"* | Analyzes blueprint from webcam, builds foundation, PBR floors, 3m walls, openings, furniture, and opens Blender |
+| **2D Plan to 3D BIM** | *"Convert floorplan modern_villa.png to 3D architectural model"* | Reads local file, extracts structural BIM topology, and constructs 3D building |
+| **CUA Actuation** | *"Move mouse to 500, 300 and click"* | Moves cursor with quadratic Bezier smoothing and executes left click |
+| **CUA Keyboard** | *"Type 'Hello World' and press return"* | Types characters with natural delay and presses Return |
+| **Camera Eyes** | *"Eyes open"* / *"Camera open"* | Starts 60 FPS AVFoundation hardware stream |
+| **Camera Eyes** | *"Eyes closed"* / *"Camera closed"* | Stops camera process (Camera LED off, 0% CPU) |
+| **Visual Query** | *"What do you see?"* / *"Look at what I'm holding"* | Captures 1080p frame and performs multimodal Gemini visual reasoning |
+| **Face Recognition** | *"Who am I?"* | Recognizes face locally (<20ms) and checks enrolled profile |
+| **System Apps** | *"Open VS Code"*, *"Launch Safari"*, *"Start Cursor"* | Launches applications and brings window to foreground |
+| **Media Playback** | *"Play my project demo video"* | Searches whole disk via Spotlight and opens video in default player |
+| **File Opening** | *"Open resume.pdf"*, *"Show report.docx"* | Locates document and opens in Preview / default editor |
+| **Folder Explorer** | *"Open Downloads folder"*, *"Show Desktop"* | Opens requested path in macOS Finder |
+| **Coding Engine** | *"Write a quicksort in Python with type hints"* | Generates clean Python 3.10+ code box with run instructions |
+| **Coding Engine** | *"Code a thread-safe queue in modern C++"* | Generates modern C++20 code with STL, RAII, and `g++` command |
+| **Coding Engine** | *"Write a linked list with malloc in C"* | Generates clean C99/C11 code with standard headers and `gcc` command |
+| **Live Weather** | *"What is the weather in Hubli?"* | Queries live weather and speaks temperature, conditions, wind |
+| **Live Web Search** | *"Who won the latest cricket match?"* | Searches live internet via DuckDuckGo and provides spoken summary |
+| **Language Lock** | *"Speak in Hindi"*, *"मराठीत बोला"* | Locks conversation to Indian language with native script and voice |
+| **Language Reset** | *"Switch to English"* | Restores English conversational mode |
+| **Sleep / Wake** | *"Good night"* / *"Rise"* | Transitions between silent sleep standby and active listening |
 
 ---
 
 ## 🚀 Getting Started
 
 ### 1. Prerequisites
-- **macOS** (MacBook Air / Pro / Mac mini / Mac Studio)
+- **macOS** (Apple Silicon M1/M2/M3/M4 or Intel Mac)
 - **Node.js 20+** (`node -v`)
 - **Python 3.11+** (`python3 --version`)
-- **uv package manager** (`curl -LsSf https://astral.sh/uv/install.sh | sh`)
+- **Blender 4.0+ / 5.0+** installed in `/Applications/Blender.app`
+- **cliclick** (for CUA mouse/keyboard actuation):
+  ```bash
+  brew install cliclick
+  ```
+- **uv package manager**:
+  ```bash
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+  ```
 
 ### 2. Installation
 ```bash
@@ -574,7 +717,7 @@ January speaks and understands **English** and **15 major Indian languages** nat
 git clone https://github.com/ashwintelangstark/january.systems.git
 cd january-ai
 
-# Install root & server dependencies
+# Install root & server dependencies and compile TypeScript
 npm install
 npm run build
 ```
@@ -585,16 +728,20 @@ Create `server/.env` based on `server/.env.example`:
 PORT=3001
 HOST=localhost
 
-# Google Gemini API Key (Free tier supported with auto-fallback)
+# Google Gemini API Keys (Tier 1 & Tier 2 Fallback)
 GEMINI_API="YOUR_GEMINI_API_KEY"
+GEMINI_API_FALLBACK="YOUR_FALLBACK_GEMINI_KEY"
 GEMINI_MODEL=models/gemini-3.6-flash
 GEMINI_VOICE=Aoede
+
+# OpenRouter / OmniRoute API Key (Tier 3 Dynamic Model Router across 458+ models)
+OPENROUTER_API_KEY="YOUR_OPENROUTER_API_KEY"
 
 # Anthropic Claude API Key (Optional - Automatically falls back to Gemini)
 CLAUDE_CODE_API="YOUR_CLAUDE_API_KEY"
 CLAUDE_MODEL=claude-3-7-sonnet-20250219
 
-# System Wake and Sleep Phrases
+# System Wake & Sleep Phrases
 WAKE_PHRASE=rise
 SLEEP_PHRASE="good night"
 
@@ -611,13 +758,30 @@ CAMERA_SLEEP_PHRASE="eyes closed"
 ```bash
 npm run dev
 ```
-> *January starts headlessly in the background, listening to your microphone and speaking aloud through your laptop speakers.*
+> *January starts headlessly in the background, listening to your microphone in the room and vocalizing responses through your laptop speakers.*
 
 ### 2. Start the Interactive Terminal CLI
 ```bash
 npm run cli
 ```
-> *Opens the dual-section CLI. Automatically pauses background mic while open, and resumes background listening when you type `exit` or press `Ctrl+C`.*
+> *Opens the dual-section CLI (`[ME]` & `[JANUARY]`). Automatically pauses the background microphone while you interact and resumes background listening upon exit.*
+
+---
+
+## 🧪 Verification & Test Suites
+
+Run the integrated verification test suites to validate all subsystems:
+
+```bash
+# Test 1: Computer-Using Agent (CUA) & Blender 3D Engine (17/17 Passed)
+npx tsx server/src/tests/test_cua_blender.ts
+
+# Test 2: 2D Building Plan & Blueprint to 3D Blender BIM Engine (14/14 Passed)
+npx tsx server/src/tests/test_plan_to_3d.ts
+
+# Test 3: Conversational 3D Intent Routing
+npx tsx server/src/tests/test_gemini_3d_intent.ts
+```
 
 ---
 
@@ -631,5 +795,5 @@ npm run cli
 ---
 
 ## 📄 License
-MIT License © 2026 Ashwin Telang Stark. All Rights Reserved.
 
+MIT License © 2026 Ashwin Telang Stark. All Rights Reserved.
