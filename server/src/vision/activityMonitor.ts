@@ -212,7 +212,7 @@ export class VisualActivityMonitor extends EventEmitter {
    * Queries Gemini Vision in the background to inspect activity, posture, and facial expressions
    */
   private async runAmbientMultimodalAnalysis(base64Image: string, reason: 'arrival' | 'periodic'): Promise<void> {
-    if (!config.geminiApiKey && !config.geminiFallbackApiKey) return;
+    if (!config.geminiApiKey && !config.geminiFallbackApiKey && !config.openrouterApiKey && !config.openaiApiKey) return;
     this.lastGeminiPerceptionTimestamp = Date.now();
 
     const enrolledUser = this.faceEngine.getEnrolledUser();
@@ -292,7 +292,76 @@ export class VisualActivityMonitor extends EventEmitter {
       }
     }
 
-    // 2. OpenAI Multimodal Vision Fallback: Activated if Gemini is quota-exhausted or unavailable
+    // 2. OpenRouter / OmniRoute Multimodal Vision Fallback (Tier 3)
+    if (config.openrouterApiKey) {
+      const candidateOpenRouterVision = ['openrouter/auto', 'openrouter/free'];
+      for (const model of candidateOpenRouterVision) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 9000);
+
+          const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            signal: controller.signal,
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${config.openrouterApiKey}`,
+              'HTTP-Referer': 'https://january.systems',
+              'X-Title': 'January AI',
+            },
+            body: JSON.stringify({
+              model,
+              messages: [
+                {
+                  role: 'user',
+                  content: [
+                    { type: 'text', text: prompt },
+                    {
+                      type: 'image_url',
+                      image_url: {
+                        url: `data:image/jpeg;base64,${base64Image}`,
+                      },
+                    },
+                  ],
+                },
+              ],
+              max_tokens: 250,
+              temperature: 0.3,
+            }),
+          });
+          clearTimeout(timeoutId);
+
+          const data = (await response.json()) as any;
+          if (response.ok && data?.choices?.[0]?.message?.content) {
+            const text = data.choices[0].message.content.trim();
+            const cleanJson = text.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+            try {
+              const parsed = JSON.parse(cleanJson);
+              if (parsed.posture) this.currentContext.posture = parsed.posture;
+              if (parsed.activity) this.currentContext.activity = parsed.activity;
+              if (parsed.expression) this.currentContext.expression = parsed.expression;
+              if (parsed.briefSummary) this.currentContext.summary = parsed.briefSummary;
+
+              console.log(`👁️ [VisualActivityMonitor:OpenRouter] Visual Context: [Activity: ${this.currentContext.activity} | Posture: ${this.currentContext.posture} | Mood: ${this.currentContext.expression}]`);
+
+              if (parsed.isWaving) {
+                this.emit('gesture', { type: 'wave', user: enrolledUser.name });
+              }
+
+              this.emit('activityUpdate', this.currentContext);
+              return;
+            } catch {
+              this.currentContext.summary = text.slice(0, 150);
+              return;
+            }
+          }
+        } catch {
+          // Fallback to next candidate model
+        }
+      }
+    }
+
+    // 3. OpenAI Multimodal Vision Fallback: Activated if Gemini & OpenRouter are unavailable
     if (config.openaiApiKey) {
       const candidateOpenAiVision = ['gpt-4o-mini', 'gpt-4o'];
       for (const model of candidateOpenAiVision) {

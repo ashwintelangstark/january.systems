@@ -237,6 +237,12 @@ export class GeminiService {
     'gpt-3.5-turbo',
     'o3-mini',
   ];
+  private candidateOpenRouterModels = [
+    'openrouter/auto',
+    'liquid/lfm-2.5-2.6b:free',
+    'openrouter/free',
+    'cohere/north-mini-code:free',
+  ];
   private emotionEngine: EmotionEngine;
   private learnedProfileEngine: LearnedProfileEngine;
   private activityMonitor: VisualActivityMonitor | null = null;
@@ -648,7 +654,21 @@ export class GeminiService {
       }
     }
 
-    // 2. OpenAI Fallback Engine: Activated if and only if Gemini quota is exhausted or unavailable
+    // 2. OpenRouter / OmniRoute Fallback Engine (Tier 3): Activated if Gemini quota is exhausted or unavailable
+    if (config.openrouterApiKey) {
+      const openRouterResponse = await this.queryOpenRouterFallback(
+        prompt,
+        webSearchContext,
+        activeLang,
+        emotionResult,
+        systemInstructionText
+      );
+      if (openRouterResponse) {
+        return openRouterResponse;
+      }
+    }
+
+    // 3. OpenAI Fallback Engine: Activated if Gemini & OpenRouter are unavailable
     if (config.openaiApiKey) {
       const openAiResponse = await this.queryOpenAIFallback(
         prompt,
@@ -688,7 +708,7 @@ export class GeminiService {
     }
 
     return {
-      text: 'AI services are currently unreachable. Please verify your GEMINI_API or OPENAI_API key in server/.env.',
+      text: 'AI services are currently unreachable. Please verify your GEMINI_API, GEMINI_FALLBACK_API, or OPENROUTER_API_KEY in server/.env.',
       isError: true,
       error: 'All AI model endpoints unavailable',
       emotion: emotionResult,
@@ -783,6 +803,104 @@ export class GeminiService {
         console.warn(`[GeminiService] OpenAI model ${model} quota/request failed (${response.status}): ${errMsg}. Switching to next candidate model...`);
       } catch (err: any) {
         console.warn(`[GeminiService] OpenAI network attempt for ${model} failed: ${err.message}. Trying next candidate model...`);
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Automatic Tier 3 Fallback Engine: Routes query to OpenRouter/OmniRoute models
+   * when Google Gemini quotas are exhausted (429) or unavailable.
+   * Automatically switches between candidate free models (openrouter/auto, liquid/lfm-2.5-2.6b:free, openrouter/free, cohere/north-mini-code:free).
+   */
+  private async queryOpenRouterFallback(
+    prompt: string,
+    webSearchContext: string,
+    activeLang: LanguageProfile | null,
+    emotionResult: EmotionResult,
+    systemInstructionText: string
+  ): Promise<GeminiResponseResult | null> {
+    if (!config.openrouterApiKey) {
+      return null;
+    }
+
+    const userMessageContent = prompt + (webSearchContext ? `\n${webSearchContext}` : '');
+
+    for (const model of this.candidateOpenRouterModels) {
+      try {
+        console.log(`[GeminiService] 🔄 Gemini exhausted/unavailable. Routing to Tier 3 Fallback (OpenRouter: ${model})...`);
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          signal: controller.signal,
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${config.openrouterApiKey}`,
+            'HTTP-Referer': 'https://january.systems',
+            'X-Title': 'January AI',
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'system', content: systemInstructionText },
+              { role: 'user', content: userMessageContent },
+            ],
+            max_tokens: 600,
+            temperature: 0.8,
+          }),
+        });
+        clearTimeout(timeoutId);
+
+        const data = (await response.json()) as any;
+        const msgContent = data?.choices?.[0]?.message?.content || data?.choices?.[0]?.message?.reasoning;
+
+        if (response.ok && msgContent) {
+          let reply = String(msgContent).trim();
+
+          let activeEmotion = emotionResult;
+          const tagMatch = reply.match(/^\[Emotion:\s*([a-zA-Z_-]+)\]\s*/i);
+          if (tagMatch) {
+            const rawTag = tagMatch[1].toLowerCase().trim();
+            activeEmotion = this.emotionEngine.createEmotionResult(rawTag);
+            reply = reply.replace(/^\[Emotion:[^\]]+\]\s*/i, '').trim();
+          }
+
+          // Real-time EmotionEngine sync
+          this.emotionEngine.setEmotion(activeEmotion);
+
+          const userAskedForName = /\b(my\s+name|who\s+am\s+i|call\s+me|name\s+is)\b/i.test(prompt);
+          if (!userAskedForName) {
+            reply = reply
+              .replace(/^(?:Hey|Hi|Hello|Well|Sure|Okay|Look|Ah),?\s+Ashwin(?:,\s*|\s*[-–—:]\s*|\s+)/i, '')
+              .replace(/^Ashwin,\s*/i, '')
+              .replace(/,\s*Ashwin([.!?])/gi, '$1')
+              .replace(/\bAshwin\b/gi, 'you');
+          }
+
+          if (reply) {
+            this.learnedProfileEngine.recordInteraction(prompt, reply, {
+              spokenLanguage: activeLang?.langName || 'English',
+              visualContext: this.activityMonitor?.getCurrentContext().summary,
+            });
+
+            console.log(`✅ [GeminiService] Successfully answered via Tier 3 OpenRouter fallback (${model}) [Emotion: ${activeEmotion.emotion}]`);
+
+            return {
+              text: reply,
+              modelUsed: `OpenRouter: ${model}`,
+              emotion: activeEmotion,
+            };
+          }
+        }
+
+        const errMsg = data?.error?.message || `HTTP ${response.status}`;
+        console.warn(`[GeminiService] OpenRouter model ${model} request failed (${response.status}): ${errMsg}. Switching to next candidate...`);
+      } catch (err: any) {
+        console.warn(`[GeminiService] OpenRouter network attempt for ${model} failed: ${err.message}. Trying next candidate...`);
       }
     }
 

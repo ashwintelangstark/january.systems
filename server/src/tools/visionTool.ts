@@ -161,7 +161,72 @@ export async function seeAndAnalyze(args: SeeAndAnalyzeArgs = {}): Promise<Visio
     }
   }
 
-  // 4. OpenAI Vision Fallback: Activated if Gemini is quota-exhausted or unavailable
+  // 4. OpenRouter / OmniRoute Multimodal Vision Fallback (Tier 3)
+  if (config.openrouterApiKey) {
+    const candidateOpenRouterVision = ['openrouter/auto', 'openrouter/free'];
+    for (const model of candidateOpenRouterVision) {
+      try {
+        console.log(`[VisionTool] 🔄 Gemini Vision exhausted/unavailable. Querying Tier 3 OpenRouter Vision (${model})...`);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 9000);
+
+        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          signal: controller.signal,
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${config.openrouterApiKey}`,
+            'HTTP-Referer': 'https://january.systems',
+            'X-Title': 'January AI',
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'system', content: visionSystemInstruction },
+              {
+                role: 'user',
+                content: [
+                  { type: 'text', text: userPrompt },
+                  {
+                    type: 'image_url',
+                    image_url: {
+                      url: `data:image/jpeg;base64,${snapshot.base64}`,
+                    },
+                  },
+                ],
+              },
+            ],
+            max_tokens: 350,
+            temperature: 0.7,
+          }),
+        });
+        clearTimeout(timeoutId);
+
+        const data = (await response.json()) as any;
+        if (response.ok && data?.choices?.[0]?.message?.content) {
+          const rawReply = data.choices[0].message.content.trim();
+          const reply = sanitizeNameOutput(rawReply);
+          if (reply) {
+            console.log(`✅ [VisionTool] Successfully analyzed image via Tier 3 OpenRouter Vision (${model})`);
+            return {
+              success: true,
+              description: reply,
+              verbalSummary: reply,
+              hasFace: faceResult.hasFace,
+              identifiedUser: faceResult.identifiedUser,
+              snapshotPath: snapshot.filePath,
+              modelUsed: `OpenRouter: ${model}`,
+            };
+          }
+        }
+        console.warn(`[VisionTool] OpenRouter Vision ${model} failed (${response.status}):`, data?.error?.message?.slice(0, 80));
+      } catch (err: any) {
+        console.warn(`[VisionTool] OpenRouter Vision network error for ${model}:`, err.message);
+      }
+    }
+  }
+
+  // 5. OpenAI Vision Fallback: Activated if Gemini & OpenRouter are unavailable
   if (config.openaiApiKey) {
     const candidateOpenAiVision = ['gpt-4o-mini', 'gpt-4o'];
     for (const model of candidateOpenAiVision) {
