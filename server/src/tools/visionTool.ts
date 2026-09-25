@@ -1,6 +1,7 @@
 import { CameraService } from '../vision/cameraService.js';
 import { FaceEngine } from '../vision/faceEngine.js';
 import { config } from '../config.js';
+import { modelRouter } from '../models/modelRouter.js';
 
 const cameraService = new CameraService();
 const faceEngine = new FaceEngine();
@@ -163,7 +164,7 @@ export async function seeAndAnalyze(args: SeeAndAnalyzeArgs = {}): Promise<Visio
 
   // 4. OpenRouter / OmniRoute Multimodal Vision Fallback (Tier 3)
   if (config.openrouterApiKey) {
-    const candidateOpenRouterVision = ['openrouter/auto', 'openrouter/free'];
+    const candidateOpenRouterVision = modelRouter.getCandidatesForTask({ taskType: 'vision', requireVision: true });
     for (const model of candidateOpenRouterVision) {
       try {
         console.log(`[VisionTool] 🔄 Gemini Vision exhausted/unavailable. Querying Tier 3 OpenRouter Vision (${model})...`);
@@ -207,7 +208,9 @@ export async function seeAndAnalyze(args: SeeAndAnalyzeArgs = {}): Promise<Visio
           const rawReply = data.choices[0].message.content.trim();
           const reply = sanitizeNameOutput(rawReply);
           if (reply) {
-            console.log(`✅ [VisionTool] Successfully analyzed image via Tier 3 OpenRouter Vision (${model})`);
+            const modelInfo = modelRouter.getRegistry().getModelById(model);
+            const modelDisplayName = modelInfo ? `${modelInfo.name} (${model})` : model;
+            console.log(`✅ [VisionTool] Successfully analyzed image via OpenRouter Vision (${modelDisplayName})`);
             return {
               success: true,
               description: reply,
@@ -215,7 +218,7 @@ export async function seeAndAnalyze(args: SeeAndAnalyzeArgs = {}): Promise<Visio
               hasFace: faceResult.hasFace,
               identifiedUser: faceResult.identifiedUser,
               snapshotPath: snapshot.filePath,
-              modelUsed: `OpenRouter: ${model}`,
+              modelUsed: `OpenRouter: ${modelDisplayName}`,
             };
           }
         }

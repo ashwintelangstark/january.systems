@@ -2,6 +2,7 @@ import { EventEmitter } from 'events';
 import { CameraService } from './cameraService.js';
 import { FaceEngine, FaceDetectionResult } from './faceEngine.js';
 import { config } from '../config.js';
+import { modelRouter } from '../models/modelRouter.js';
 
 export interface VisualContextState {
   isEyesOpen: boolean;
@@ -294,7 +295,7 @@ export class VisualActivityMonitor extends EventEmitter {
 
     // 2. OpenRouter / OmniRoute Multimodal Vision Fallback (Tier 3)
     if (config.openrouterApiKey) {
-      const candidateOpenRouterVision = ['openrouter/auto', 'openrouter/free'];
+      const candidateOpenRouterVision = modelRouter.getCandidatesForTask({ taskType: 'vision', requireVision: true });
       for (const model of candidateOpenRouterVision) {
         try {
           const controller = new AbortController();

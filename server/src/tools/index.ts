@@ -4,6 +4,7 @@ import { manageWhatsappMessage } from './manageWhatsapp.js';
 import { searchWeb, fetchWebPage } from './webSearch.js';
 import { openSystemResource, searchSystemFiles, listSystemFolder, readSystemFile } from './systemAccess.js';
 import { seeAndAnalyze } from './visionTool.js';
+import { manageAiModel } from './manageModel.js';
 
 export const GEMINI_TOOLS_DECLARATION = [
   {
@@ -174,6 +175,32 @@ export const GEMINI_TOOLS_DECLARATION = [
           required: ['number', 'text'],
         },
       },
+      {
+        name: 'manage_ai_models',
+        description: 'Inspect, list, switch, or reset active AI models across 458+ available OpenRouter/OmniRoute models.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            action: {
+              type: 'STRING',
+              description: 'The action to perform: "list", "switch", "status", or "reset".',
+            },
+            model: {
+              type: 'STRING',
+              description: 'Model name or ID when action is "switch" (e.g. "deepseek/deepseek-r1", "claude 3.7", "gpt-4o").',
+            },
+            category: {
+              type: 'STRING',
+              description: 'Category filter for "list": "coding", "vision", "reasoning", "fast", "general", "creative", or "free".',
+            },
+            search: {
+              type: 'STRING',
+              description: 'Keyword search for "list" (e.g. "llama", "deepseek", "qwen").',
+            },
+          },
+          required: ['action'],
+        },
+      },
     ],
   },
 ];
@@ -211,6 +238,9 @@ export async function executeTool(name: string, args: Record<string, any>): Prom
 
     case 'manage_whatsapp_message':
       return await manageWhatsappMessage(args as any);
+
+    case 'manage_ai_models':
+      return await manageAiModel(args as any);
 
     default:
       console.warn(`[ToolsDispatcher] Unknown tool called: ${name}`);

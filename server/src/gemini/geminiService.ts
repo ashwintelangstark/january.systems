@@ -4,6 +4,7 @@ import { delegateCoding, DelegateCodingResult } from '../tools/delegateCoding.js
 import { EmotionEngine, EmotionResult } from '../emotions/emotionEngine.js';
 import { LearnedProfileEngine } from '../memory/learnedProfileEngine.js';
 import { VisualActivityMonitor } from '../vision/activityMonitor.js';
+import { modelRouter } from '../models/modelRouter.js';
 
 export interface GeminiResponseResult {
   text: string;
@@ -297,6 +298,54 @@ export class GeminiService {
 
     const activeLang = this.currentSessionLanguage;
 
+    // -1. Check for Model Switching / Management Intent
+    const modelIntent = modelRouter.detectModelSwitchIntent(prompt);
+    if (modelIntent.isIntent) {
+      if (modelIntent.action === 'switch' && modelIntent.targetModelQuery) {
+        const switchRes = modelRouter.setSessionModel(modelIntent.targetModelQuery);
+        const switchEmotion = this.emotionEngine.createEmotionResult(switchRes.success ? 'joy' : 'concerned');
+        this.emotionEngine.setEmotion(switchEmotion);
+        return {
+          text: switchRes.message,
+          verbalSummary: switchRes.message,
+          modelUsed: switchRes.model ? `ModelRouter: ${switchRes.model.name}` : 'ModelRouter',
+          emotion: switchEmotion,
+        };
+      } else if (modelIntent.action === 'reset') {
+        const msg = modelRouter.resetSessionModel();
+        const resetEmotion = this.emotionEngine.createEmotionResult('calm');
+        this.emotionEngine.setEmotion(resetEmotion);
+        return {
+          text: msg,
+          verbalSummary: msg,
+          modelUsed: 'ModelRouter: Dynamic Auto',
+          emotion: resetEmotion,
+        };
+      } else if (modelIntent.action === 'status') {
+        const statusRes = await executeTool('manage_ai_models', { action: 'status' });
+        const statEmotion = this.emotionEngine.createEmotionResult('focused');
+        this.emotionEngine.setEmotion(statEmotion);
+        return {
+          text: statusRes.message,
+          verbalSummary: statusRes.message,
+          modelUsed: 'ModelRouter: Status',
+          emotion: statEmotion,
+        };
+      } else if (modelIntent.action === 'list') {
+        const listRes = await executeTool('manage_ai_models', { action: 'list', category: modelIntent.category });
+        const listEmotion = this.emotionEngine.createEmotionResult('curious');
+        this.emotionEngine.setEmotion(listEmotion);
+        const modelLines = (listRes.models || []).map((m: any, idx: number) => `${idx + 1}. **${m.name}** (\`${m.id}\`${m.is_free ? ' • Free' : ''})`).join('\n');
+        const replyText = `${listRes.message}\n\n${modelLines}\n\n*Tip: Say "switch model to <name>" to lock any model.*`;
+        return {
+          text: replyText,
+          verbalSummary: listRes.message,
+          modelUsed: 'ModelRouter: Catalog',
+          emotion: listEmotion,
+        };
+      }
+    }
+
     // 0. Check for Camera Vision, Surroundings, Outfit, Things, and Behavior
     const isVisionQuery =
       (/\b(look|see|camera|eyes|holding|in\s+my\s+hand|in\s+my\s+hands|what('s|\s+is)\s+this|what\s+do\s+you\s+see|who\s+am\s+i|who\s+is\s+(this|here|sitting|in\s+front)|recognize\s+me|can\s+you\s+see|my\s+face|posture|slouching|sitting\s+upright|read\s+this|examine|inspect|scan|surroundings|environment|my\s+room|the\s+room|desk|table|background|behind\s+me|around\s+me|in\s+front\s+of\s+(me|you)|things|objects?|what\s+is\s+around|outfit|wearing|clothes|clothing|shirt|t-?shirt|hoodie|jacket|dress|pant|pants|glasses|spectacles|headphone|accessories|appearance|how\s+do\s+i\s+look|how\s+am\s+i\s+looking|am\s+i\s+(smiling|tired|focused|happy)|expression|facial\s+expression|behaviou?r|what\s+am\s+i\s+doing|what\s+is\s+my\s+activity|am\s+i\s+doing|action|gesture|waving)\b/i.test(lower) ||
@@ -565,6 +614,22 @@ export class GeminiService {
         .replace(/\bAshwin\b/gi, 'you');
     };
 
+    // If user explicitly locked a specific model in ModelRouter, route directly to it via OpenRouter
+    const userLockedModel = modelRouter.getActiveSessionModel();
+    if (userLockedModel && config.openrouterApiKey) {
+      console.log(`[GeminiService] 🎯 User-locked model active: ${userLockedModel.name} (${userLockedModel.id}). Querying directly via OpenRouter...`);
+      const lockedRes = await this.queryOpenRouterFallback(
+        prompt,
+        webSearchContext,
+        activeLang,
+        emotionResult,
+        systemInstructionText
+      );
+      if (lockedRes) {
+        return lockedRes;
+      }
+    }
+
     // Try Google Gemini API servers with Primary Key, then Fallback Key, rotating models
     const promptWithWeb = prompt + (webSearchContext ? `\n${webSearchContext}` : '');
     const geminiKeysToTry = [
@@ -827,9 +892,15 @@ export class GeminiService {
 
     const userMessageContent = prompt + (webSearchContext ? `\n${webSearchContext}` : '');
 
-    for (const model of this.candidateOpenRouterModels) {
+    const isCodingTask = /\b(code|function|class|python|c\+\+|algorithm|script|programming|solve)\b/i.test(prompt);
+    const isReasoningTask = /\b(math|equation|prove|logic|puzzle|riddle|why|analyze)\b/i.test(prompt);
+    const taskType = isCodingTask ? 'coding' : (isReasoningTask ? 'reasoning' : 'general');
+    const dynamicCandidates = modelRouter.getCandidatesForTask({ taskType, prompt });
+    const modelsToTry = dynamicCandidates.length > 0 ? dynamicCandidates : this.candidateOpenRouterModels;
+
+    for (const model of modelsToTry) {
       try {
-        console.log(`[GeminiService] 🔄 Gemini exhausted/unavailable. Routing to Tier 3 Fallback (OpenRouter: ${model})...`);
+        console.log(`[GeminiService] 🔄 Routing to OpenRouter dynamic model: ${model} (task: ${taskType})...`);
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 8000);
@@ -887,11 +958,14 @@ export class GeminiService {
               visualContext: this.activityMonitor?.getCurrentContext().summary,
             });
 
-            console.log(`✅ [GeminiService] Successfully answered via Tier 3 OpenRouter fallback (${model}) [Emotion: ${activeEmotion.emotion}]`);
+            const modelInfo = modelRouter.getRegistry().getModelById(model);
+            const modelDisplayName = modelInfo ? `${modelInfo.name} (${model})` : model;
+
+            console.log(`✅ [GeminiService] Successfully answered via OpenRouter (${modelDisplayName}) [Emotion: ${activeEmotion.emotion}]`);
 
             return {
               text: reply,
-              modelUsed: `OpenRouter: ${model}`,
+              modelUsed: `OpenRouter: ${modelDisplayName}`,
               emotion: activeEmotion,
             };
           }
