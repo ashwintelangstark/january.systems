@@ -16,4 +16,6 @@ server/data/captures/
 server/data/memory/*.jsonl
 server/camera_engine/camera_snap
 JAN_ESP/build/
+server/data/exports/
+*.blend
 

@@ -377,6 +377,43 @@ export class GeminiService {
       };
     }
 
+    // 0.5 Check for 3D Modeling & Blender Creation Tasks
+    const is3DModelingRequest =
+      /\b(3d\s+model|3d\s+mesh|in\s+blender|open\s+blender|blender\s+model|build\s+(?:a\s+)?3d|create\s+(?:a\s+)?3d|make\s+(?:a\s+)?3d|generate\s+(?:a\s+)?3d)\b/i.test(lower) ||
+      /\b(blender\s+file|3d\s+file|\.blend|\.obj\s+model|\.glb\s+model)\b/i.test(lower);
+
+    if (is3DModelingRequest) {
+      console.log(`[GeminiService] 🎨 3D Modeling pipeline triggered for: "${prompt}"...`);
+      const modelingEmotion = this.emotionEngine.createEmotionResult('focused');
+      this.emotionEngine.setEmotion(modelingEmotion);
+
+      // Extract subject prompt
+      let modelPrompt = prompt
+        .replace(/^(?:hey\s+|hi\s+|ok\s+|okay\s+)?january[,:\s]*/i, '')
+        .replace(/^(?:can\s+you\s+|please\s+)?(?:build|create|make|generate|model)\s+(?:me\s+)?(?:a\s+|an\s+)?(?:3d\s+model\s+(?:of\s+)?|3d\s+mesh\s+(?:of\s+)?|3d\s+file\s+(?:of\s+)?)/i, '')
+        .replace(/\b(open\s+blender\s+(?:and\s+)?|build\s+(?:a\s+)?3d\s+model\s+(?:of\s+)?|create\s+(?:a\s+)?3d\s+model\s+(?:of\s+)?|make\s+(?:a\s+)?3d\s+model\s+(?:of\s+)?|generate\s+(?:a\s+)?3d\s+model\s+(?:of\s+)?|in\s+blender|3d\s+model\s+(?:of\s+)?|3d\s+file|3d\s+mesh)\b/gi, '')
+        .replace(/^(?:a\s+|an\s+|the\s+)/i, '')
+        .trim();
+
+      if (!modelPrompt) modelPrompt = prompt;
+
+      const result = await executeTool('create_3d_model', {
+        prompt: modelPrompt,
+        openInBlender: true,
+      });
+
+      const finishedEmotion = this.emotionEngine.createEmotionResult(result.success ? 'joy' : 'concerned');
+      this.emotionEngine.setEmotion(finishedEmotion);
+
+      return {
+        text: result.message,
+        verbalSummary: result.verbalSummary,
+        toolCalls: [{ name: 'create_3d_model', args: { prompt: modelPrompt, openInBlender: true }, result }],
+        modelUsed: 'Blender 5.2 Native Engine',
+        emotion: finishedEmotion,
+      };
+    }
+
     // 1. Check for System Resource Opening (IDEs, Softwares, Folders, Videos, Files, Audio)
     const isMultilingualOpen = /(?:खोलो|ओपन\s*करो|चालू\s*करो|चलाओ|उघडा|ओपन\s*करा|प्ले\s*करा|दाखवा)$/i.test(prompt.trim());
     const isEnglishOpen =

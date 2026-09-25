@@ -5,6 +5,8 @@ import { searchWeb, fetchWebPage } from './webSearch.js';
 import { openSystemResource, searchSystemFiles, listSystemFolder, readSystemFile } from './systemAccess.js';
 import { seeAndAnalyze } from './visionTool.js';
 import { manageAiModel } from './manageModel.js';
+import { create3DModelTool } from './blenderTool.js';
+import { executeCuaAction } from './cuaTool.js';
 
 export const GEMINI_TOOLS_DECLARATION = [
   {
@@ -201,6 +203,52 @@ export const GEMINI_TOOLS_DECLARATION = [
           required: ['action'],
         },
       },
+      {
+        name: 'create_3d_model',
+        description: 'Build a procedural 3D model in Blender, apply PBR materials and studio lighting, save the named .blend project and .obj/.glb files, and launch Blender on screen.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            prompt: {
+              type: 'STRING',
+              description: 'What 3D model to build (e.g. "futuristic cyber sword", "ceramic coffee cup", "modern armchair", "porcelain vase", "low poly sports car", "abstract torus knot").',
+            },
+            fileName: {
+              type: 'STRING',
+              description: 'Optional custom file name for the 3D model (e.g. "cyber_sword", "coffee_mug").',
+            },
+            openInBlender: {
+              type: 'BOOLEAN',
+              description: 'Whether to visibly launch Blender with the newly created model on screen (default true).',
+            },
+          },
+          required: ['prompt'],
+        },
+      },
+      {
+        name: 'execute_cua_action',
+        description: 'Computer-Using Agent (CUA) tool: simulate physical mouse movement, clicking, dragging strokes, typing, and keyboard shortcuts on macOS.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            action: {
+              type: 'STRING',
+              description: 'The CUA action: "move", "click", "drag", "type", "shortcut", or "position".',
+            },
+            x: { type: 'NUMBER', description: 'Target X screen coordinate for move/click.' },
+            y: { type: 'NUMBER', description: 'Target Y screen coordinate for move/click.' },
+            fromX: { type: 'NUMBER', description: 'Start X for drag stroke.' },
+            fromY: { type: 'NUMBER', description: 'Start Y for drag stroke.' },
+            toX: { type: 'NUMBER', description: 'End X for drag stroke.' },
+            toY: { type: 'NUMBER', description: 'End Y for drag stroke.' },
+            button: { type: 'STRING', description: '"left", "right", or "middle".' },
+            count: { type: 'NUMBER', description: '1 for single click, 2 for double click.' },
+            text: { type: 'STRING', description: 'Text to type.' },
+            shortcut: { type: 'STRING', description: 'Key combination (e.g. "cmd+s", "cmd+n", "enter").' },
+          },
+          required: ['action'],
+        },
+      },
     ],
   },
 ];
@@ -241,6 +289,12 @@ export async function executeTool(name: string, args: Record<string, any>): Prom
 
     case 'manage_ai_models':
       return await manageAiModel(args as any);
+
+    case 'create_3d_model':
+      return await create3DModelTool(args as any);
+
+    case 'execute_cua_action':
+      return await executeCuaAction(args as any);
 
     default:
       console.warn(`[ToolsDispatcher] Unknown tool called: ${name}`);
