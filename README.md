@@ -288,6 +288,55 @@ flowchart TD
 
 ---
 
+## 🌌 Universal 3D Object Synthesis Engine (Arbitrary Natural Language 3D Modeling)
+
+January is not limited to aircraft or architectural floor plans. Through the **Universal 3D Generation Engine** (`Universal3DEngine`), January can construct a detailed, multi-component 3D model of **literally any object** requested in natural language—scientific instruments, drones, musical instruments, cyber weapons, mechanical assemblies, consumer electronics, furniture, or artistic sculptures—directly in Blender 5.2.2 LTS.
+
+```mermaid
+flowchart TD
+    UserVoice["🗣️ User Prompt / Voice:<br/>'January, build a 3D model of a vintage brass microscope with dual objective lenses'"] --> IntentRouter{"Intent & Routing"}
+    
+    IntentRouter -->|Aircraft / Aerospace| AeroEngine["BMeshLoftingEngine (Phase 1 & 2)"]
+    IntentRouter -->|Architectural Blueprint| BIMEngine["ArchitecturalBridge (BIM Engine)"]
+    IntentRouter -->|Any Arbitrary Object| UnivEngine["Universal3DEngine (Master 3D Synthesizer)"]
+    
+    subgraph "Universal 3D Synthesis Pipeline"
+        UnivEngine --> Decomp["Component Assembly Decomposition<br/>(4-8 Sub-meshes: Base, Frame, Stage, Optics, Knobs)"]
+        Decomp --> MultiAI{"Multi-Tier AI Synthesizer"}
+        MultiAI -->|Tier 1| GeminiFlash["Gemini 2.0 Flash (Blender 5.2.2 Script Synthesizer)"]
+        MultiAI -->|Tier 2 / Fallback| QwenCoder["OpenRouter Qwen 2.5 Coder 32B"]
+        
+        GeminiFlash --> Sanitize["Syntax Sanitizer & Blender 5.2 Patching<br/>(Coat Weight, Transmission Weight, BMesh Geoms)"]
+        QwenCoder --> Sanitize
+        
+        Sanitize --> HeadlessExec["Blender 5.2 Headless Execution<br/>(bpy / bmesh Native Python Worker)"]
+        
+        HeadlessExec --> ResultCheck{"Generation Success?"}
+        ResultCheck -->|Blender Traceback / Error| SelfHeal["🩹 Self-Healing Recovery Loop<br/>(Feed traceback back to AI for dynamic repair)"]
+        SelfHeal --> HeadlessExec
+        ResultCheck -->|Repeated Failure / Offline| ParametricFallback["🛡️ Guaranteed Parametric Procedural Builder<br/>(Multi-Component Assembly Fallback)"]
+        
+        ResultCheck -->|Success| ExportAssets["Export .blend, .obj/.mtl, and .glb"]
+        ParametricFallback --> ExportAssets
+    end
+    
+    subgraph "Presentation & System Activation"
+        ExportAssets --> BlendFile["Saved in server/data/exports/3d/"]
+        BlendFile --> OpenGUI["macOS Launch: open -a Blender '<filepath>'"]
+        OpenGUI --> WindowFocus["WindowManager: Bring Blender to Front & Center"]
+    end
+```
+
+### 🛠️ Key Architectural Capabilities
+1. **Zero-Restriction Object Modeling**: Accepts arbitrary natural language descriptions without preset constraints (e.g. vintage microscope, surveillance quadcopter drone, Fender electric guitar, espresso machine, robotic arm, cyber katana).
+2. **Component Assembly Decomposition**: Dynamically breaks down requested objects into 4–8 distinct realistic sub-meshes and functional components rather than single primitive block-outs.
+3. **Blender 5.2.2 LTS Socket Compatibility**: Enforces clean compatibility with Blender 4.0+/5.0+ Principled BSDF shader architecture (`Coat Weight`, `Transmission Weight`, `Emission Color`, `Specular IOR Level`).
+4. **Self-Healing Error Recovery**: If Blender's Python runtime encounters any traceback error, January's self-healing loop automatically captures `stdout`/`stderr` and feeds it back to the code model for an immediate corrected patch.
+5. **Guaranteed Offline Parametric Fallback**: If network is offline or AI quotas are exhausted, an offline procedural generator creates a proportional, multi-component assembly so model creation *never fails*.
+6. **Triple Universal Format Output**: Every generation compiles `.blend` (Blender project), `.obj` + `.mtl` (Universal CAD/3D interchange), and `.glb` (Realtime glTF 2.0 binary).
+
+---
+
 ## 🏛️ 2D Architectural Plan & Blueprint to 3D Blender BIM Engine
 
 January can visually inspect any 2D architectural building floor plan, CAD blueprint, or hand-drawn sketch (either held up in front of the camera or from a local file), extract the structural layout, and construct an interactive, fully-furnished 3D architectural model in Blender.
@@ -674,9 +723,10 @@ january-ai/
 │       ├── blender/               # Blender 3D, Precision Engineering & BIM Bridges
 │       │   ├── blenderBridge.ts   # Procedural 3D model generator & Blender GUI launcher
 │       │   ├── architecturalBridge.ts # 2D Blueprint to 3D BIM procedural builder
-│       │   └── advanced/          # High-Precision Real-World 3D Engine
+│       │   └── advanced/          # High-Precision Real-World & Universal 3D Engine
 │       │       ├── technicalSpecEngine.ts # Web grounding & dimensional telemetry scraper
-│       │       └── bmeshLoftingEngine.ts  # Mathematical NACA airfoils & bmesh station skinning
+│       │       ├── bmeshLoftingEngine.ts  # Mathematical NACA airfoils & bmesh station skinning
+│       │       └── universal3DEngine.ts   # Arbitrary multi-component 3D model generator & Blender 5.2 synthesizer
 │       ├── vision/                # Vision Cortex & Blueprint Perception
 │       │   ├── activityMonitor.ts # Continuous ambient camera monitor & gesture detector
 │       │   ├── cameraService.ts   # Swift camera snapshot invoker & frame cache
@@ -707,6 +757,7 @@ january-ai/
 │           ├── test_cua_blender.ts # CUA & Blender 3D test suite (17/17 passed)
 │           ├── test_plan_to_3d.ts  # 2D Floor Plan to 3D BIM test suite (14/14 passed)
 │           ├── test_precision_3d.ts # High-Precision Real-World 3D Engine (18/18 passed)
+│           ├── test_universal_3d.ts # Universal arbitrary 3D model test suite (9/9 passed)
 │           └── test_gemini_3d_intent.ts # Conversational intent test suite
 ```
 
@@ -730,6 +781,9 @@ january-ai/
 | **Precision 3D Engineering** | *"Create a 3D model of Concorde in Blender"* | Grounds ogival gothic delta wings, droop nose visor, 4 Olympus turbojets, and opens Blender |
 | **2D Plan to 3D BIM** | *"Look at this building plan and convert it into 3D in Blender"* | Analyzes blueprint from webcam, builds foundation, PBR floors, 3m walls, openings, furniture, and opens Blender |
 | **2D Plan to 3D BIM** | *"Convert floorplan modern_villa.png to 3D architectural model"* | Reads local file, extracts structural BIM topology, and constructs 3D building |
+| **Universal 3D Modeling** | *"Make a 3D model of a vintage brass microscope in Blender"* | Decomposes microscope into base, pillar, stage, dual objective lenses, and glass eyepiece with brass PBR shader and opens Blender |
+| **Universal 3D Modeling** | *"Build a 3D model of a surveillance quadcopter drone in Blender"* | Generates drone airframe, 4 motor arms, carbon propellers, gimbal camera, and opens Blender |
+| **Universal 3D Modeling** | *"Create a 3D model of an electric guitar in Blender"* | Generates contoured body, neck, fretboard, pickups, bridge, and volume knobs and opens Blender |
 | **CUA Actuation** | *"Move mouse to 500, 300 and click"* | Moves cursor with quadratic Bezier smoothing and executes left click |
 | **CUA Keyboard** | *"Type 'Hello World' and press return"* | Types characters with natural delay and presses Return |
 | **Camera Eyes** | *"Eyes open"* / *"Camera open"* | Starts 60 FPS AVFoundation hardware stream |
@@ -840,6 +894,9 @@ npx tsx server/src/tests/test_gemini_3d_intent.ts
 
 # Test 4: Real-World Precision 3D Engine & Aerodynamic Kernel (18/18 Passed)
 npx tsx server/src/tests/test_precision_3d.ts
+
+# Test 5: Universal 3D Object Synthesis Engine (9/9 Passed)
+npx tsx server/src/tests/test_universal_3d.ts
 ```
 
 ---

@@ -5,6 +5,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { windowManager } from '../gui/windowManager.js';
 import { bmeshLoftingEngine } from './advanced/bmeshLoftingEngine.js';
+import { universal3DEngine } from './advanced/universal3DEngine.js';
 
 const execAsync = promisify(exec);
 const __filename = fileURLToPath(import.meta.url);
@@ -325,6 +326,22 @@ except Exception as e:
         error: precisionResult.error,
       };
     }
+
+    // Delegate ANY other object to Universal3DEngine (AI-synthesized multi-part 3D model)
+    console.log(`[BlenderBridge] 🌌 Delegating to Universal3DEngine for universal object synthesis: "${options.prompt}"...`);
+    const universalResult = await universal3DEngine.generateAny3DModel(options.prompt, options.openInBlender !== false);
+    if (universalResult.success) {
+      return {
+        success: true,
+        modelName: universalResult.modelName,
+        blendFilePath: universalResult.blendFilePath,
+        objFilePath: universalResult.objFilePath,
+        glbFilePath: universalResult.glbFilePath,
+        message: universalResult.message,
+        verbalSummary: universalResult.verbalSummary,
+      };
+    }
+    console.warn(`[BlenderBridge] Universal3DEngine failed, falling back to local procedural script: "${options.prompt}"`);
 
     const rawName = options.fileName || options.prompt.toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 30).replace(/^_+|_+$/g, '');
     const cleanName = rawName || 'january_model';
