@@ -8,6 +8,7 @@ import { modelRouter } from '../../models/modelRouter.js';
 import { windowManager } from '../../gui/windowManager.js';
 import { bmeshLoftingEngine } from './bmeshLoftingEngine.js';
 import { searchWeb } from '../../tools/webSearch.js';
+import { brainService } from '../../brain/index.js';
 
 const execAsync = promisify(exec);
 const __filename = fileURLToPath(import.meta.url);
@@ -250,6 +251,24 @@ export class Universal3DEngine {
             }, 1200);
           }
 
+          // Persist 3D model asset in SQLite Brain memory
+          try {
+            brainService.recordCreated3DModel(
+              prompt,
+              blendFilePath,
+              'blend',
+              prompt,
+              {
+                metadata: {
+                  objFilePath: fs.existsSync(objFilePath) ? objFilePath : undefined,
+                  glbFilePath: fs.existsSync(glbFilePath) ? glbFilePath : undefined,
+                },
+              }
+            );
+          } catch (brainErr: any) {
+            console.warn('[Universal3DEngine] Brain memory log notice:', brainErr.message);
+          }
+
           const verbalSummary = `I have engineered a realistic 3D model of ${prompt} with full component geometry and PBR materials. It is now open in Blender on your screen.`;
 
           return {
@@ -319,6 +338,25 @@ export class Universal3DEngine {
           setTimeout(async () => {
             await windowManager.activateApp('Blender');
           }, 1200);
+        }
+
+        // Persist fallback 3D model asset in SQLite Brain memory
+        try {
+          brainService.recordCreated3DModel(
+            prompt,
+            blendFilePath,
+            'blend',
+            prompt,
+            {
+              metadata: {
+                objFilePath: fs.existsSync(objFilePath) ? objFilePath : undefined,
+                glbFilePath: fs.existsSync(glbFilePath) ? glbFilePath : undefined,
+                isProceduralFallback: true,
+              },
+            }
+          );
+        } catch (brainErr: any) {
+          console.warn('[Universal3DEngine] Brain memory log notice:', brainErr.message);
         }
 
         return {

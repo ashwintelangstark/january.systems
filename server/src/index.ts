@@ -11,8 +11,14 @@ import { EmotionEngine } from './emotions/emotionEngine.js';
 import { GeminiService } from './gemini/geminiService.js';
 import { VisualActivityMonitor } from './vision/activityMonitor.js';
 import { AgentState, ClientMessage, ServerMessage } from './types.js';
+import { brainService } from './brain/index.js';
 
 validateConfig();
+
+// Initialize January Brain SQLite Memory Unit
+brainService.initialize().catch((err) => {
+  console.error('[Coordinator] Failed to initialize Brain database:', err.message);
+});
 
 const app = express();
 app.use(cors());
@@ -36,6 +42,7 @@ geminiService.setActivityMonitor(visualActivityMonitor);
 // Basic health & status endpoint
 app.get('/api/health', (req, res) => {
   const profile = geminiService.getLearnedProfileEngine().getProfile();
+  const brainStats = brainService.getStats();
   res.json({
     status: 'ok',
     agent: 'January',
@@ -49,11 +56,240 @@ app.get('/api/health', (req, res) => {
     visualContext: visualActivityMonitor.getCurrentContext(),
     learnedInteractions: profile.totalInteractions,
     preferredLanguages: profile.preferredCodingLanguages,
+    brain: {
+      activeSessionId: brainService.getActiveSessionId(),
+      totalSessions: brainStats.totalSessions,
+      totalMessages: brainStats.totalMessages,
+      totalArtifacts: brainStats.totalArtifacts,
+    },
   });
 });
 
 app.get('/api/profile', (req, res) => {
   res.json(geminiService.getLearnedProfileEngine().getProfile());
+});
+
+// ==========================================
+// Brain Persistent Memory Unit Endpoints
+// ==========================================
+
+// Brain Statistics
+app.get('/api/brain/stats', (req, res) => {
+  try {
+    const stats = brainService.getStats();
+    res.json({ status: 'ok', stats });
+  } catch (err: any) {
+    res.status(500).json({ status: 'error', error: err.message });
+  }
+});
+
+// List Chat Sessions
+app.get('/api/brain/sessions', (req, res) => {
+  try {
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+    const offset = req.query.offset ? parseInt(req.query.offset as string) : undefined;
+    const search = req.query.search as string | undefined;
+    const archived = req.query.archived !== undefined ? req.query.archived === 'true' : undefined;
+
+    const sessions = brainService.listSessions({ limit, offset, search, archived });
+    res.json({ status: 'ok', sessions, activeSessionId: brainService.getActiveSessionId() });
+  } catch (err: any) {
+    res.status(500).json({ status: 'error', error: err.message });
+  }
+});
+
+// Create Chat Session
+app.post('/api/brain/sessions', (req, res) => {
+  try {
+    const { title, activeModel, summary, metadata } = req.body || {};
+    const session = brainService.createSession({ title, activeModel, summary, metadata });
+    res.json({ status: 'ok', session });
+  } catch (err: any) {
+    res.status(500).json({ status: 'error', error: err.message });
+  }
+});
+
+// Get Specific Session
+app.get('/api/brain/sessions/:id', (req, res) => {
+  try {
+    const session = brainService.getSession(req.params.id);
+    if (!session) {
+      return res.status(404).json({ status: 'error', message: 'Session not found' });
+    }
+    res.json({ status: 'ok', session });
+  } catch (err: any) {
+    res.status(500).json({ status: 'error', error: err.message });
+  }
+});
+
+// Update Session (rename, pin, archive)
+app.patch('/api/brain/sessions/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, isPinned, isArchived } = req.body || {};
+    if (title !== undefined) {
+      brainService.renameSession(id, title);
+    }
+    if (isPinned !== undefined) {
+      brainService.togglePinSession(id, isPinned);
+    }
+    if (isArchived !== undefined) {
+      brainService.archiveSession(id, isArchived);
+    }
+    const session = brainService.getSession(id);
+    res.json({ status: 'ok', session });
+  } catch (err: any) {
+    res.status(500).json({ status: 'error', error: err.message });
+  }
+});
+
+// Delete Session
+app.delete('/api/brain/sessions/:id', (req, res) => {
+  try {
+    const success = brainService.deleteSession(req.params.id);
+    res.json({ status: 'ok', success });
+  } catch (err: any) {
+    res.status(500).json({ status: 'error', error: err.message });
+  }
+});
+
+// Resume Past Session - Reopens discussion days later with full context
+app.post('/api/brain/sessions/:id/resume', (req, res) => {
+  try {
+    const maxMessages = req.body?.maxMessages ? parseInt(req.body.maxMessages) : 50;
+    const context = brainService.resumeSession(req.params.id, maxMessages);
+    res.json({ status: 'ok', context });
+  } catch (err: any) {
+    res.status(500).json({ status: 'error', error: err.message });
+  }
+});
+
+// Get Conversation Context for Session (Messages + Artifacts + LLM history)
+app.get('/api/brain/sessions/:id/context', (req, res) => {
+  try {
+    const maxMessages = req.query.maxMessages ? parseInt(req.query.maxMessages as string) : 40;
+    const context = brainService.getConversationContext(req.params.id, maxMessages);
+    if (!context) {
+      return res.status(404).json({ status: 'error', message: 'Session not found' });
+    }
+    res.json({ status: 'ok', context });
+  } catch (err: any) {
+    res.status(500).json({ status: 'error', error: err.message });
+  }
+});
+
+// Get Messages for a Session
+app.get('/api/brain/sessions/:id/messages', (req, res) => {
+  try {
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+    const messages = brainService.getMessages(req.params.id, limit);
+    res.json({ status: 'ok', messages });
+  } catch (err: any) {
+    res.status(500).json({ status: 'error', error: err.message });
+  }
+});
+
+// Add Message to a Session
+app.post('/api/brain/sessions/:id/messages', (req, res) => {
+  try {
+    const { role, content, verbalSummary, emotion, modelName, tokensUsed, metadata, artifacts } = req.body || {};
+    if (!content) {
+      return res.status(400).json({ status: 'error', message: 'Message content is required' });
+    }
+    const message = role === 'assistant'
+      ? brainService.recordAssistantMessage(content, {
+          sessionId: req.params.id,
+          verbalSummary,
+          emotion,
+          modelName,
+          tokensUsed,
+          metadata,
+          artifacts,
+        })
+      : brainService.recordUserMessage(content, {
+          sessionId: req.params.id,
+          metadata,
+        });
+    res.json({ status: 'ok', message });
+  } catch (err: any) {
+    res.status(500).json({ status: 'error', error: err.message });
+  }
+});
+
+// Get Artifacts for a Session (Images, Code, 3D Models)
+app.get('/api/brain/sessions/:id/artifacts', (req, res) => {
+  try {
+    const type = req.query.type as any;
+    const artifacts = brainService.listArtifactsForSession(req.params.id, type);
+    res.json({ status: 'ok', artifacts });
+  } catch (err: any) {
+    res.status(500).json({ status: 'error', error: err.message });
+  }
+});
+
+// Save an Artifact linked to a Session
+app.post('/api/brain/sessions/:id/artifacts', (req, res) => {
+  try {
+    const { type, name, filePath, content, metadata } = req.body || {};
+    let artifact;
+    switch (type) {
+      case 'image_uploaded':
+        artifact = brainService.recordUploadedImage(name, filePath, { sessionId: req.params.id, metadata });
+        break;
+      case 'image_created':
+        artifact = brainService.recordCreatedImage(name, filePath, metadata?.prompt, { sessionId: req.params.id, metadata });
+        break;
+      case 'code_created':
+        artifact = brainService.recordCreatedCode(name, content || '', metadata?.language || 'python', { sessionId: req.params.id, filePath, metadata });
+        break;
+      case '3d_model_created':
+        artifact = brainService.recordCreated3DModel(name, filePath, metadata?.format || 'blend', metadata?.prompt, { sessionId: req.params.id, metadata });
+        break;
+      case '3d_model_uploaded':
+        artifact = brainService.recordUploaded3DModel(name, filePath, metadata?.format || 'cad', { sessionId: req.params.id, metadata });
+        break;
+      default:
+        artifact = brainService.recordUploadedImage(name, filePath, { sessionId: req.params.id, metadata });
+    }
+    res.json({ status: 'ok', artifact });
+  } catch (err: any) {
+    res.status(500).json({ status: 'error', error: err.message });
+  }
+});
+
+// List Recent Artifacts Across All Sessions
+app.get('/api/brain/artifacts', (req, res) => {
+  try {
+    const type = req.query.type as any;
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+    const artifacts = brainService.listRecentArtifacts(type, limit);
+    res.json({ status: 'ok', artifacts });
+  } catch (err: any) {
+    res.status(500).json({ status: 'error', error: err.message });
+  }
+});
+
+// Get Single Artifact
+app.get('/api/brain/artifacts/:id', (req, res) => {
+  try {
+    const artifact = brainService.getArtifact(req.params.id);
+    if (!artifact) {
+      return res.status(404).json({ status: 'error', message: 'Artifact not found' });
+    }
+    res.json({ status: 'ok', artifact });
+  } catch (err: any) {
+    res.status(500).json({ status: 'error', error: err.message });
+  }
+});
+
+// Delete Single Artifact
+app.delete('/api/brain/artifacts/:id', (req, res) => {
+  try {
+    const success = brainService.deleteArtifact(req.params.id);
+    res.json({ status: 'ok', success });
+  } catch (err: any) {
+    res.status(500).json({ status: 'error', error: err.message });
+  }
 });
 
 app.post('/api/camera/toggle', (req, res) => {
@@ -426,6 +662,9 @@ async function handleUnifiedPrompt(text: string, source: 'voice' | 'text' = 'voi
 
   setAgentState('working', `Processing ${source} command`);
 
+  // Persist user prompt into SQLite Brain memory
+  brainService.recordUserMessage(clean, { metadata: { source } });
+
   try {
     const result = await geminiService.analyzeAndRespond(clean);
 
@@ -459,6 +698,26 @@ async function handleUnifiedPrompt(text: string, source: 'voice' | 'text' = 'voi
       console.log(`\x1b[36m\x1b[1m╚═══════════════════════════════════════════════════════════════════╝\x1b[0m\n`);
 
       const speechSummary = result.verbalSummary || `I've generated the ${(result.language || 'code').toUpperCase()} code for you in your terminal.`;
+      
+      // Persist assistant code message and code artifact into Brain
+      brainService.recordAssistantMessage(result.text, {
+        verbalSummary: speechSummary,
+        emotion: result.emotion?.emotion,
+        modelName: result.modelUsed || 'Coding Engine',
+        artifacts: [
+          {
+            type: 'code_created',
+            name: `${result.language || 'code'}_script_${Date.now()}`,
+            content: result.text,
+            metadata: {
+              language: result.language,
+              compilationCommand: result.compilationCommand,
+              model: result.modelUsed,
+            },
+          },
+        ],
+      });
+
       broadcast({
         type: 'transcript',
         payload: {
@@ -481,6 +740,14 @@ async function handleUnifiedPrompt(text: string, source: 'voice' | 'text' = 'voi
 
     // 3. Regular Voice/Text Response (System Apps/Files/Videos, Live Web Search, Multilingual Indian Languages)
     console.log(`\x1b[32m[January]\x1b[0m ${result.text}`);
+    
+    // Persist assistant message into Brain
+    brainService.recordAssistantMessage(result.text, {
+      verbalSummary: result.verbalSummary || result.text,
+      emotion: result.emotion?.emotion,
+      modelName: result.modelUsed || 'Gemini',
+    });
+
     broadcast({
       type: 'transcript',
       payload: {

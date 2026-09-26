@@ -21,4 +21,9 @@ server/camera_engine/camera_snap
 JAN_ESP/build/
 server/data/exports/
 *.blend
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+data/brain/
+server/data/brain/
 

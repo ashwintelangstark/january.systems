@@ -1,7 +1,70 @@
 {
-  "timestamp": 1790355084121,
+  "timestamp": 1790442005303,
   "count": 458,
   "models": [
+    {
+      "id": "typesafe/jev-router",
+      "name": "TypeSafe: Jev Router",
+      "created": 1790363560,
+      "description": "Jev Router picks the best model and reasoning effort for each request, balancing quality, speed, and cost. It runs on [Jev](https://openrouter.ai/~typesafe/jev-latest), TypeSafe's first System One model, and adapts as your...",
+      "context_length": 1000000,
+      "modality": "text+image+file+audio+video->text",
+      "input_modalities": [
+        "audio",
+        "file",
+        "image",
+        "text",
+        "video"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "is_free": false,
+      "pricing": {
+        "prompt": -1,
+        "completion": -1,
+        "prompt_per_million": -1000000,
+        "completion_per_million": -1000000
+      },
+      "supports_vision": true,
+      "supports_tools": false,
+      "categories": [
+        "general",
+        "vision",
+        "reasoning"
+      ]
+    },
+    {
+      "id": "perceptron/perceptron-mk1.5",
+      "name": "Perceptron: Perceptron Mk1.5",
+      "created": 1790352661,
+      "description": "Perceptron Mk1.5 is Perceptron's embodied reasoning model for physical agents. It accepts text, image, video, and audio input, and answers with text plus optional structured annotations: points, boxes, polygons, tracks,...",
+      "context_length": 36864,
+      "modality": "text+image+audio+video->text",
+      "input_modalities": [
+        "text",
+        "image",
+        "video",
+        "audio"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "is_free": false,
+      "pricing": {
+        "prompt": 1.5e-7,
+        "completion": 0.0000015,
+        "prompt_per_million": 0.15,
+        "completion_per_million": 1.5
+      },
+      "supports_vision": true,
+      "supports_tools": true,
+      "categories": [
+        "general",
+        "vision",
+        "reasoning"
+      ]
+    },
     {
       "id": "fireworks/ember-1",
       "name": "Fireworks: Ember-1",
@@ -592,7 +655,7 @@
       "name": "Xiaomi: MiMo-V2.6-Pro",
       "created": 1790021259,
       "description": "MiMo-V2.6-Pro is the flagship foundation model developed by Xiaomi. Built at a scale of over 1T parameters, it is designed to push the ceiling of capability for the most demanding...",
-      "context_length": 1048576,
+      "context_length": 1050000,
       "modality": "text+image+audio+video->text",
       "input_modalities": [
         "text",
@@ -783,10 +846,10 @@
       ],
       "is_free": false,
       "pricing": {
-        "prompt": 2.528e-7,
-        "completion": 0.0000019584,
-        "prompt_per_million": 0.2528,
-        "completion_per_million": 1.9584
+        "prompt": 2.4948e-7,
+        "completion": 7.4844e-7,
+        "prompt_per_million": 0.2495,
+        "completion_per_million": 0.7484
       },
       "supports_vision": false,
       "supports_tools": true,
@@ -810,10 +873,10 @@
       ],
       "is_free": false,
       "pricing": {
-        "prompt": 7.5e-8,
-        "completion": 3e-7,
-        "prompt_per_million": 0.075,
-        "completion_per_million": 0.3
+        "prompt": 3.5e-8,
+        "completion": 2.9e-7,
+        "prompt_per_million": 0.035,
+        "completion_per_million": 0.29
       },
       "supports_vision": true,
       "supports_tools": true,
@@ -1097,10 +1160,10 @@
       ],
       "is_free": false,
       "pricing": {
-        "prompt": 7.5e-8,
-        "completion": 3e-7,
-        "prompt_per_million": 0.075,
-        "completion_per_million": 0.3
+        "prompt": 3e-7,
+        "completion": 0.0000012,
+        "prompt_per_million": 0.3,
+        "completion_per_million": 1.2
       },
       "supports_vision": true,
       "supports_tools": true,
@@ -1658,10 +1721,10 @@
       ],
       "is_free": false,
       "pricing": {
-        "prompt": 4.5e-8,
-        "completion": 1.4e-7,
-        "prompt_per_million": 0.045,
-        "completion_per_million": 0.14
+        "prompt": 4e-8,
+        "completion": 5e-7,
+        "prompt_per_million": 0.04,
+        "completion_per_million": 0.5
       },
       "supports_vision": true,
       "supports_tools": true,
@@ -1720,10 +1783,10 @@
       ],
       "is_free": false,
       "pricing": {
-        "prompt": 4.5e-8,
-        "completion": 1.4e-7,
-        "prompt_per_million": 0.045,
-        "completion_per_million": 0.14
+        "prompt": 4e-8,
+        "completion": 5e-7,
+        "prompt_per_million": 0.04,
+        "completion_per_million": 0.5
       },
       "supports_vision": true,
       "supports_tools": true,
@@ -1895,10 +1958,10 @@
       ],
       "is_free": false,
       "pricing": {
-        "prompt": 5.614e-7,
-        "completion": 0.0000017644,
-        "prompt_per_million": 0.5614,
-        "completion_per_million": 1.7644
+        "prompt": 3.794e-7,
+        "completion": 0.0000011924,
+        "prompt_per_million": 0.3794,
+        "completion_per_million": 1.1924
       },
       "supports_vision": false,
       "supports_tools": true,
@@ -1948,10 +2011,10 @@
       ],
       "is_free": false,
       "pricing": {
-        "prompt": 0.0000014,
-        "completion": 0.0000044,
-        "prompt_per_million": 1.4,
-        "completion_per_million": 4.4
+        "prompt": 3.794e-7,
+        "completion": 0.0000011924,
+        "prompt_per_million": 0.3794,
+        "completion_per_million": 1.1924
       },
       "supports_vision": false,
       "supports_tools": true,
@@ -2249,10 +2312,10 @@
       ],
       "is_free": false,
       "pricing": {
-        "prompt": 3.4584e-7,
-        "completion": 0.00000103752,
-        "prompt_per_million": 0.3458,
-        "completion_per_million": 1.0375
+        "prompt": 2.64e-7,
+        "completion": 7.92e-7,
+        "prompt_per_million": 0.264,
+        "completion_per_million": 0.792
       },
       "supports_vision": false,
       "supports_tools": true,
@@ -2334,9 +2397,9 @@
       ],
       "is_free": false,
       "pricing": {
-        "prompt": 7e-8,
+        "prompt": 8e-8,
         "completion": 2e-7,
-        "prompt_per_million": 0.07,
+        "prompt_per_million": 0.08,
         "completion_per_million": 0.2
       },
       "supports_vision": false,
@@ -2504,9 +2567,9 @@
       ],
       "is_free": false,
       "pricing": {
-        "prompt": 3e-8,
+        "prompt": 2.1e-8,
         "completion": 3.2e-7,
-        "prompt_per_million": 0.03,
+        "prompt_per_million": 0.021,
         "completion_per_million": 0.32
       },
       "supports_vision": false,
@@ -2531,9 +2594,9 @@
       ],
       "is_free": false,
       "pricing": {
-        "prompt": 3e-8,
+        "prompt": 2.1e-8,
         "completion": 3.2e-7,
-        "prompt_per_million": 0.03,
+        "prompt_per_million": 0.021,
         "completion_per_million": 0.32
       },
       "supports_vision": false,
@@ -2550,7 +2613,7 @@
       "name": "Thinking Machines: Inkling Small",
       "created": 1785443117,
       "description": "Inkling Small is an open-weight multimodal mixture-of-experts model from Thinking Machines Lab, with 12B active parameters out of 276B total. It is positioned as the smaller, more efficient member of...",
-      "context_length": 1048576,
+      "context_length": 524288,
       "modality": "text+image+audio->text",
       "input_modalities": [
         "text",
@@ -2945,7 +3008,7 @@
       "name": "Thinking Machines: Inkling",
       "created": 1784325956,
       "description": "Inkling is an open-weight multimodal mixture-of-experts model from Thinking Machines Lab, with 41B active parameters out of 975B total. It is designed for general-purpose reasoning, coding, agentic and tool-use systems,...",
-      "context_length": 1048576,
+      "context_length": 524288,
       "modality": "text+image+audio->text",
       "input_modalities": [
         "text",
@@ -3952,34 +4015,6 @@
       ]
     },
     {
-      "id": "z-ai/glm-5.2:free",
-      "name": "Z.ai: GLM 5.2 (free)",
-      "created": 1781631930,
-      "description": "GLM 5.2 is a large-scale reasoning model from Z.ai. It supports text input and output with a 1M-token context window, and is suited for long-horizon agent workflows, project-level software engineering,...",
-      "context_length": 131072,
-      "modality": "text->text",
-      "input_modalities": [
-        "text"
-      ],
-      "output_modalities": [
-        "text"
-      ],
-      "is_free": true,
-      "pricing": {
-        "prompt": 0,
-        "completion": 0,
-        "prompt_per_million": 0,
-        "completion_per_million": 0
-      },
-      "supports_vision": false,
-      "supports_tools": false,
-      "categories": [
-        "general",
-        "reasoning",
-        "fast"
-      ]
-    },
-    {
       "id": "openrouter/fusion",
       "name": "OpenRouter: Fusion",
       "created": 1781371647,
@@ -4896,10 +4931,10 @@
       ],
       "is_free": false,
       "pricing": {
-        "prompt": 8.845e-7,
-        "completion": 0.0000105346,
-        "prompt_per_million": 0.8845,
-        "completion_per_million": 10.5346
+        "prompt": 0.0000010301,
+        "completion": 0.000009043,
+        "prompt_per_million": 1.0301,
+        "completion_per_million": 9.043
       },
       "supports_vision": true,
       "supports_tools": true,
@@ -5102,9 +5137,9 @@
       "is_free": false,
       "pricing": {
         "prompt": 3.2e-7,
-        "completion": 0.0000027,
+        "completion": 0.0000032,
         "prompt_per_million": 0.32,
-        "completion_per_million": 2.7
+        "completion_per_million": 3.2
       },
       "supports_vision": true,
       "supports_tools": true,
@@ -5248,10 +5283,10 @@
       ],
       "is_free": false,
       "pricing": {
-        "prompt": 7.12878e-7,
-        "completion": 0.000001425756,
-        "prompt_per_million": 0.7129,
-        "completion_per_million": 1.4258
+        "prompt": 3.48e-7,
+        "completion": 6.96e-7,
+        "prompt_per_million": 0.348,
+        "completion_per_million": 0.696
       },
       "supports_vision": false,
       "supports_tools": true,
@@ -5276,10 +5311,10 @@
       ],
       "is_free": false,
       "pricing": {
-        "prompt": 4.816e-8,
-        "completion": 9.632e-8,
-        "prompt_per_million": 0.0482,
-        "completion_per_million": 0.0963
+        "prompt": 4.704e-8,
+        "completion": 9.408e-8,
+        "prompt_per_million": 0.047,
+        "completion_per_million": 0.0941
       },
       "supports_vision": false,
       "supports_tools": true,
@@ -12975,35 +13010,6 @@
         "completion": 0.000015,
         "prompt_per_million": 5,
         "completion_per_million": 15
-      },
-      "supports_vision": true,
-      "supports_tools": true,
-      "categories": [
-        "general",
-        "vision",
-        "fast"
-      ]
-    },
-    {
-      "id": "anthropic/claude-3-haiku",
-      "name": "Anthropic: Claude 3 Haiku",
-      "created": 1710288000,
-      "description": "Claude 3 Haiku is Anthropic's fastest and most compact model for\nnear-instant responsiveness. Quick and accurate targeted performance.\n\nSee the launch announcement and benchmark results [here](https://www.anthropic.com/news/claude-3-haiku)\n\n#multimodal",
-      "context_length": 200000,
-      "modality": "text+image->text",
-      "input_modalities": [
-        "text",
-        "image"
-      ],
-      "output_modalities": [
-        "text"
-      ],
-      "is_free": false,
-      "pricing": {
-        "prompt": 2.5e-7,
-        "completion": 0.00000125,
-        "prompt_per_million": 0.25,
-        "completion_per_million": 1.25
       },
       "supports_vision": true,
       "supports_tools": true,

@@ -12,8 +12,12 @@ import { GeminiService } from './gemini/geminiService.js';
 import { executeTool } from './tools/index.js';
 import { config, validateConfig } from './config.js';
 import { ClientMessage } from './types.js';
+import { brainService } from './brain/index.js';
 
 validateConfig();
+
+// Initialize January Brain SQLite memory unit
+brainService.initialize().catch(() => {});
 
 const systemSpeaker = new SystemSpeaker();
 const geminiService = new GeminiService();
@@ -98,10 +102,11 @@ ${cyan(bold('║'))} ${brightCyan(bold(' [ME]      '))} ${white('Ask questions, 
 ${cyan(bold('║'))} ${purple(bold(' [JANUARY] '))} ${white('Gemini & Claude Core with out-loud speaker synthesis   ')} ${cyan(bold('║'))}
 ${cyan(bold('╠═══════════════════════════════════════════════════════════════════╣'))}
 ${cyan(bold('║'))} ${dim('Coding Engine:')}   Python, C, and C++ (Claude with instant Gemini fallback)${cyan(bold('║'))}
+${cyan(bold('║'))} ${dim('Brain Database:')}   SQLite Persistent History, Code, Images & 3D Models ${cyan(bold('║'))}
 ${cyan(bold('║'))} ${dim('Ambient Eyes:')}    Continuous Camera & Face/Posture Monitoring (Local Edge)${cyan(bold('║'))}
 ${cyan(bold('║'))} ${dim('Adaptive Memory:')} Learned Habits, Daily Rhythms & Personalized Profile  ${cyan(bold('║'))}
-${cyan(bold('║'))} ${dim('Hardware Audio:')}  MacBook Physical Speaker (Edge-TTS Neural)          ${cyan(bold('║'))}
-${cyan(bold('║'))} ${dim('Commands:')}        ${yellow('memory')}${dim(',')} ${yellow('eyes')}${dim(',')} ${yellow('clear')}${dim(',')} ${yellow('help')}${dim(',')} ${yellow('exit')} ${dim('to quit and resume room mic')}${cyan(bold('║'))}
+${cyan(bold('║'))} ${dim('Chat Commands:')}    ${yellow('chats')}${dim(',')} ${yellow('chat <id>')}${dim(',')} ${yellow('newchat')}${dim(',')} ${yellow('artifacts')}${dim(',')} ${yellow('brain')}         ${cyan(bold('║'))}
+${cyan(bold('║'))} ${dim('System Commands:')}  ${yellow('memory')}${dim(',')} ${yellow('eyes')}${dim(',')} ${yellow('clear')}${dim(',')} ${yellow('help')}${dim(',')} ${yellow('exit')}                  ${cyan(bold('║'))}
 ${cyan(bold('╚═══════════════════════════════════════════════════════════════════╝'))}
 `);
 
@@ -238,6 +243,131 @@ async function handleUserInput(text: string) {
     return;
   }
 
+  // ----------------------------------------------------
+  // Brain Memory Unit: Chat Sessions & Continuity
+  // ----------------------------------------------------
+  if (lower === 'chats' || lower === 'sessions') {
+    const sessions = brainService.listSessions({ limit: 12 });
+    const activeId = brainService.getActiveSessionId();
+    console.log(`\n${purple(bold('┌── [JANUARY BRAIN : SAVED CONVERSATION THREADS] ───────────────────'))}`);
+    if (sessions.length === 0) {
+      console.log(`│ ${dim('No saved conversations found yet. Start chatting to auto-save!')}`);
+    } else {
+      for (const s of sessions) {
+        const isActive = s.id === activeId;
+        const marker = isActive ? green('● [ACTIVE]') : dim('○         ');
+        const dateStr = new Date(s.updatedAt).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+        const titleTrim = (s.title.length > 32 ? s.title.slice(0, 30) + '..' : s.title).padEnd(32);
+        console.log(`│ ${marker} ${bold(titleTrim)} ${cyan(s.id.slice(0, 8))} ${dim(`(${s.messageCount || 0} msgs, ${s.artifactCount || 0} files) • ${dateStr}`)}`);
+      }
+    }
+    console.log(`│`);
+    console.log(`│ ${dim('To resume any past chat days later, type:')} ${yellow('chat <id>')} ${dim('or')} ${yellow('resume <id>')}`);
+    console.log(`│ ${dim('To start a clean new chat thread, type:')}   ${yellow('newchat')}`);
+    console.log(`${purple(bold('└────────────────────────────────────────────────────────────────────'))}`);
+    promptUser();
+    return;
+  }
+
+  const chatMatch = lower.match(/^(?:chat|session|resume)\s+([a-zA-Z0-9_-]+)/i);
+  if (chatMatch) {
+    const query = chatMatch[1].trim();
+    const allSessions = brainService.listSessions();
+    const matched = allSessions.find(
+      (s) => s.id === query || s.id.startsWith(query) || s.title.toLowerCase().includes(query.toLowerCase())
+    );
+    if (!matched) {
+      console.log(`\n${yellow(`⚠ Conversation "${query}" not found. Type "chats" to view all saved sessions.`)}`);
+    } else {
+      const context = brainService.resumeSession(matched.id);
+      console.log(`\n${green(bold('┌── [JANUARY BRAIN : RESUMED PAST CONVERSATION] ─────────────────────'))}`);
+      console.log(`│ ${bold('Session Title:')} ${brightCyan(context.session.title)} ${dim(`(ID: ${context.session.id})`)}`);
+      console.log(`│ ${bold('Messages Saved:')} ${yellow(context.messages.length.toString())} | ${bold('Files/Artifacts Saved:')} ${yellow(context.artifacts.length.toString())}`);
+      console.log(`│`);
+      console.log(`│ ${dim('--- Recent Discussion History ---')}`);
+      const recent = context.messages.slice(-5);
+      for (const m of recent) {
+        const prefix = m.role === 'user' ? brightCyan('[ME]:') : purple('[JANUARY]:');
+        const snippet = m.content.replace(/\n/g, ' ').slice(0, 75);
+        console.log(`│ ${prefix} ${snippet}${m.content.length > 75 ? '...' : ''}`);
+      }
+      if (context.artifacts.length > 0) {
+        console.log(`│`);
+        console.log(`│ ${dim('--- Files & 3D Models in this Chat ---')}`);
+        for (const a of context.artifacts.slice(0, 5)) {
+          console.log(`│ ${yellow('•')} ${bold(a.name)} ${dim(`[${a.type}]`)} ${a.filePath ? cyan(a.filePath) : ''}`);
+        }
+      }
+      console.log(`│`);
+      console.log(`│ ${green('✔ Full conversation context restored. You can continue the discussion!')}`);
+      console.log(`${green(bold('└────────────────────────────────────────────────────────────────────'))}`);
+    }
+    promptUser();
+    return;
+  }
+
+  if (lower === 'newchat' || lower === 'new chat' || lower === 'new session') {
+    const newSession = brainService.createSession({ title: 'New Conversation' });
+    console.log(`\n${green(bold('┌── [JANUARY BRAIN : NEW CONVERSATION THREAD] ───────────────────────'))}`);
+    console.log(`│ ${green('⚡ Started a brand new conversation thread.')}`);
+    console.log(`│ ${dim(`Active Session ID: ${newSession.id}`)}`);
+    console.log(`│ ${dim('All upcoming questions, code, and 3D models will be saved here.')}`);
+    console.log(`${green(bold('└────────────────────────────────────────────────────────────────────'))}`);
+    promptUser();
+    return;
+  }
+
+  if (lower === 'artifacts' || lower === 'files' || lower === 'models') {
+    const activeId = brainService.getActiveSessionId();
+    const session = brainService.getSession(activeId);
+    const artifacts = brainService.listArtifactsForSession(activeId);
+    console.log(`\n${purple(bold('┌── [JANUARY BRAIN : SAVED FILES & 3D MODELS] ───────────────────────'))}`);
+    console.log(`│ ${bold('Session:')} ${brightCyan(session?.title || 'Active Session')} ${dim(`(${activeId.slice(0, 8)})`)}`);
+    if (artifacts.length === 0) {
+      console.log(`│ ${dim('No files, images, or 3D models saved under this session yet.')}`);
+    } else {
+      for (const a of artifacts) {
+        const typeLabel = (() => {
+          switch (a.type) {
+            case '3d_model_created': return cyan('[3D MODEL]');
+            case '3d_model_uploaded': return blue('[CAD REF]');
+            case 'code_created': return green('[CODE]');
+            case 'image_created': return yellow('[AI IMAGE]');
+            case 'image_uploaded': return purple('[PHOTO REF]');
+            default: return dim(`[${a.type.toUpperCase()}]`);
+          }
+        })();
+        const sizeStr = a.fileSize ? `${(a.fileSize / 1024).toFixed(1)} KB` : '';
+        console.log(`│ ${typeLabel} ${bold(a.name)} ${dim(sizeStr)}`);
+        if (a.filePath) console.log(`│   ${dim('Path:')} ${cyan(a.filePath)}`);
+      }
+    }
+    console.log(`${purple(bold('└────────────────────────────────────────────────────────────────────'))}`);
+    promptUser();
+    return;
+  }
+
+  if (lower === 'brain' || lower === 'brain stats' || lower === 'database') {
+    const stats = brainService.getStats();
+    console.log(`\n${purple(bold('┌── [JANUARY BRAIN : SQLITE PERSISTENT MEMORY UNIT] ─────────────────'))}`);
+    console.log(`│ ${bold('Total Saved Conversations:')} ${yellow(stats.totalSessions.toString())}`);
+    console.log(`│ ${bold('Total Saved Messages:')}      ${yellow(stats.totalMessages.toString())}`);
+    console.log(`│ ${bold('Total Saved Artifacts:')}     ${yellow(stats.totalArtifacts.toString())}`);
+    console.log(`│ ${dim('Artifacts Breakdown:')}`);
+    for (const [t, c] of Object.entries(stats.artifactsByType)) {
+      console.log(`│   ${cyan('•')} ${dim(t.padEnd(20))}: ${yellow(c.toString())}`);
+    }
+    console.log(`│ ${dim('Database Location:')} ${cyan(stats.dbPath)}`);
+    console.log(`${purple(bold('└────────────────────────────────────────────────────────────────────'))}`);
+    promptUser();
+    return;
+  }
+
   if (lower === 'profile' || lower === 'memory' || lower === 'stats') {
     const profile = geminiService.getLearnedProfileEngine().getProfile();
     const topCoding = Object.entries(profile.preferredCodingLanguages)
@@ -357,6 +487,9 @@ async function handleUserInput(text: string) {
     console.log(`\n${purple(bold('┌── [JANUARY : CODING ENGINE (Python / C / C++)] ─────────────────────'))}`);
     console.log(`│ ${dim('⚡ Routing task to Coding Engine (Claude -> Gemini Fallback)...')}`);
     
+    // Save user message to Brain
+    brainService.recordUserMessage(clean);
+
     const codingResult = await executeTool('delegate_coding', { prompt: clean });
 
     if (codingResult.success) {
@@ -376,6 +509,25 @@ async function handleUserInput(text: string) {
       
       // Voice: Crisp verbal confirmation (never recites raw code lines aloud)
       const verbal = codingResult.verbalSummary || `I've generated the ${langBadge} code for you on screen.`;
+      
+      // Save code to Brain database
+      brainService.recordAssistantMessage(codingResult.response || '', {
+        verbalSummary: verbal,
+        modelName: codingResult.model,
+        artifacts: [
+          {
+            type: 'code_created',
+            name: `${codingResult.language || 'code'}_script_${Date.now()}`,
+            content: codingResult.codeSnippet || codingResult.response || '',
+            metadata: {
+              language: codingResult.language,
+              compilationCommand: codingResult.compilationCommand,
+              model: codingResult.model,
+            },
+          },
+        ],
+      });
+
       await systemSpeaker.speakText(verbal, { emotion: 'focused', pitch: '+0Hz' });
     } else {
       console.log(`│ ${yellow('⚠ Coding Engine Notice:')} ${codingResult.response || codingResult.error}`);
@@ -390,6 +542,9 @@ async function handleUserInput(text: string) {
   // General Questions / Multilingual / Live Search -> Google Gemini API
   console.log(`\n${purple(bold('┌── [JANUARY : INTELLIGENCE CORE] ───────────────────────────────────'))}`);
   console.log(`│ ${dim('🧠 Reasoning with Google Gemini API & Emotion Attunement...')}`);
+
+  // Save user message to Brain
+  brainService.recordUserMessage(clean);
 
   const geminiResult = await geminiService.analyzeAndRespond(clean);
   const emotion = geminiResult.emotion;
@@ -423,6 +578,25 @@ async function handleUserInput(text: string) {
     }
     console.log(`${purple(bold('└────────────────────────────────────────────────────────────────────'))}`);
     const verbal = geminiResult.verbalSummary || `I've generated the ${langBadge} code for you in your terminal.`;
+
+    brainService.recordAssistantMessage(geminiResult.text, {
+      verbalSummary: verbal,
+      emotion: geminiResult.emotion?.emotion,
+      modelName: geminiResult.modelUsed,
+      artifacts: [
+        {
+          type: 'code_created',
+          name: `${geminiResult.language || 'code'}_script_${Date.now()}`,
+          content: geminiResult.text,
+          metadata: {
+            language: geminiResult.language,
+            compilationCommand: geminiResult.compilationCommand,
+            model: geminiResult.modelUsed,
+          },
+        },
+      ],
+    });
+
     await systemSpeaker.speakText(verbal, { emotion: 'focused', pitch: '+0Hz' });
   } else {
     console.log(`│ ${dim('Mood Attunement:')} ${emotionLabel} ${dim(`(Pitch: ${emotion?.pitch || '+0Hz'}, Rate: ${emotion?.rate || '+0%'})`)}`);
@@ -434,6 +608,13 @@ async function handleUserInput(text: string) {
     console.log(`│`);
     console.log(`${purple(bold('└────────────────────────────────────────────────────────────────────'))}`);
     const spokenText = geminiResult.verbalSummary || geminiResult.text;
+
+    brainService.recordAssistantMessage(geminiResult.text, {
+      verbalSummary: spokenText,
+      emotion: geminiResult.emotion?.emotion,
+      modelName: geminiResult.modelUsed || 'Gemini',
+    });
+
     await systemSpeaker.speakText(spokenText, {
       pitch: emotion?.pitch,
       rate: emotion?.rate,

@@ -475,6 +475,77 @@ flowchart TD
 
 ---
 
+## 🧠 Brain Database & Conversation Continuity (SQLite Persistent Memory Unit)
+
+January is equipped with a high-performance **SQLite Persistent Memory Unit** (`better-sqlite3` with WAL journaling) located inside `server/src/brain/` and backed by `server/data/brain/january_brain.sqlite`.
+
+This unit safely preserves:
+- **Chat Conversations & Sessions**: Multi-turn history with timestamps, token counts, and emotion tags.
+- **Uploaded Reference Images**: Webcam captures, engineering blueprints, diagrams, and reference photos.
+- **Created AI Images**: Synthesized conceptual images, visualizations, and renders.
+- **Generated Code Scripts**: Python, C, C++, and TypeScript files with compilation flags and execution instructions.
+- **Synthesized 3D Models**: Blender projects (`.blend`), Wavefront meshes (`.obj` + `.mtl`), and glTF binaries (`.glb`).
+- **Uploaded Reference 3D Models**: STEP, IGES, STL, and CAD reference models.
+
+Even if you exit the application and return **days later**, you can reopen the exact same conversation thread with `chat <id>` or `resume <id>`, and January seamlessly loads the full discussion history and all associated assets so you can pick up right where you left off.
+
+```mermaid
+flowchart TD
+    UserTurn["👤 User Input / Voice / CLI"] --> BrainSvc["BrainService Facade (server/src/brain/brainService.ts)"]
+    
+    subgraph Storage ["💾 SQLite Persistent Engine (WAL Journaling)"]
+        BrainSvc --> DB["better-sqlite3: server/data/brain/january_brain.sqlite"]
+        DB --> T1["Table: sessions (id, title, timestamps, pin, archive, metadata)"]
+        DB --> T2["Table: messages (id, session_id, role, content, tokens, emotion)"]
+        DB --> T3["Table: artifacts (id, session_id, type, name, file_path, content, metadata)"]
+    end
+
+    subgraph MultimodalArtifacts ["📦 Multimodal Artifact Categories"]
+        T3 --> A1["🖼️ image_uploaded (blueprints, reference photos)"]
+        T3 --> A2["✨ image_created (AI generated visuals)"]
+        T3 --> A3["💻 code_created (Python / C / C++ scripts)"]
+        T3 --> A4["🧊 3d_model_created (.blend, .obj, .glb)"]
+        T3 --> A5["📐 3d_model_uploaded (CAD, STEP, STL)"]
+    end
+
+    subgraph ContinuityFlow ["🔄 Continuity & Re-opening Days Later"]
+        Resume["User: 'chat <id>' / REST: POST /api/brain/sessions/:id/resume"] --> LoadCtx["ConversationManager.getConversationContext()"]
+        LoadCtx --> Restored["- Restores past message sequence<br/>- Links all 3D models, code files & images<br/>- Prepares formattedPromptHistory for LLM"]
+        Restored --> NextGen["LLM continues conversation with full context recall"]
+    end
+```
+
+### 🗣️ Brain CLI & Terminal Commands
+
+| CLI Command | Action |
+| :--- | :--- |
+| **`chats`** or **`sessions`** | Lists recent conversations with dates, message counts, and saved files |
+| **`chat <id>`** or **`resume <id>`** | Reopens a past conversation days later, restoring all messages and 3D models |
+| **`newchat`** | Starts a brand new conversational session |
+| **`artifacts`** or **`files`** | Lists all code, images, and 3D models saved under the active chat |
+| **`brain`** or **`brain stats`** | Displays database statistics, counts, and breakdown of stored assets |
+
+### 🌐 Brain REST API Endpoints
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/brain/stats` | Database statistics (total sessions, messages, artifacts by type) |
+| `GET` | `/api/brain/sessions` | List sessions with pagination and search (`?limit=&search=&archived=`) |
+| `POST` | `/api/brain/sessions` | Create a new session |
+| `GET` | `/api/brain/sessions/:id` | Get details and metadata for a specific session |
+| `PATCH` | `/api/brain/sessions/:id` | Update session (title, pin, archive) |
+| `DELETE` | `/api/brain/sessions/:id` | Permanently delete a session and its message thread |
+| `POST` | `/api/brain/sessions/:id/resume` | Reopen past session days later and return full context |
+| `GET` | `/api/brain/sessions/:id/context` | Get LLM-ready conversation prompt history and artifacts |
+| `GET` | `/api/brain/sessions/:id/messages` | Retrieve chronological messages for a session |
+| `POST` | `/api/brain/sessions/:id/messages` | Append a message to a session |
+| `GET` | `/api/brain/sessions/:id/artifacts` | List all images, code files, and 3D models for a session |
+| `POST` | `/api/brain/sessions/:id/artifacts` | Save an artifact linked to a session |
+| `GET` | `/api/brain/artifacts` | List recent artifacts across all sessions |
+| `GET` | `/api/brain/artifacts/:id` | Get metadata for a specific artifact |
+
+---
+
 ## 🖥️ macOS System Control Engine
 
 January has deep macOS integration to launch applications, search and play video files, open documents and spreadsheets, explore Finder directories, and preview file contents.
@@ -946,6 +1017,9 @@ npx tsx server/src/tests/test_elevenlabs_speech.ts
 
 # Test 8: Ultra-Fast Model Switching & Circuit-Breaker Fallback (14/14 Passed)
 npx tsx server/src/tests/test_fast_fallback.ts
+
+# Test 9: SQLite Brain Memory Unit & Conversation Continuity (7/7 Passed)
+npx tsx server/src/tests/test_brain_database.ts
 ```
 
 ---
