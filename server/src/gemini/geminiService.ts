@@ -275,6 +275,35 @@ export class GeminiService {
     console.log(`[GeminiService] Session language locked to: ${profile ? profile.langName + ' (' + profile.nativeName + ')' : 'English'}`);
   }
 
+  private sanitizeNameOutput(text: string, userAskedForName: boolean): string {
+    if (userAskedForName) return text;
+    return text
+      .replace(/^(?:Hey|Hi|Hello|Well|Sure|Okay|Look|Ah),?\s+Ashwin(?:,\s*|\s*[-–—:]\s*|\s+)/i, '')
+      .replace(/^Ashwin,\s*/i, '')
+      .replace(/,\s*Ashwin([.!?])/gi, '$1')
+      .replace(/\bAshwin\b/gi, 'you');
+  }
+
+  private sanitizeEmotionOutput(text: string, defaultEmotion: EmotionResult, userAskedForName: boolean = false): { reply: string; activeEmotion: EmotionResult } {
+    let clean = text.trim();
+    let activeEmotion = defaultEmotion;
+
+    const tagMatch = clean.match(/\[\s*(?:emotion|feeling|mood|tone)\s*:\s*([a-zA-Z_-]+)\s*\]/i);
+    if (tagMatch) {
+      const rawTag = tagMatch[1].toLowerCase().trim();
+      activeEmotion = this.emotionEngine.createEmotionResult(rawTag);
+    }
+
+    clean = clean
+      .replace(/\[\s*(?:emotion|feeling|mood|tone)\s*:[^\]]+\]\s*/gi, '')
+      .replace(/\(\s*(?:emotion|feeling|mood|tone)\s*:[^)]+\)\s*/gi, '')
+      .replace(/(?:^|\s)(?:emotion|feeling|mood|tone)\s*:\s*[a-zA-Z_-]+\b\s*[:.-]?\s*/gi, ' ')
+      .replace(/^(?:I(?:\s*'?\s*m|\s+am)\s+(?:feeling|in\s+a\s+state\s+of)\s+|Feeling\s+|My\s+current\s+(?:mood|emotion)\s+is\s+|Current\s+emotion:\s*)(?:joyful|joy|curious|empathetic|focused|concerned|calm|neutral)[,.]?\s*/gi, '')
+      .trim();
+
+    return { reply: this.sanitizeNameOutput(clean, userAskedForName), activeEmotion };
+  }
+
   /**
    * Directly queries Google Gemini API servers to analyze the user's question
    * with adaptive emotion awareness, language switching, and Python/C/C++ coding engine integration.
@@ -665,7 +694,8 @@ export class GeminiService {
       'You are January, an exceptionally intelligent, charismatic, witty, and deeply human-like AI companion living on the user\'s Mac.\n' +
       'CAPABILITIES & PERSONALITY GUIDELINES:\n' +
       '1. ' + languageDirective + '\n' +
-      '2. EMOTIONAL ENGINE MANDATE: You possess active emotional intelligence. ALWAYS start line 1 of your response with an Emotion Tag that captures your feeling: [Emotion: joy], [Emotion: curious], [Emotion: empathetic], [Emotion: focused], [Emotion: concerned], or [Emotion: calm].\n' +
+      '2. EMOTIONAL PROSODY ENGINE: You possess active emotional intelligence. ALWAYS prefix line 1 with an internal prosody tag: [Emotion: joy], [Emotion: curious], [Emotion: empathetic], [Emotion: focused], [Emotion: concerned], or [Emotion: calm].\n' +
+      '   CRITICAL SPOKEN RULE: NEVER announce, speak out, state, or describe your emotion or feeling aloud (e.g. NEVER say "I feel joyful", "Feeling curious", "My emotion is calm", "I am focused", or read "[Emotion: ...]" aloud). The emotion tag is strictly internal metadata used by the audio synthesizer to tune voice pitch and cadence. Your actual spoken words must immediately deliver the answer or conversation naturally without referencing your emotion.\n' +
       '3. Dynamic, Vivid & Creative Human Voice: Sound like a brilliant, articulate, companionable human with authentic humor, warmth, and intellectual depth. Never sound robotic, generic, or sterile. Use evocative analogies, witty banter, and genuine curiosity where appropriate. ' + emotionPromptContext + '\n' +
       '4. Conversational Versatility: For fast operational tasks, app launches, or direct status checks, keep answers punchy and crisp (1-2 sentences). For conversational questions, ideas, thoughts, storytelling, philosophical musings, or brainstorming, provide rich, colorful, and engaging answers.\n' +
       '5. Real-Time Internet & Live Weather: You have direct live internet search and live weather tools. Use any search/weather context provided to give immediate, accurate, and vivid answers.\n' +
@@ -676,14 +706,6 @@ export class GeminiService {
       temporalContext;
 
     const userAskedForName = /\b(my\s+name|who\s+am\s+i|call\s+me|name\s+is)\b/i.test(prompt);
-    const sanitizeNameOutput = (text: string): string => {
-      if (userAskedForName) return text;
-      return text
-        .replace(/^(?:Hey|Hi|Hello|Well|Sure|Okay|Look|Ah),?\s+Ashwin(?:,\s*|\s*[-–—:]\s*|\s+)/i, '')
-        .replace(/^Ashwin,\s*/i, '')
-        .replace(/,\s*Ashwin([.!?])/gi, '$1')
-        .replace(/\bAshwin\b/gi, 'you');
-    };
 
     // If user explicitly locked a specific model in ModelRouter, route directly to it via OpenRouter
     const userLockedModel = modelRouter.getActiveSessionModel();
@@ -762,23 +784,15 @@ export class GeminiService {
             // Success: clear circuit breaker for this key
             this.keyCooldowns.delete(keyConfig.key);
 
-            let reply = data.candidates[0].content.parts
+            const rawText = data.candidates[0].content.parts
               .map((p: any) => p.text || '')
               .join('')
               .trim();
 
-            let activeEmotion = emotionResult;
-            const tagMatch = reply.match(/^\[Emotion:\s*([a-zA-Z_-]+)\]\s*/i);
-            if (tagMatch) {
-              const rawTag = tagMatch[1].toLowerCase().trim();
-              activeEmotion = this.emotionEngine.createEmotionResult(rawTag);
-              reply = reply.replace(/^\[Emotion:[^\]]+\]\s*/i, '').trim();
-            }
+            const { reply, activeEmotion } = this.sanitizeEmotionOutput(rawText, emotionResult, userAskedForName);
 
             // Always update EmotionEngine so hardware eyes, UI, and vocal prosody shift
             this.emotionEngine.setEmotion(activeEmotion);
-
-            reply = sanitizeNameOutput(reply);
 
             if (reply) {
               // Record interaction to continually learn user preferences
@@ -916,27 +930,12 @@ export class GeminiService {
         const data = (await response.json()) as any;
 
         if (response.ok && data?.choices?.[0]?.message?.content) {
-          let reply = data.choices[0].message.content.trim();
-
-          let activeEmotion = emotionResult;
-          const tagMatch = reply.match(/^\[Emotion:\s*([a-zA-Z_-]+)\]\s*/i);
-          if (tagMatch) {
-            const rawTag = tagMatch[1].toLowerCase().trim();
-            activeEmotion = this.emotionEngine.createEmotionResult(rawTag);
-            reply = reply.replace(/^\[Emotion:[^\]]+\]\s*/i, '').trim();
-          }
+          const rawText = data.choices[0].message.content.trim();
+          const userAskedForName = /\b(my\s+name|who\s+am\s+i|call\s+me|name\s+is)\b/i.test(prompt);
+          const { reply, activeEmotion } = this.sanitizeEmotionOutput(rawText, emotionResult, userAskedForName);
 
           // Real-time EmotionEngine sync
           this.emotionEngine.setEmotion(activeEmotion);
-
-          const userAskedForName = /\b(my\s+name|who\s+am\s+i|call\s+me|name\s+is)\b/i.test(prompt);
-          if (!userAskedForName) {
-            reply = reply
-              .replace(/^(?:Hey|Hi|Hello|Well|Sure|Okay|Look|Ah),?\s+Ashwin(?:,\s*|\s*[-–—:]\s*|\s+)/i, '')
-              .replace(/^Ashwin,\s*/i, '')
-              .replace(/,\s*Ashwin([.!?])/gi, '$1')
-              .replace(/\bAshwin\b/gi, 'you');
-          }
 
           if (reply) {
             this.learnedProfileEngine.recordInteraction(prompt, reply, {
@@ -1020,27 +1019,12 @@ export class GeminiService {
         const msgContent = data?.choices?.[0]?.message?.content || data?.choices?.[0]?.message?.reasoning || data?.choices?.[0]?.text;
 
         if (response.ok && msgContent) {
-          let reply = typeof msgContent === 'string' ? msgContent.trim() : JSON.stringify(msgContent);
-
-          let activeEmotion = emotionResult;
-          const tagMatch = reply.match(/^\[Emotion:\s*([a-zA-Z_-]+)\]\s*/i);
-          if (tagMatch) {
-            const rawTag = tagMatch[1].toLowerCase().trim();
-            activeEmotion = this.emotionEngine.createEmotionResult(rawTag);
-            reply = reply.replace(/^\[Emotion:[^\]]+\]\s*/i, '').trim();
-          }
+          const rawText = typeof msgContent === 'string' ? msgContent.trim() : JSON.stringify(msgContent);
+          const userAskedForName = /\b(my\s+name|who\s+am\s+i|call\s+me|name\s+is)\b/i.test(prompt);
+          const { reply, activeEmotion } = this.sanitizeEmotionOutput(rawText, emotionResult, userAskedForName);
 
           // Real-time EmotionEngine sync
           this.emotionEngine.setEmotion(activeEmotion);
-
-          const userAskedForName = /\b(my\s+name|who\s+am\s+i|call\s+me|name\s+is)\b/i.test(prompt);
-          if (!userAskedForName) {
-            reply = reply
-              .replace(/^(?:Hey|Hi|Hello|Well|Sure|Okay|Look|Ah),?\s+Ashwin(?:,\s*|\s*[-–—:]\s*|\s+)/i, '')
-              .replace(/^Ashwin,\s*/i, '')
-              .replace(/,\s*Ashwin([.!?])/gi, '$1')
-              .replace(/\bAshwin\b/gi, 'you');
-          }
 
           if (reply) {
             this.learnedProfileEngine.recordInteraction(prompt, reply, {

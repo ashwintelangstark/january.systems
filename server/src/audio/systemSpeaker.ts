@@ -49,6 +49,12 @@ export class SystemSpeaker extends EventEmitter {
       clean = clean.replace(/<[^>]+>/g, '');
     }
 
+    // Strip emotion metadata tags: e.g. "[Emotion: joy]", "[emotion: calm]", "(Emotion: focused)", "[Feeling: happy]"
+    clean = clean.replace(/\[\s*(?:emotion|feeling|mood|tone)\s*:[^\]]+\]/gi, '');
+    clean = clean.replace(/\(\s*(?:emotion|feeling|mood|tone)\s*:[^)]+\)/gi, '');
+    clean = clean.replace(/(?:^|\s)(?:emotion|feeling|mood|tone)\s*:\s*[a-zA-Z_-]+\b\s*[:.-]?\s*/gi, ' ');
+    clean = clean.replace(/^(?:I(?:\s*'?\s*m|\s+am)\s+(?:feeling|in\s+a\s+state\s+of)\s+|Feeling\s+|My\s+current\s+(?:mood|emotion)\s+is\s+|Current\s+emotion:\s*)(?:joyful|joy|curious|empathetic|focused|concerned|calm|neutral)[,.]?\s*/gi, '');
+
     // Strip lines that are code syntax or file export listings
     clean = clean
       .split('\n')
@@ -68,7 +74,9 @@ export class SystemSpeaker extends EventEmitter {
         }
 
         // If line looks like code syntax, filter it out
-        if (/^(?:import|export|const|let|var|function|class|def|return|public|private)\b/.test(trimmed)) {
+        if (
+          /^(?:import\s+.*?from\b|export\s+(?:default\s+)?(?:const|let|var|function|class)\b|const\s+[a-zA-Z_$]\w*\s*=|let\s+[a-zA-Z_$]\w*\s*=|var\s+[a-zA-Z_$]\w*\s*=|function\s+[a-zA-Z_$]\w*\(|def\s+[a-zA-Z_$]\w*\(|class\s+[a-zA-Z_$]\w*[\s:{]|return\s+[a-zA-Z0-9_$'"([{]|public\s+[a-zA-Z_$]|private\s+[a-zA-Z_$])/.test(trimmed)
+        ) {
           hadCode = true;
           return false;
         }
