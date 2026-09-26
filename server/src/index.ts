@@ -379,6 +379,24 @@ app.post('/api/camera/toggle', (req, res) => {
   res.json({ status: 'ok', ...visualActivityMonitor.getEyesStatus() });
 });
 
+app.get('/api/camera/status', (req, res) => {
+  res.json({
+    status: 'ok',
+    ...visualActivityMonitor.getEyesStatus(),
+    context: visualActivityMonitor.getCurrentContext(),
+  });
+});
+
+app.get('/api/camera/frame', (req, res) => {
+  const context = visualActivityMonitor.getCurrentContext();
+  if (context.lastSnapshotPath && fs.existsSync(context.lastSnapshotPath)) {
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.setHeader('Cache-Control', 'no-cache, no-store');
+    return fs.createReadStream(context.lastSnapshotPath).pipe(res);
+  }
+  res.status(404).json({ error: 'No camera frame available' });
+});
+
 emotionEngine.on('emotionChange', (emotion) => {
   broadcast({ type: 'emotion_update', payload: emotion });
 });
