@@ -4,6 +4,8 @@ import fs from 'fs';
 import os from 'os';
 import { EventEmitter } from 'events';
 import { fileURLToPath } from 'url';
+import { elevenLabsEngine } from './elevenLabsEngine.js';
+import { config } from '../config.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -166,6 +168,23 @@ export class SystemSpeaker extends EventEmitter {
     this.isSpeaking = true;
     this.emit('start');
 
+    // Tier 1: ElevenLabs High-Fidelity Neural Emotional Voice Engine
+    if (config.elevenlabsApiKey && config.useElevenLabs !== false) {
+      try {
+        const success = await elevenLabsEngine.speak(speechText, {
+          emotion: options?.emotion,
+          voiceId: config.elevenlabsVoiceId,
+          modelId: config.elevenlabsModelId,
+        });
+        if (success) {
+          return;
+        }
+        console.warn('⚠️ [SystemSpeaker] ElevenLabs synthesis did not complete, falling back to secondary speech tier.');
+      } catch (err: any) {
+        console.warn('⚠️ [SystemSpeaker] ElevenLabs error, falling back:', err.message);
+      }
+    }
+
     const useEdgeTts = process.env.USE_EDGE_TTS === 'true';
     const isDevanagari = /[\u0900-\u097F]/.test(speechText);
     const hasOtherIndianScript = /[\u0980-\u0D7F]/.test(speechText);
@@ -267,6 +286,9 @@ export class SystemSpeaker extends EventEmitter {
     this.speechQueue = [];
     this.isProcessingQueue = false;
 
+    // Stop ElevenLabs if active
+    elevenLabsEngine.stopPlayback();
+
     if (this.currentProcess) {
       console.log('[SystemSpeaker] Stopping current speaker playback.');
       this.currentProcess.kill('SIGTERM');
@@ -277,7 +299,7 @@ export class SystemSpeaker extends EventEmitter {
   }
 
   public getIsSpeaking(): boolean {
-    return this.isSpeaking;
+    return this.isSpeaking || elevenLabsEngine.getIsSpeaking();
   }
 
   private createWavHeader(dataLength: number, sampleRate: number, numChannels: number, bitsPerSample: number): Buffer {

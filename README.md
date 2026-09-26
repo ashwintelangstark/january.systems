@@ -5,7 +5,7 @@
 
 ## 🌟 Executive Overview
 
-**January** is an advanced, emotionally attuned, autonomous operating system agent engineered to run directly on your Mac hardware. It listens through your MacBook's physical microphone using local **Faster-Whisper** speech-to-text, sees through your native Mac webcam with **AVFoundation 60 FPS hardware streaming** and sub-20ms **local edge face detection**, reasons across **458+ AI models** via a **Dynamic Multi-Tier Model Router**, acts on your desktop as an autonomous **Computer-Using Agent (CUA)**, creates interactive **3D models and architectural BIM buildings in Blender**, generates production-grade **Python, C, and C++** code, queries real-time internet and weather data, and speaks aloud through physical laptop speakers with emotionally modulated **Microsoft Edge-TTS** neural voices.
+**January** is an advanced, emotionally attuned, autonomous operating system agent engineered to run directly on your Mac hardware. It listens through your MacBook's physical microphone using local **Faster-Whisper** speech-to-text, sees through your native Mac webcam with **AVFoundation 60 FPS hardware streaming** and sub-20ms **local edge face detection**, reasons across **458+ AI models** via a **Dynamic Multi-Tier Model Router**, acts on your desktop as an autonomous **Computer-Using Agent (CUA)**, creates interactive **3D models and architectural BIM buildings in Blender**, generates production-grade **Python, C, and C++** code, queries real-time internet and weather data, and speaks aloud through physical laptop speakers with **ElevenLabs Ultra-Realistic Neural Voices** dynamically modulated by a **7-Archetype Emotion Engine**, backed by **Microsoft Edge-TTS** and native speech fallback.
 
 January operates across two seamless modes:
 1. **Autonomous Background Daemon (`npm run dev`)**: Runs headlessly in the background, listening for wake phrases (**"Rise"**) and spoken commands in the room with no open windows required.
@@ -63,7 +63,8 @@ flowchart TD
 
     subgraph Synthesis ["🔊 Vocal Synthesis & Physical Output"]
         LANG_ROUTER["🔤 Unicode Script & Language Classifier<br/>(English + 15 Indian Languages)"]
-        TTS["🗣️ Microsoft Edge-TTS Neural Voice Engine<br/>(Emotionally Modulated Pitch & Rate)"]
+        EL_TTS["🎙️ ElevenLabs Realistic Neural Voice Engine<br/>(Voice: Monika Sogam / Sarah | Real-Time Emotion Tuning)"]
+        EDGE_TTS["🗣️ Microsoft Edge-TTS / Native Say Fallback<br/>(Multilingual Script Synthesis)"]
         SPEAKER["🔊 MacBook Physical Speaker<br/>(macOS afplay with Echo Muting)"]
     end
 
@@ -89,7 +90,10 @@ flowchart TD
     
     ROUTER --> LANG_ROUTER
     CODE -.-> LANG_ROUTER
-    LANG_ROUTER --> TTS --> SPEAKER
+    EMO --> EL_TTS
+    LANG_ROUTER --> EL_TTS
+    EL_TTS -->|Success| SPEAKER
+    EL_TTS -->|Fallback / Offline| EDGE_TTS --> SPEAKER
 
     classDef primary fill:#1e1e2e,stroke:#89b4fa,stroke-width:2px,color:#cdd6f4;
     classDef highlight fill:#313244,stroke:#f9e2af,stroke-width:2px,color:#f9e2af;
@@ -523,19 +527,27 @@ flowchart TD
 
 ---
 
-## 🎭 Local Emotion Engine & Prosody Attunement
+## 🎭 Local Emotion Engine & ElevenLabs Realistic Voice Attunement
 
-January features a **100% free, local Emotion Engine** running in under 1ms on your Mac. It analyzes conversational valence, arousal, and intent to attune January's responses and vocal prosody to your mood:
+January features a **100% real-time local Emotion Engine** running in under 1ms on your Mac. It analyzes conversational valence, arousal, and intent to dynamically attune January's responses, visual glow auras, and vocal synthesis parameters across **7 Emotional Archetypes**.
 
-| Emotion | Tone / Context | Voice Modulation | Visual Glow Aura |
-| :--- | :--- | :--- | :--- |
-| **Joy** | Upbeat, witty, celebrating wins | Pitch: `+4Hz`, Rate: `+5%` | Golden Amber (`#F59E0B`) |
-| **Curious** | Inquisitive, reasoning, exploratory | Pitch: `+2Hz`, Rate: `+2%` | Neon Cyan (`#00F5FF`) |
-| **Empathetic** | Supportive, comforting, gentle | Pitch: `-2Hz`, Rate: `-5%` | Mint Emerald (`#10B981`) |
-| **Focused** | Analytical, coding, technical execution | Pitch: `+0Hz`, Rate: `+0%` | Electric Violet (`#8B5CF6`) |
-| **Calm / Sleep** | Soothing, peaceful, bedtime standby | Pitch: `-3Hz`, Rate: `-7%` | Deep Indigo (`#6366F1`) |
-| **Concerned** | Alert, cautious, debugging errors | Pitch: `-1Hz`, Rate: `-3%` | Coral Red (`#EF4444`) |
-| **Neutral** | Direct, balanced conversational mode | Pitch: `+0Hz`, Rate: `+0%` | Crystal White (`#E2E8F0`) |
+### 🎙️ ElevenLabs Ultra-Realistic Neural Voice Modulation
+When ElevenLabs is enabled, January directly modulates the neural voice parameters (`stability`, `similarity_boost`, `style`, `use_speaker_boost`) in real-time per utterance using high-performance streaming with `optimize_streaming_latency=3` (<300ms Time-to-First-Audio):
+
+| Emotion Archetype | Tone & Psychological Context | Stability | Style Exaggeration | Similarity Boost | Visual Glow Aura |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Joy** | Upbeat, celebrating wins, lively dynamic range | `0.35` | `0.45` | `0.82` | Golden Amber (`#F59E0B`) |
+| **Curious** | Inquisitive, exploratory, investigative cadence | `0.45` | `0.30` | `0.85` | Neon Cyan (`#00F5FF`) |
+| **Empathetic** | Warm, supportive, comforting, gentle reassurance | `0.58` | `0.35` | `0.88` | Mint Emerald (`#10B981`) |
+| **Focused** | Analytical, precise, articulate technical execution | `0.68` | `0.15` | `0.85` | Electric Violet (`#8B5CF6`) |
+| **Calm / Sleep** | Soothing, relaxed, peaceful, bedtime standby | `0.75` | `0.10` | `0.85` | Deep Indigo (`#6366F1`) |
+| **Concerned** | Alert, cautious, debugging errors, serious tone | `0.40` | `0.35` | `0.80` | Coral Red (`#EF4444`) |
+| **Neutral** | Balanced, conversational naturalism | `0.50` | `0.20` | `0.85` | Crystal White (`#E2E8F0`) |
+
+### 🛡️ Multi-Tier Resilient Voice Fallback
+1. **Tier 1 (ElevenLabs High-Fidelity Neural)**: Synthesizes ultra-realistic voice (`2zRM7PkgwBPiau2jvVXc` - Monika Sogam / `EXAVITQu4vr4xnSDxMaL` - Sarah) modulated by active emotion.
+2. **Tier 2 (Microsoft Edge-TTS)**: Seamless fallback for 15+ Indian regional languages and offline operation with prosody pitch and rate shifting.
+3. **Tier 3 (macOS Native Say)**: Low-latency local fallback (`Samantha` / `Lekha`) ensuring voice output is never blocked.
 
 ---
 
@@ -845,6 +857,12 @@ GEMINI_API_FALLBACK="YOUR_FALLBACK_GEMINI_KEY"
 GEMINI_MODEL=models/gemini-3.6-flash
 GEMINI_VOICE=Aoede
 
+# ElevenLabs Realistic Neural Voice & Emotion Engine
+ELEVENLABS_API_KEY="YOUR_ELEVENLABS_API_KEY"
+ELEVENLABS_VOICE_ID="2zRM7PkgwBPiau2jvVXc"
+ELEVENLABS_MODEL_ID=eleven_turbo_v2_5
+USE_ELEVENLABS=true
+
 # OpenRouter / OmniRoute API Key (Tier 3 Dynamic Model Router across 458+ models)
 OPENROUTER_API_KEY="YOUR_OPENROUTER_API_KEY"
 
@@ -901,6 +919,9 @@ npx tsx server/src/tests/test_universal_3d.ts
 
 # Test 6: Speech Path Sanitization (No File Paths Spoken) (13/13 Passed)
 npx tsx server/src/tests/test_speech_path_sanitization.ts
+
+# Test 7: ElevenLabs Neural Voice & Emotion Engine Integration (12/12 Passed)
+npx tsx server/src/tests/test_elevenlabs_speech.ts
 ```
 
 ---

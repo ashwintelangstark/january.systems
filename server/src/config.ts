@@ -28,6 +28,10 @@ export const config = {
   openaiApiKey: (process.env.OPENAI_API_KEY || '').replace(/^["']|["']$/g, '').trim(),
   geminiFallbackApiKey: (process.env.GEMINI_FALLBACK_API || process.env.GEMINI_FALLBACK_API_KEY || '').replace(/^["']|["']$/g, '').trim(),
   openrouterApiKey: (process.env.OPENROUTER_API_KEY || process.env.OMNIROUTE_API_KEY || '').replace(/^["']|["']$/g, '').trim(),
+  elevenlabsApiKey: (process.env.ELEVENLABS_API_KEY || '').replace(/^["']|["']$/g, '').trim(),
+  elevenlabsVoiceId: (process.env.ELEVENLABS_VOICE_ID || '2zRM7PkgwBPiau2jvVXc').replace(/^["']|["']$/g, '').trim(),
+  elevenlabsModelId: process.env.ELEVENLABS_MODEL_ID || 'eleven_turbo_v2_5',
+  useElevenLabs: process.env.USE_ELEVENLABS !== 'false',
 };
 
 export function validateConfig() {
