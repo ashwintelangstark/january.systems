@@ -922,6 +922,9 @@ npx tsx server/src/tests/test_speech_path_sanitization.ts
 
 # Test 7: ElevenLabs Neural Voice & Emotion Engine Integration (12/12 Passed)
 npx tsx server/src/tests/test_elevenlabs_speech.ts
+
+# Test 8: Ultra-Fast Model Switching & Circuit-Breaker Fallback (14/14 Passed)
+npx tsx server/src/tests/test_fast_fallback.ts
 ```
 
 ---

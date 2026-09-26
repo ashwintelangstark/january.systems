@@ -157,13 +157,12 @@ export class DynamicModelRouter {
 
     const freeOnly = this.tierMode === 'free_only';
 
-    // 2. Select category-specific candidates
+    // 2. Select category-specific candidates (ultra-fast verified models prioritized first)
     if (options.taskType === 'vision' || options.requireVision) {
       const visionPool = [
         'openrouter/auto',
-        'meta-llama/llama-3.2-11b-vision-instruct:free',
-        'qwen/qwen2.5-vl-72b-instruct:free',
         'openrouter/free',
+        'meta-llama/llama-3.2-11b-vision-instruct:free',
       ];
       for (const m of visionPool) {
         if (!candidates.includes(m)) candidates.push(m);
@@ -171,14 +170,14 @@ export class DynamicModelRouter {
     } else if (options.taskType === 'coding') {
       const codingPool = freeOnly
         ? [
+            'openrouter/free',
             'cohere/north-mini-code:free',
             'liquid/lfm-2.5-2.6b:free',
-            'openrouter/free',
             'openrouter/auto',
           ]
         : [
+            'openrouter/free',
             'qwen/qwen-2.5-coder-32b-instruct',
-            'deepseek/deepseek-coder',
             'cohere/north-mini-code:free',
             'liquid/lfm-2.5-2.6b:free',
             'openrouter/auto',
@@ -187,29 +186,21 @@ export class DynamicModelRouter {
         if (!candidates.includes(m)) candidates.push(m);
       }
     } else if (options.taskType === 'reasoning') {
-      const reasoningPool = freeOnly
-        ? [
-            'deepseek/deepseek-r1:free',
-            'liquid/lfm-2.5-2.6b:free',
-            'openrouter/auto',
-            'openrouter/free',
-          ]
-        : [
-            'deepseek/deepseek-r1',
-            'deepseek/deepseek-r1:free',
-            'liquid/lfm-2.5-2.6b:free',
-            'openrouter/auto',
-          ];
+      const reasoningPool = [
+        'openrouter/free',
+        'deepseek/deepseek-r1',
+        'liquid/lfm-2.5-2.6b:free',
+        'openrouter/auto',
+      ];
       for (const m of reasoningPool) {
         if (!candidates.includes(m)) candidates.push(m);
       }
     } else {
-      // General conversational chat
+      // General conversational chat: openrouter/free (~500ms) and openrouter/auto
       const generalPool = [
+        'openrouter/free',
         'openrouter/auto',
         'liquid/lfm-2.5-2.6b:free',
-        'google/gemma-4-26b-a4b-it:free',
-        'openrouter/free',
         'cohere/north-mini-code:free',
       ];
       for (const m of generalPool) {

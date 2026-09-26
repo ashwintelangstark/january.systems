@@ -229,20 +229,21 @@ export class VisualActivityMonitor extends EventEmitter {
 
     const candidateModels = [
       'models/gemini-flash-lite-latest',
-      'models/gemini-3.5-flash-lite',
-      'models/gemini-3-flash-preview',
       'models/gemini-flash-latest',
-      'models/gemini-3.5-flash',
     ];
 
     for (const keyConfig of geminiKeysToTry) {
       for (const model of candidateModels) {
         try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 3500);
+
           const response = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${keyConfig.key}`,
             {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
+              signal: controller.signal,
               body: JSON.stringify({
                 contents: [
                   {
@@ -261,6 +262,8 @@ export class VisualActivityMonitor extends EventEmitter {
               }),
             }
           );
+
+          clearTimeout(timeout);
 
           const data = (await response.json()) as any;
           if (response.ok && data?.candidates?.[0]?.content?.parts) {
@@ -286,6 +289,10 @@ export class VisualActivityMonitor extends EventEmitter {
               this.currentContext.summary = text.slice(0, 150);
               return;
             }
+          }
+
+          if (response.status === 429 || response.status === 400 || response.status === 403) {
+            break; // Immediately exit model loop for dead key
           }
         } catch {
           // Fallback to next candidate model

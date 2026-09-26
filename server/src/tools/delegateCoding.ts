@@ -157,21 +157,25 @@ export async function delegateCoding(args: DelegateCodingArgs): Promise<Delegate
   // =========================================================================
   // TIER 2: Google Gemini API (Primary / Instant High-Speed Fallback)
   // =========================================================================
-  if (config.geminiApiKey) {
-    const candidateModels = [
-      'models/gemini-3.5-flash-lite',
-      'models/gemini-3.6-flash',
-      'models/gemini-3.1-flash-lite',
-    ];
+  const geminiKeys = [
+    { key: config.geminiApiKey, name: 'Primary Gemini' },
+    { key: config.geminiFallbackApiKey, name: 'Fallback Gemini' },
+  ].filter((item) => !!item.key);
 
+  const candidateModels = [
+    'models/gemini-flash-lite-latest',
+    'models/gemini-flash-latest',
+  ];
+
+  for (const keyConfig of geminiKeys) {
     for (const model of candidateModels) {
       try {
-        console.log(`[CodingEngine] Generating ${targetLang.toUpperCase()} code with Google Gemini API (${model})...`);
+        console.log(`[CodingEngine] Generating ${targetLang.toUpperCase()} code with ${keyConfig.name} (${model})...`);
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 15000);
+        const timeout = setTimeout(() => controller.abort(), 4000);
 
         const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${config.geminiApiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${keyConfig.key}`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -206,7 +210,7 @@ export async function delegateCoding(args: DelegateCodingArgs): Promise<Delegate
           if (fullText) {
             const codeMatch = fullText.match(/```(?:[a-zA-Z0-9_-]+)?\n([\s\S]*?)```/);
             const codeSnippet = codeMatch ? codeMatch[1].trim() : undefined;
-            console.log(`[CodingEngine] Successfully generated with Google Gemini (${model}, ${fullText.length} chars).`);
+            console.log(`[CodingEngine] Successfully generated with ${keyConfig.name} (${model}, ${fullText.length} chars).`);
 
             return {
               success: true,
@@ -220,9 +224,77 @@ export async function delegateCoding(args: DelegateCodingArgs): Promise<Delegate
           }
         }
 
+        // ⚡ Fast Bailout on Quota / Auth Errors
+        if (response.status === 429 || response.status === 400 || response.status === 403 || data?.error?.status === 'RESOURCE_EXHAUSTED') {
+          console.warn(`[CodingEngine] ⚡ ${keyConfig.name} returned ${response.status}. Instantly switching to next tier...`);
+          break; // Exit model loop for this dead key immediately
+        }
+
         console.warn(`[CodingEngine] Gemini model ${model} returned status ${response.status}:`, data?.error?.message?.slice(0, 80));
       } catch (err: any) {
         console.warn(`[CodingEngine] Gemini attempt failed for ${model}:`, err.message);
+      }
+    }
+  }
+
+  // =========================================================================
+  // TIER 3: OpenRouter Dynamic High-Speed Coding Models
+  // =========================================================================
+  if (config.openrouterApiKey) {
+    const openRouterCodingModels = [
+      'openrouter/free',
+      'qwen/qwen-2.5-coder-32b-instruct',
+      'cohere/north-mini-code:free',
+      'openrouter/auto',
+    ];
+
+    for (const model of openRouterCodingModels) {
+      try {
+        console.log(`[CodingEngine] ⚡ Ultra-Fast Routing to OpenRouter coding model (${model})...`);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 4500);
+
+        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          signal: controller.signal,
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${config.openrouterApiKey}`,
+            'HTTP-Referer': 'https://january.systems',
+            'X-Title': 'January AI',
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userContent },
+            ],
+            max_tokens: 3000,
+            temperature: 0.2,
+          }),
+        });
+        clearTimeout(timeout);
+
+        const data = (await response.json()) as any;
+        const msgContent = data?.choices?.[0]?.message?.content || data?.choices?.[0]?.text;
+
+        if (response.ok && msgContent) {
+          const fullText = typeof msgContent === 'string' ? msgContent.trim() : JSON.stringify(msgContent);
+          const codeMatch = fullText.match(/```(?:[a-zA-Z0-9_-]+)?\n([\s\S]*?)```/);
+          const codeSnippet = codeMatch ? codeMatch[1].trim() : undefined;
+
+          return {
+            success: true,
+            model: `OpenRouter (${model})`,
+            response: fullText,
+            codeSnippet,
+            language: targetLang,
+            compilationCommand: getRunInstructions(targetLang),
+            verbalSummary: getVerbalSummary(prompt, targetLang),
+          };
+        }
+      } catch (err: any) {
+        console.warn(`[CodingEngine] OpenRouter model ${model} failed: ${err.message}. Trying next candidate...`);
       }
     }
   }

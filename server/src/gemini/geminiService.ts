@@ -227,23 +227,21 @@ function inspectPromptLanguage(prompt: string): { action: 'switch_english' | 'se
 export class GeminiService {
   private candidateModels = [
     'models/gemini-flash-lite-latest',
-    'models/gemini-3.5-flash-lite',
-    'models/gemini-3-flash-preview',
     'models/gemini-flash-latest',
-    'models/gemini-3.5-flash',
   ];
   private candidateOpenAIModels = [
     'gpt-4o-mini',
     'gpt-4o',
     'gpt-3.5-turbo',
-    'o3-mini',
   ];
   private candidateOpenRouterModels = [
+    'openrouter/free',
     'openrouter/auto',
     'liquid/lfm-2.5-2.6b:free',
-    'openrouter/free',
     'cohere/north-mini-code:free',
   ];
+  // Key Circuit-Breaker: Maps API Key -> Cooldown Expiry Timestamp
+  private keyCooldowns: Map<string, number> = new Map();
   private emotionEngine: EmotionEngine;
   private learnedProfileEngine: LearnedProfileEngine;
   private activityMonitor: VisualActivityMonitor | null = null;
@@ -710,13 +708,22 @@ export class GeminiService {
       { key: config.geminiFallbackApiKey, name: 'Fallback Gemini' },
     ].filter((item) => !!item.key);
 
+    const nowMs = Date.now();
+
     for (const keyConfig of geminiKeysToTry) {
+      // ⚡ Fast Circuit Breaker: If key recently returned 429/400/403, skip in 0ms
+      const cooldownUntil = this.keyCooldowns.get(keyConfig.key) || 0;
+      if (nowMs < cooldownUntil) {
+        console.log(`[GeminiService] ⚡ Fast-Skipping ${keyConfig.name} (circuit-breaker active for ${Math.round((cooldownUntil - nowMs) / 1000)}s)...`);
+        continue;
+      }
+
       for (const model of this.candidateModels) {
         try {
           console.log(`[GeminiService] Analyzing question with ${keyConfig.name} (${model}) [Emotion: ${emotionResult.emotion}, Active Lang: ${activeLang?.langName || 'English'}]...`);
 
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 6000);
+          const timeoutId = setTimeout(() => controller.abort(), 2800);
 
           const response = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${keyConfig.key}`,
@@ -752,6 +759,9 @@ export class GeminiService {
           const data = (await response.json()) as any;
 
           if (response.ok && data?.candidates?.[0]?.content?.parts) {
+            // Success: clear circuit breaker for this key
+            this.keyCooldowns.delete(keyConfig.key);
+
             let reply = data.candidates[0].content.parts
               .map((p: any) => p.text || '')
               .join('')
@@ -783,6 +793,13 @@ export class GeminiService {
                 emotion: activeEmotion,
               };
             }
+          }
+
+          // ⚡ Instant Key Bailout: If key has quota limit or is invalid, do not retry other models on the same key!
+          if (response.status === 429 || response.status === 400 || response.status === 403 || data?.error?.status === 'RESOURCE_EXHAUSTED') {
+            console.warn(`[GeminiService] ⚡ ${keyConfig.name} returned ${response.status} (Quota/Auth). Opening 60s circuit-breaker and immediately switching tier...`);
+            this.keyCooldowns.set(keyConfig.key, Date.now() + 60000);
+            break; // Exit model loop for this dead key immediately
           }
 
           console.warn(`[GeminiService] ${keyConfig.name} model ${model} returned status ${response.status}:`, data?.error?.message?.slice(0, 80));
@@ -872,10 +889,10 @@ export class GeminiService {
 
     for (const model of this.candidateOpenAIModels) {
       try {
-        console.log(`[GeminiService] 🔄 Gemini quota reached/unavailable. Routing to OpenAI model (${model})...`);
+        console.log(`[GeminiService] 🔄 Routing to OpenAI fallback model (${model})...`);
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 9000);
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
 
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
@@ -938,7 +955,7 @@ export class GeminiService {
         }
 
         const errMsg = data?.error?.message || `HTTP ${response.status}`;
-        console.warn(`[GeminiService] OpenAI model ${model} quota/request failed (${response.status}): ${errMsg}. Switching to next candidate model...`);
+        console.warn(`[GeminiService] OpenAI model ${model} failed (${response.status}): ${errMsg}. Switching to next candidate model...`);
       } catch (err: any) {
         console.warn(`[GeminiService] OpenAI network attempt for ${model} failed: ${err.message}. Trying next candidate model...`);
       }
@@ -950,7 +967,7 @@ export class GeminiService {
   /**
    * Automatic Tier 3 Fallback Engine: Routes query to OpenRouter/OmniRoute models
    * when Google Gemini quotas are exhausted (429) or unavailable.
-   * Automatically switches between candidate free models (openrouter/auto, liquid/lfm-2.5-2.6b:free, openrouter/free, cohere/north-mini-code:free).
+   * Ultra-fast model resolution with streaming latency optimization.
    */
   private async queryOpenRouterFallback(
     prompt: string,
@@ -973,10 +990,10 @@ export class GeminiService {
 
     for (const model of modelsToTry) {
       try {
-        console.log(`[GeminiService] 🔄 Routing to OpenRouter dynamic model: ${model} (task: ${taskType})...`);
+        console.log(`[GeminiService] ⚡ Ultra-Fast Routing to OpenRouter model: ${model} (task: ${taskType})...`);
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const timeoutId = setTimeout(() => controller.abort(), 3500);
 
         const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
           method: 'POST',
@@ -993,17 +1010,17 @@ export class GeminiService {
               { role: 'system', content: systemInstructionText },
               { role: 'user', content: userMessageContent },
             ],
-            max_tokens: 600,
+            max_tokens: 500,
             temperature: 0.8,
           }),
         });
         clearTimeout(timeoutId);
 
         const data = (await response.json()) as any;
-        const msgContent = data?.choices?.[0]?.message?.content || data?.choices?.[0]?.message?.reasoning;
+        const msgContent = data?.choices?.[0]?.message?.content || data?.choices?.[0]?.message?.reasoning || data?.choices?.[0]?.text;
 
         if (response.ok && msgContent) {
-          let reply = String(msgContent).trim();
+          let reply = typeof msgContent === 'string' ? msgContent.trim() : JSON.stringify(msgContent);
 
           let activeEmotion = emotionResult;
           const tagMatch = reply.match(/^\[Emotion:\s*([a-zA-Z_-]+)\]\s*/i);
@@ -1045,9 +1062,9 @@ export class GeminiService {
         }
 
         const errMsg = data?.error?.message || `HTTP ${response.status}`;
-        console.warn(`[GeminiService] OpenRouter model ${model} request failed (${response.status}): ${errMsg}. Switching to next candidate...`);
+        console.warn(`[GeminiService] OpenRouter model ${model} failed (${response.status}): ${errMsg}. Instantly switching to next candidate...`);
       } catch (err: any) {
-        console.warn(`[GeminiService] OpenRouter network attempt for ${model} failed: ${err.message}. Trying next candidate...`);
+        console.warn(`[GeminiService] OpenRouter attempt for ${model} failed: ${err.message}. Instantly switching to next candidate...`);
       }
     }
 
