@@ -206,21 +206,25 @@ export const GEMINI_TOOLS_DECLARATION = [
       },
       {
         name: 'create_3d_model',
-        description: 'Build a procedural 3D model in Blender, apply PBR materials and studio lighting, save the named .blend project and .obj/.glb files, and launch Blender on screen.',
+        description: 'Build a high-fidelity 3D model in Blender using OpenRouter Astra GPT-6 engine. Can construct anything across all domains: houses & architectural buildings, electrical appliances, vehicles & cars, mechanical tools, and props. Automatically grounds with real-world web blueprints/dimensions and can launch default browser for reference images.',
         parameters: {
           type: 'OBJECT',
           properties: {
             prompt: {
               type: 'STRING',
-              description: 'What 3D model to build (e.g. "futuristic cyber sword", "ceramic coffee cup", "modern armchair", "porcelain vase", "low poly sports car", "abstract torus knot").',
+              description: 'What 3D model to build (e.g. "modern minimalist villa with glass walls and patio", "retro electric toaster with bread slots and chrome lever", "electric sports car with alloy rims", "vintage brass microscope").',
             },
             fileName: {
               type: 'STRING',
-              description: 'Optional custom file name for the 3D model (e.g. "cyber_sword", "coffee_mug").',
+              description: 'Optional custom file name for the 3D model (e.g. "modern_villa", "electric_toaster").',
             },
             openInBlender: {
               type: 'BOOLEAN',
               description: 'Whether to visibly launch Blender with the newly created model on screen (default true).',
+            },
+            openBrowserForImages: {
+              type: 'BOOLEAN',
+              description: 'Whether to open the default web browser on macOS to look for real-world reference images/blueprints during construction (default false, auto-enabled if prompt asks for image lookup).',
             },
           },
           required: ['prompt'],

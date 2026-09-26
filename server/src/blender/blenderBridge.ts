@@ -15,6 +15,8 @@ export interface Create3DModelOptions {
   prompt: string;
   fileName?: string;
   openInBlender?: boolean;
+  openBrowserForImages?: boolean;
+  enableWebGrounding?: boolean;
 }
 
 export interface Create3DModelResult {
@@ -26,6 +28,7 @@ export interface Create3DModelResult {
   message: string;
   verbalSummary: string;
   error?: string;
+  webReferenceOpened?: boolean;
 }
 
 export class BlenderBridge {
@@ -329,7 +332,11 @@ except Exception as e:
 
     // Delegate ANY other object to Universal3DEngine (AI-synthesized multi-part 3D model)
     console.log(`[BlenderBridge] 🌌 Delegating to Universal3DEngine for universal object synthesis: "${options.prompt}"...`);
-    const universalResult = await universal3DEngine.generateAny3DModel(options.prompt, options.openInBlender !== false);
+    const universalResult = await universal3DEngine.generateAny3DModel(options.prompt, {
+      openInBlender: options.openInBlender !== false,
+      openBrowserForImages: options.openBrowserForImages,
+      enableWebGrounding: options.enableWebGrounding !== false,
+    });
     if (universalResult.success) {
       return {
         success: true,
@@ -339,6 +346,7 @@ except Exception as e:
         glbFilePath: universalResult.glbFilePath,
         message: universalResult.message,
         verbalSummary: universalResult.verbalSummary,
+        webReferenceOpened: universalResult.webReferenceOpened,
       };
     }
     console.warn(`[BlenderBridge] Universal3DEngine failed, falling back to local procedural script: "${options.prompt}"`);

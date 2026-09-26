@@ -292,39 +292,49 @@ flowchart TD
 
 ---
 
-## 🌌 Universal 3D Object Synthesis Engine (Arbitrary Natural Language 3D Modeling)
+## 🌌 OpenRouter Astra GPT-6 Universal 3D Engine (Multi-Domain 3D Generative Synthesis)
 
-January is not limited to aircraft or architectural floor plans. Through the **Universal 3D Generation Engine** (`Universal3DEngine`), January can construct a detailed, multi-component 3D model of **literally any object** requested in natural language—scientific instruments, drones, musical instruments, cyber weapons, mechanical assemblies, consumer electronics, furniture, or artistic sculptures—directly in Blender 5.2.2 LTS.
+January integrates OpenRouter's flagship **Astra GPT-6** models (`openai/gpt-6-astra-pro`, `openai/gpt-6-astra`, `~openai/gpt-astra-latest`) for multi-domain 3D object generation in Blender 5.2.2 LTS. Inspired by the frontier GPT-6 Astra launch capabilities, January is not bound to a single domain: it can engineer **anything you tell it to make**—from modern architectural houses and villas to complex electrical appliances, aerodynamic vehicles, scientific instruments, mechanical tools, and props.
+
+If detailed reference is required or requested, January features **Real-Time Web Visual Grounding**: it queries online technical specifications and blueprint dimensions, and can automatically launch the user's default macOS browser to inspect reference imagery before generating and compiling the 3D scene in Blender.
 
 ```mermaid
 flowchart TD
-    UserVoice["🗣️ User Prompt / Voice:<br/>'January, build a 3D model of a vintage brass microscope with dual objective lenses'"] --> IntentRouter{"Intent & Routing"}
+    UserVoice["🗣️ User Prompt / Voice:<br/>'January, build a 3D model of a retro toaster / modern villa / electric sports car in Blender'"] --> IntentRouter{"Intent & Domain Routing"}
     
-    IntentRouter -->|Aircraft / Aerospace| AeroEngine["BMeshLoftingEngine (Phase 1 & 2)"]
-    IntentRouter -->|Architectural Blueprint| BIMEngine["ArchitecturalBridge (BIM Engine)"]
-    IntentRouter -->|Any Arbitrary Object| UnivEngine["Universal3DEngine (Master 3D Synthesizer)"]
+    IntentRouter -->|Aerospace Flight Surfaces| AeroEngine["BMeshLoftingEngine (Aerodynamic Kernel)"]
+    IntentRouter -->|2D Blueprint to BIM| BIMEngine["ArchitecturalBridge (BIM Engine)"]
+    IntentRouter -->|Universal Multi-Domain Object| UnivEngine["Universal3DEngine (Astra GPT-6 Master Synthesizer)"]
     
-    subgraph "Universal 3D Synthesis Pipeline"
-        UnivEngine --> Decomp["Component Assembly Decomposition<br/>(4-8 Sub-meshes: Base, Frame, Stage, Optics, Knobs)"]
-        Decomp --> MultiAI{"Multi-Tier AI Synthesizer"}
-        MultiAI -->|Tier 1| GeminiFlash["Gemini 2.0 Flash (Blender 5.2.2 Script Synthesizer)"]
-        MultiAI -->|Tier 2 / Fallback| QwenCoder["OpenRouter Qwen 2.5 Coder 32B"]
+    subgraph WebGrounding ["🌐 Web Visual Grounding & Default Browser Reference"]
+        UnivEngine --> GroundCheck{"Reference Needed or Requested?"}
+        GroundCheck -->|Yes / Browser Asked| OpenBrowser["🖥️ Launch Default macOS Browser<br/>(DuckDuckGo Image & Blueprint Search)"]
+        GroundCheck --> RealtimeSearch["🔍 Web Search Technical Specs<br/>(Dimensions, Material Finish, Component Specs)"]
+        RealtimeSearch --> InjectedContext["📐 Injected Engineering Grounding Context"]
+    end
+    
+    subgraph UniversalPipeline ["🚀 Multi-Tier AI Synthesis & Self-Healing Pipeline"]
+        InjectedContext --> AstraRouter{"Multi-Tier AI Cascade"}
+        AstraRouter -->|Tier 1 (Flagship)| AstraGPT6["OpenRouter Astra GPT-6<br/>(openai/gpt-6-astra-pro / gpt-6-astra)"]
+        AstraRouter -->|Tier 2 (Fallback)| GeminiFlash["Google Gemini 2.0 Flash<br/>(Blender 5.2.2 Script Synthesizer)"]
+        AstraRouter -->|Tier 3 (Fallback)| QwenCoder["OpenRouter Qwen 2.5 Coder 32B"]
         
-        GeminiFlash --> Sanitize["Syntax Sanitizer & Blender 5.2 Patching<br/>(Coat Weight, Transmission Weight, BMesh Geoms)"]
+        AstraGPT6 --> Sanitize["Syntax Sanitizer & Blender 5.2 Patching<br/>(RGBA 4-Vectors, Principled BSDF, Safe Modifiers)"]
+        GeminiFlash --> Sanitize
         QwenCoder --> Sanitize
         
         Sanitize --> HeadlessExec["Blender 5.2 Headless Execution<br/>(bpy / bmesh Native Python Worker)"]
         
-        HeadlessExec --> ResultCheck{"Generation Success?"}
-        ResultCheck -->|Blender Traceback / Error| SelfHeal["🩹 Self-Healing Recovery Loop<br/>(Feed traceback back to AI for dynamic repair)"]
+        HeadlessExec --> ResultCheck{"Execution Result?"}
+        ResultCheck -->|Blender Traceback / Error| SelfHeal["🩹 Self-Healing Recovery Loop (Up to 3x)<br/>(Feed traceback back to Astra/Gemini for automated repair)"]
         SelfHeal --> HeadlessExec
-        ResultCheck -->|Repeated Failure / Offline| ParametricFallback["🛡️ Guaranteed Parametric Procedural Builder<br/>(Multi-Component Assembly Fallback)"]
+        ResultCheck -->|Quota Limit / Offline| ParametricFallback["🛡️ Guaranteed Multi-Domain Parametric Builder<br/>(Houses, Appliances, Vehicles, Instruments)"]
         
         ResultCheck -->|Success| ExportAssets["Export .blend, .obj/.mtl, and .glb"]
         ParametricFallback --> ExportAssets
     end
     
-    subgraph "Presentation & System Activation"
+    subgraph PresentationActivation ["🖥️ Presentation & macOS Activation"]
         ExportAssets --> BlendFile["Saved in server/data/exports/3d/"]
         BlendFile --> OpenGUI["macOS Launch: open -a Blender '<filepath>'"]
         OpenGUI --> WindowFocus["WindowManager: Bring Blender to Front & Center"]
@@ -332,12 +342,20 @@ flowchart TD
 ```
 
 ### 🛠️ Key Architectural Capabilities
-1. **Zero-Restriction Object Modeling**: Accepts arbitrary natural language descriptions without preset constraints (e.g. vintage microscope, surveillance quadcopter drone, Fender electric guitar, espresso machine, robotic arm, cyber katana).
-2. **Component Assembly Decomposition**: Dynamically breaks down requested objects into 4–8 distinct realistic sub-meshes and functional components rather than single primitive block-outs.
-3. **Blender 5.2.2 LTS Socket Compatibility**: Enforces clean compatibility with Blender 4.0+/5.0+ Principled BSDF shader architecture (`Coat Weight`, `Transmission Weight`, `Emission Color`, `Specular IOR Level`).
-4. **Self-Healing Error Recovery**: If Blender's Python runtime encounters any traceback error, January's self-healing loop automatically captures `stdout`/`stderr` and feeds it back to the code model for an immediate corrected patch.
-5. **Guaranteed Offline Parametric Fallback**: If network is offline or AI quotas are exhausted, an offline procedural generator creates a proportional, multi-component assembly so model creation *never fails*.
-6. **Triple Universal Format Output**: Every generation compiles `.blend` (Blender project), `.obj` + `.mtl` (Universal CAD/3D interchange), and `.glb` (Realtime glTF 2.0 binary).
+1. **OpenRouter Astra GPT-6 Integration**: Employs OpenAI's frontier GPT-6 Astra models (`openai/gpt-6-astra-pro`, `openai/gpt-6-astra`) via OpenRouter with adaptive token budget management and rapid multi-tier cascade routing.
+2. **Multi-Domain Synthesis (Houses, Appliances, Vehicles, Instruments)**:
+   - **Architectural Houses & BIM**: Multi-tier foundations, floor-to-ceiling glass curtain walls (Transmission=0.9, IOR=1.52), cantilevered overhangs, patio entryways, and chimney stacks.
+   - **Electrical Appliances & Consumer Electronics**: Beveled chassis housings, front glass faceplates, emissive OLED readouts, rotary dials with indicator notches, tactile buttons, and rubber support feet.
+   - **Vehicles & Transport**: Aerodynamic body curvature, wheel arches, alloy rims with rubber tires, tinted canopies, front splitters, and LED headlights/taillights.
+   - **Scientific Instruments & Mechanical Tools**: Armatures, articulated joints, knurled thumbwheels, and brass/chrome PBR materials.
+3. **Real-Time Web Visual Grounding**: Dynamically searches the web for dimensional blueprints, form factors, and material specs. If requested or needed, automatically opens your macOS default web browser with reference images.
+4. **Self-Healing Blender 5.2.2 Execution Loop**: If Blender's Python runtime encounters any traceback error, January's self-healing loop automatically captures `stdout`/`stderr` and prompts the model to patch the issue across up to 3 iterative repair attempts.
+5. **Blender 5.2.2 LTS Shader & Vector Auto-Sanitization**:
+   - Auto-expands 3-item RGB color tuples into 4-item RGBA `(R, G, B, 1.0)` vectors for Principled BSDF color sockets.
+   - Replaces deprecated shader sockets (`Coat Weight`, `Transmission Weight`, `Emission Color`).
+   - Automatically sanitizes invalid light types (`type='SKY'` ➜ `type='SUN'`) and guards modifier lookups.
+6. **Guaranteed Multi-Domain Parametric Fallback**: If network is offline or API tokens are constrained, a high-fidelity procedural generator creates a proportional, multi-component assembly so 3D generation *never fails*.
+7. **Triple Universal Format Output**: Every generation compiles `.blend` (Blender project), `.obj` + `.mtl` (Universal CAD/3D interchange), and `.glb` (Realtime glTF 2.0 binary).
 
 ---
 
@@ -794,6 +812,9 @@ january-ai/
 | **Precision 3D Engineering** | *"Create a 3D model of Concorde in Blender"* | Grounds ogival gothic delta wings, droop nose visor, 4 Olympus turbojets, and opens Blender |
 | **2D Plan to 3D BIM** | *"Look at this building plan and convert it into 3D in Blender"* | Analyzes blueprint from webcam, builds foundation, PBR floors, 3m walls, openings, furniture, and opens Blender |
 | **2D Plan to 3D BIM** | *"Convert floorplan modern_villa.png to 3D architectural model"* | Reads local file, extracts structural BIM topology, and constructs 3D building |
+| **Universal 3D Modeling (Astra GPT-6)** | *"Make a 3D model of a retro electric toaster with dual slots and chrome lever in Blender"* | Grounds appliance specs via web, constructs beveled chassis, heating slots, and dials, and opens Blender |
+| **Universal 3D Modeling (Astra GPT-6)** | *"Build a 3D modern minimalist villa house with glass walls and cantilever roof in Blender"* | Queries BIM architecture references, constructs foundation, glass curtain walls, and patio, and opens Blender |
+| **Universal 3D Modeling (Astra GPT-6)** | *"Look up reference images on my browser and construct a 3D cyberpunk electric sports car in Blender"* | Opens default macOS browser for reference images, extracts dimensional specs, synthesizes aerodynamic model, and opens Blender |
 | **Universal 3D Modeling** | *"Make a 3D model of a vintage brass microscope in Blender"* | Decomposes microscope into base, pillar, stage, dual objective lenses, and glass eyepiece with brass PBR shader and opens Blender |
 | **Universal 3D Modeling** | *"Build a 3D model of a surveillance quadcopter drone in Blender"* | Generates drone airframe, 4 motor arms, carbon propellers, gimbal camera, and opens Blender |
 | **Universal 3D Modeling** | *"Create a 3D model of an electric guitar in Blender"* | Generates contoured body, neck, fretboard, pickups, bridge, and volume knobs and opens Blender |
