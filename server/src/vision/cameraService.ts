@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { promisify } from 'util';
 import { fileURLToPath } from 'url';
+import { getWritableDataDir } from '../utils/paths.js';
 
 const execFileAsync = promisify(execFile);
 const __filename = fileURLToPath(import.meta.url);
@@ -27,12 +28,8 @@ export class CameraService {
 
   constructor() {
     this.binaryPath = path.resolve(__dirname, '../../camera_engine/camera_snap');
-    this.capturesDir = path.resolve(__dirname, '../../data/captures');
+    this.capturesDir = getWritableDataDir('captures');
     this.latestFramePath = path.join(this.capturesDir, 'latest.jpg');
-
-    if (!fs.existsSync(this.capturesDir)) {
-      fs.mkdirSync(this.capturesDir, { recursive: true });
-    }
   }
 
   /**

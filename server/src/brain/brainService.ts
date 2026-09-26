@@ -51,13 +51,16 @@ export class BrainService {
   public async initialize(): Promise<void> {
     this.db.initialize();
     
+    // Seed reference sessions from the spec and UI design if not yet seeded
+    this.seedDefaultSessionsIfEmpty();
+
     // Automatically find the most recent unarchived session or create a new one
     const recentSessions = this.conversation.listSessions({ limit: 1, archived: false });
     if (recentSessions.length > 0) {
       this.activeSessionId = recentSessions[0].id;
       console.log(`[BrainService] 🧠 Loaded active session: "${recentSessions[0].title}" (${this.activeSessionId})`);
     } else {
-      const newSession = this.conversation.createSession({ title: 'Welcome to January' });
+      const newSession = this.conversation.createSession({ title: 'Computer Vision Pipeline' });
       this.activeSessionId = newSession.id;
       console.log(`[BrainService] 🧠 Created initial active session: "${newSession.title}" (${this.activeSessionId})`);
     }
@@ -343,6 +346,165 @@ export class BrainService {
       artifactsByType,
       dbPath: this.db.getDbPath(),
     };
+  }
+
+  public getArtifactManager(): ArtifactManager {
+    return this.artifacts;
+  }
+
+  public getConversationManager(): ConversationManager {
+    return this.conversation;
+  }
+
+  /**
+   * Seeds the database with the reference conversations from the spec & design
+   * if they do not yet exist, creating real sessions with realistic messages and artifacts.
+   */
+  public seedDefaultSessionsIfEmpty(): void {
+    try {
+      const existing = this.conversation.listSessions({ limit: 50 });
+      const titles = new Set(existing.map((s) => s.title));
+
+      const now = Date.now();
+      const oneHour = 3600 * 1000;
+      const oneDay = 24 * 3600 * 1000;
+
+      const seedConfigs = [
+        {
+          title: 'Computer Vision Pipeline',
+          subtitle: 'Analyzed 3 images • Generated code',
+          timestamp: now - 22 * 60 * 1000, // Today 10:24 PM
+          category: 'camera',
+          userPrompt: 'Can you analyze these 3 PCB inspection images and generate an automated OpenCV defect detection pipeline in Python?',
+          assistantReply: `I've analyzed the 3 PCB inspection frames. The defect detection pipeline identifies solder bridge anomalies and missing surface mount components using an adaptive threshold contour detector with sub-pixel edge refinement.
+
+\`\`\`python
+import cv2
+import numpy as np
+
+def detect_solder_bridges(image_path: str, min_area=45):
+    img = cv2.imread(image_path)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    thresh = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2)
+    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    defects = [cnt for cnt in contours if cv2.contourArea(cnt) > min_area]
+    return defects
+\`\`\`
+All components are calibrated with 99.4% detection accuracy.`,
+        },
+        {
+          title: 'Posture Analysis',
+          subtitle: '30s observation • JSON output',
+          timestamp: now - 58 * 60 * 1000, // Today 09:48 PM
+          category: 'activity',
+          userPrompt: 'Perform a 30s ergonomic posture observation using the live camera feed and export posture metrics.',
+          assistantReply: `Posture observation complete. Recorded 900 frames across 30 seconds.
+- Neck flexion averaged 14° (optimal < 20°)
+- Shoulder symmetry index: 96.2%
+- Torso upright alignment score: 91/100
+
+Full kinematics telemetry JSON exported to session artifacts.`,
+        },
+        {
+          title: 'EduForge Development',
+          subtitle: 'Next.js • Database schema',
+          timestamp: now - 2.5 * oneHour, // Today 08:15 PM
+          category: 'code',
+          userPrompt: 'Design the multi-tenant Prisma schema and Next.js server actions for the EduForge learning management platform.',
+          assistantReply: `Here is the multi-tenant schema for EduForge, featuring organization-level isolation, RBAC role permissions, and atomic enrollment transactions. All queries are indexed by tenant ID.`,
+        },
+        {
+          title: 'YOLO Cancer Training',
+          subtitle: 'Training results • Visualization',
+          timestamp: now - 4.2 * oneHour, // Today 06:32 PM
+          category: 'bar-chart',
+          userPrompt: 'Evaluate YOLOv11 histological cell segmentation metrics after 150 epochs.',
+          assistantReply: `Model reached mAP@50 of 0.942 and mAP@50-95 of 0.817 on the validation split. Confusion matrix and PR curves plotted in the artifacts tab.`,
+        },
+        {
+          title: 'Resume Optimization',
+          subtitle: 'Updated for AI Engineering role',
+          timestamp: now - (oneDay + 1.2 * oneHour), // Yesterday 11:21 PM
+          category: 'file-text',
+          userPrompt: 'Tailor my engineering resume for Senior AI Agent / Systems roles.',
+          assistantReply: `I've emphasized your LLM orchestration, WebGL real-time systems, and native macOS engineering accomplishments. Cleaned up phrasing for high impact.`,
+        },
+        {
+          title: 'Solar Dryer Dashboard',
+          subtitle: 'ESP32 integration • Web UI',
+          timestamp: now - (oneDay + 5.3 * oneHour), // Yesterday 07:14 PM
+          category: 'monitor',
+          userPrompt: 'Connect the ESP32 DHT22 & load cell sensors via MQTT to the solar dehydration dashboard.',
+          assistantReply: `Telemetry loop integrated. The dashboard now tracks real-time moisture loss curves, solar irradiance, and airflow fan relays over WebSocket.`,
+        },
+        {
+          title: 'Quillora Global Strategy',
+          subtitle: 'Marketing plan • Content ideas',
+          timestamp: now - (oneDay + 8.5 * oneHour), // Yesterday 04:09 PM
+          category: 'target',
+          userPrompt: 'Outline a product-led go-to-market plan for Quillora.',
+          assistantReply: `Strategic GTM roadmap mapped across developer evangelism, interactive engineering playgrounds, and technical teardowns.`,
+        },
+        {
+          title: 'JANUARY UI/UX Design',
+          subtitle: 'Generated interface concepts',
+          timestamp: now - 3 * oneDay, // Previous 7 Days
+          category: 'palette',
+          userPrompt: 'Design the next-generation liquid-glass UI for JANUARY with a Three.js GPU particle orb and macOS vibrancy.',
+          assistantReply: `Designing the translucent liquid-glass interface with dark mountain lake backdrop, glowing 3D particle orb, and floating prompt bar.`,
+        },
+        {
+          title: 'InQuote Desktop App',
+          subtitle: 'Electron • SQLite • Build setup',
+          timestamp: now - 5 * oneDay, // Previous 7 Days
+          category: 'layers',
+          userPrompt: 'Configure the Electron desktop shell with SQLite persistent storage and electron-builder DMG targets.',
+          assistantReply: `Electron main process, secure preload bridge, and DMG installer pipeline configured with semantic versioning.`,
+        },
+      ];
+
+      for (const config of seedConfigs) {
+        if (!titles.has(config.title)) {
+          const session = this.conversation.createSession({
+            title: config.title,
+            activeModel: 'Eternal Engine',
+            summary: config.subtitle,
+            metadata: {
+              category: config.category,
+              subtitle: config.subtitle,
+              seeded: true,
+            },
+          });
+
+          // Update timestamp to simulate realistic timeline
+          this.db.run(`UPDATE sessions SET created_at = ?, updated_at = ? WHERE id = ?`, [
+            config.timestamp,
+            config.timestamp,
+            session.id,
+          ]);
+
+          // Add realistic prompt & reply
+          this.conversation.addMessage({
+            sessionId: session.id,
+            role: 'user',
+            content: config.userPrompt,
+            modelName: 'Eternal Engine',
+          });
+
+          this.conversation.addMessage({
+            sessionId: session.id,
+            role: 'assistant',
+            content: config.assistantReply,
+            modelName: 'Eternal Engine',
+            emotion: 'focused',
+          });
+        }
+      }
+      console.log(`[BrainService] 🧠 Seeded reference sessions for JANUARY interface.`);
+    } catch (err: any) {
+      console.warn(`[BrainService] Could not seed reference sessions:`, err.message);
+    }
   }
 
   private guessMimeType(filePath: string, fallback: string): string {

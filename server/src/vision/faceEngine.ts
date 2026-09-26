@@ -2,6 +2,7 @@ import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { getWritableDataDir } from '../utils/paths.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,12 +30,8 @@ export class FaceEngine {
 
   constructor() {
     this.scriptPath = path.resolve(__dirname, '../../camera_engine/face_detect.py');
-    this.dataDir = path.resolve(__dirname, '../../data/faces');
+    this.dataDir = getWritableDataDir('faces');
     this.profilePath = path.join(this.dataDir, 'profile.json');
-
-    if (!fs.existsSync(this.dataDir)) {
-      fs.mkdirSync(this.dataDir, { recursive: true });
-    }
 
     this.currentProfile = this.loadProfile();
   }

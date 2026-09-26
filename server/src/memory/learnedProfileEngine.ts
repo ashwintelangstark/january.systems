@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { getWritableDataDir } from '../utils/paths.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -39,13 +40,9 @@ export class LearnedProfileEngine {
   private profile: LearnedUserProfile;
 
   constructor() {
-    this.dataDir = path.resolve(__dirname, '../../data/memory');
+    this.dataDir = getWritableDataDir('memory');
     this.profileFile = path.join(this.dataDir, 'learned_profile.json');
     this.logFile = path.join(this.dataDir, 'interactions.jsonl');
-
-    if (!fs.existsSync(this.dataDir)) {
-      fs.mkdirSync(this.dataDir, { recursive: true });
-    }
 
     this.profile = this.loadProfile();
   }

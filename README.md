@@ -543,6 +543,8 @@ flowchart TD
 | `POST` | `/api/brain/sessions/:id/artifacts` | Save an artifact linked to a session |
 | `GET` | `/api/brain/artifacts` | List recent artifacts across all sessions |
 | `GET` | `/api/brain/artifacts/:id` | Get metadata for a specific artifact |
+| `DELETE` | `/api/brain/artifacts/:id` | Remove an artifact from the database and disk |
+| `POST` | `/api/brain/upload` | Upload multi-modal file attachments (images, blueprints, 3D CAD, code, PDF) |
 
 ---
 

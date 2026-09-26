@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { config } from '../config.js';
+import { getWritableDataDir } from '../utils/paths.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,12 +36,7 @@ export class ModelRegistry {
   private fetchPromise: Promise<number> | null = null;
 
   private constructor() {
-    const dataDir = path.resolve(__dirname, '../../data/models');
-    if (!fs.existsSync(dataDir)) {
-      try {
-        fs.mkdirSync(dataDir, { recursive: true });
-      } catch {}
-    }
+    const dataDir = getWritableDataDir('models');
     this.catalogPath = path.join(dataDir, 'catalog.json');
     this.loadFromCache();
   }

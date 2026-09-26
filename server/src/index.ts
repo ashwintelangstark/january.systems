@@ -1,3 +1,6 @@
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 import express from 'express';
 import http from 'http';
 import cors from 'cors';
@@ -12,6 +15,10 @@ import { GeminiService } from './gemini/geminiService.js';
 import { VisualActivityMonitor } from './vision/activityMonitor.js';
 import { AgentState, ClientMessage, ServerMessage } from './types.js';
 import { brainService } from './brain/index.js';
+import { getWritableDataDir } from './utils/paths.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 validateConfig();
 
@@ -22,7 +29,8 @@ brainService.initialize().catch((err) => {
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
@@ -288,6 +296,73 @@ app.delete('/api/brain/artifacts/:id', (req, res) => {
     const success = brainService.deleteArtifact(req.params.id);
     res.json({ status: 'ok', success });
   } catch (err: any) {
+    res.status(500).json({ status: 'error', error: err.message });
+  }
+});
+
+// File Attachment & Upload Endpoint (supports PDF, DOCX, TXT, Images, CAD/3D, Code)
+app.post('/api/brain/upload', (req, res) => {
+  try {
+    const { name, mimeType, data, sessionId } = req.body || {};
+    if (!name || !data) {
+      return res.status(400).json({ status: 'error', message: 'Missing file name or data' });
+    }
+
+    const uploadsDir = getWritableDataDir('uploads');
+
+    const safeName = path.basename(name).replace(/[^a-zA-Z0-9._-]/g, '_');
+    const uniqueName = `${Date.now()}_${safeName}`;
+    const targetPath = path.join(uploadsDir, uniqueName);
+
+    // Data can be base64 (data URL or raw base64) or string
+    let buffer: Buffer;
+    if (typeof data === 'string' && data.includes(';base64,')) {
+      buffer = Buffer.from(data.split(';base64,')[1], 'base64');
+    } else if (typeof data === 'string') {
+      try {
+        buffer = Buffer.from(data, 'base64');
+      } catch {
+        buffer = Buffer.from(data, 'utf-8');
+      }
+    } else {
+      buffer = Buffer.from(data);
+    }
+
+    fs.writeFileSync(targetPath, buffer);
+
+    const targetSessionId = sessionId || brainService.getActiveSessionId();
+    let type: any = 'file_uploaded';
+    if (mimeType?.startsWith('image/') || /\.(png|jpe?g|webp|gif|svg)$/i.test(name)) {
+      type = 'image_uploaded';
+    } else if (/\.(blend|obj|glb|gltf|fbx|stl|step|stp)$/i.test(name)) {
+      type = '3d_model_uploaded';
+    } else if (/\.(ts|js|py|cpp|c|h|rs|go|html|css|json|md|txt)$/i.test(name)) {
+      type = 'code_created';
+    }
+
+    const artifact = brainService.getArtifactManager().saveArtifact({
+      sessionId: targetSessionId,
+      type,
+      name,
+      filePath: targetPath,
+      fileSize: buffer.length,
+      mimeType: mimeType || 'application/octet-stream',
+      metadata: { originalName: name, uploadedAt: Date.now() },
+    });
+
+    res.json({
+      status: 'ok',
+      artifact,
+      file: {
+        id: artifact.id,
+        name,
+        size: buffer.length,
+        path: targetPath,
+        mimeType: mimeType || 'application/octet-stream',
+      },
+    });
+  } catch (err: any) {
+    console.error('[Brain Upload Error]', err);
     res.status(500).json({ status: 'error', error: err.message });
   }
 });
