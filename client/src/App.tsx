@@ -7,6 +7,7 @@ import { TopStatusBar } from './components/hud/TopStatusBar';
 import {
   fetchSessions,
   createSession,
+  deleteSessionApi,
   fetchSessionMessages,
   toggleCameraEyes,
   uploadAttachment,
@@ -85,6 +86,30 @@ export const App: React.FC = () => {
     setIsChatExpanded(true);
   };
 
+  // Handle Deleting Chat Session
+  const handleDeleteSession = async (sessionId: string) => {
+    try {
+      await deleteSessionApi(sessionId);
+    } catch (err) {
+      console.warn('[Session] Failed to delete session on server:', err);
+    }
+
+    setSessions((prev) => {
+      const remaining = prev.filter((s) => s.id !== sessionId);
+      if (activeSessionId === sessionId) {
+        if (remaining.length > 0) {
+          const nextId = remaining[0].id;
+          setActiveSessionId(nextId);
+          fetchSessionMessages(nextId).then((msgs) => setMessages(msgs));
+        } else {
+          setActiveSessionId('');
+          setMessages([]);
+        }
+      }
+      return remaining;
+    });
+  };
+
   // Handle Camera Eyes Toggle
   const handleToggleEyes = async () => {
     try {
@@ -151,6 +176,7 @@ export const App: React.FC = () => {
         sessions={sessions}
         activeSessionId={activeSessionId}
         onSelectSession={handleSelectSession}
+        onDeleteSession={handleDeleteSession}
         onNewChat={handleNewChat}
         messages={messages}
         activeTools={activeTools}

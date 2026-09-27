@@ -17,6 +17,7 @@ import {
   Sparkles,
   Copy,
   Check,
+  Trash2,
 } from 'lucide-react';
 import { BrainSession, ChatMessage, ActiveTool } from '../../types';
 
@@ -24,6 +25,7 @@ interface LiquidGlassDrawerProps {
   sessions: BrainSession[];
   activeSessionId: string;
   onSelectSession: (id: string) => void;
+  onDeleteSession?: (id: string) => void;
   onNewChat: () => void;
   messages: ChatMessage[];
   activeTools: ActiveTool[];
@@ -38,6 +40,7 @@ export const LiquidGlassDrawer: React.FC<LiquidGlassDrawerProps> = ({
   sessions,
   activeSessionId,
   onSelectSession,
+  onDeleteSession,
   onNewChat,
   messages,
   activeTools,
@@ -218,6 +221,7 @@ export const LiquidGlassDrawer: React.FC<LiquidGlassDrawerProps> = ({
                         onSelectSession(session.id);
                         if (!isChatExpanded) toggleChatExpanded();
                       }}
+                      onDelete={onDeleteSession ? () => onDeleteSession(session.id) : undefined}
                     />
                   ))}
                 </div>
@@ -241,6 +245,7 @@ export const LiquidGlassDrawer: React.FC<LiquidGlassDrawerProps> = ({
                         onSelectSession(session.id);
                         if (!isChatExpanded) toggleChatExpanded();
                       }}
+                      onDelete={onDeleteSession ? () => onDeleteSession(session.id) : undefined}
                     />
                   ))}
                 </div>
@@ -264,6 +269,7 @@ export const LiquidGlassDrawer: React.FC<LiquidGlassDrawerProps> = ({
                         onSelectSession(session.id);
                         if (!isChatExpanded) toggleChatExpanded();
                       }}
+                      onDelete={onDeleteSession ? () => onDeleteSession(session.id) : undefined}
                     />
                   ))}
                 </div>
@@ -277,19 +283,31 @@ export const LiquidGlassDrawer: React.FC<LiquidGlassDrawerProps> = ({
           <div className="w-[440px] flex-shrink-0 flex flex-col h-full bg-black/40 backdrop-blur-xl animate-in fade-in duration-300">
             {/* Chat Stream Header */}
             <div className="h-14 border-b border-white/[0.08] px-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                <h3 className="text-xs font-semibold text-white tracking-wide truncate max-w-[280px]">
+              <div className="flex items-center gap-2 min-w-0 pr-2">
+                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse flex-shrink-0" />
+                <h3 className="text-xs font-semibold text-white tracking-wide truncate">
                   {sessions.find((s) => s.id === activeSessionId)?.title || 'Current Discussion'}
                 </h3>
               </div>
-              <button
-                onClick={closeChat}
-                className="text-xs font-mono text-slate-400 hover:text-white px-2 py-1 rounded bg-white/5 hover:bg-white/10 transition-colors"
-                title="Collapse Chat View"
-              >
-                Close
-              </button>
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                {onDeleteSession && (
+                  <button
+                    onClick={() => onDeleteSession(activeSessionId)}
+                    className="flex items-center gap-1 text-[11px] font-sans text-slate-400 hover:text-rose-400 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-rose-500/15 border border-white/5 hover:border-rose-500/30 transition-all cursor-pointer"
+                    title="Delete this conversation"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    <span>Delete</span>
+                  </button>
+                )}
+                <button
+                  onClick={closeChat}
+                  className="text-xs font-mono text-slate-400 hover:text-white px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+                  title="Collapse Chat View"
+                >
+                  Close
+                </button>
+              </div>
             </div>
 
             {/* Messages Feed */}
@@ -370,9 +388,10 @@ interface SessionCardProps {
   isActive: boolean;
   icon: React.ReactNode;
   onClick: () => void;
+  onDelete?: () => void;
 }
 
-const SessionCard: React.FC<SessionCardProps> = ({ session, isActive, icon, onClick }) => {
+const SessionCard: React.FC<SessionCardProps> = ({ session, isActive, icon, onClick, onDelete }) => {
   return (
     <div
       onClick={onClick}
@@ -411,13 +430,28 @@ const SessionCard: React.FC<SessionCardProps> = ({ session, isActive, icon, onCl
         </div>
       </div>
 
-      {/* Timestamp */}
-      <span className="text-[10px] font-mono text-slate-400 flex-shrink-0 font-medium">
-        {new Date(session.updatedAt).toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit',
-        })}
-      </span>
+      {/* Timestamp & Delete Action */}
+      <div className="flex items-center gap-1.5 flex-shrink-0">
+        <span className="text-[10px] font-mono text-slate-400 font-medium group-hover:hidden">
+          {new Date(session.updatedAt).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+        </span>
+        {onDelete && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            className="hidden group-hover:flex items-center justify-center w-6 h-6 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/20 border border-transparent hover:border-rose-500/30 transition-all cursor-pointer"
+            title="Delete conversation"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
     </div>
   );
 };

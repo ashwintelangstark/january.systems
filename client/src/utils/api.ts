@@ -211,3 +211,15 @@ export async function uploadAttachment(file: File, sessionId?: string): Promise<
     reader.readAsDataURL(file);
   });
 }
+
+export async function deleteSessionApi(sessionId: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE}/api/brain/sessions/${sessionId}`, {
+      method: 'DELETE',
+    });
+    return res.ok;
+  } catch (err) {
+    console.warn('[API] Failed to delete session:', err);
+    return false;
+  }
+}
