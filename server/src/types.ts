@@ -47,6 +47,8 @@ export type ClientMessage =
   | { type: 'set_mic_mute'; muted: boolean }
   | { type: 'set_speaker_mute'; muted: boolean }
   | { type: 'set_camera_eyes'; open: boolean; fps?: number }
+  | { type: 'cli_attach' }
+  | { type: 'cli_detach' }
   | { type: 'interrupt' }
   | { type: 'ping' };
 

@@ -1,10 +1,15 @@
 import { EventEmitter } from 'events';
 import { elevenLabsEngine } from './elevenLabsEngine.js';
 import { config } from '../config.js';
+import { spawn, ChildProcess } from 'child_process';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 
 export class SystemSpeaker extends EventEmitter {
   private isSpeaking = false;
   private isMuted = false;
+  private currentAudioProcess: ChildProcess | null = null;
 
   constructor() {
     super();
@@ -191,31 +196,79 @@ export class SystemSpeaker extends EventEmitter {
         });
 
         if (audioBuffer && audioBuffer.length > 0) {
-          console.log(`📡 [SystemSpeaker] Streaming ElevenLabs voice audio to frontend (${audioBuffer.length} bytes)...`);
           this.emit('audio_output', {
             data: audioBuffer.toString('base64'),
             mimeType: 'audio/mpeg',
             text: speechText,
           });
 
-          // Allow realistic pacing for the utterance before resolving
-          const words = speechText.trim().split(/\s+/).length;
-          const estimatedDurationMs = Math.max(1000, Math.min(30000, Math.round((words / 2.7) * 1000)));
-          await new Promise((r) => setTimeout(r, estimatedDurationMs));
+          // Play through Mac physical speakers directly via afplay
+          await this.playAudioBufferLocally(audioBuffer);
           return;
         }
       } catch (err: any) {
         console.warn('⚠️ [SystemSpeaker] ElevenLabs error:', err.message);
       }
     }
+
+    // Local macOS fallback if ElevenLabs is unavailable
+    if (process.platform === 'darwin') {
+      await this.speakNativeMac(speechText);
+    }
+  }
+
+  private async playAudioBufferLocally(buffer: Buffer): Promise<void> {
+    const tmpFile = path.join(os.tmpdir(), `january_tts_${Date.now()}_${Math.random().toString(36).slice(2)}.mp3`);
+    try {
+      await fs.promises.writeFile(tmpFile, buffer);
+      await new Promise<void>((resolve) => {
+        const player = process.platform === 'darwin' ? 'afplay' : process.platform === 'win32' ? 'powershell' : 'aplay';
+        const args = process.platform === 'darwin' ? [tmpFile] : process.platform === 'win32' ? ['-c', `(New-Object Media.SoundPlayer "${tmpFile}").PlaySync()`] : [tmpFile];
+
+        const proc = spawn(player, args);
+        this.currentAudioProcess = proc;
+
+        proc.on('close', () => {
+          this.currentAudioProcess = null;
+          resolve();
+        });
+        proc.on('error', () => {
+          this.currentAudioProcess = null;
+          resolve();
+        });
+      });
+    } catch {
+      // Fallback silently
+    } finally {
+      try {
+        if (fs.existsSync(tmpFile)) {
+          fs.unlinkSync(tmpFile);
+        }
+      } catch {}
+    }
+  }
+
+  private async speakNativeMac(text: string): Promise<void> {
+    return new Promise<void>((resolve) => {
+      const proc = spawn('say', ['-v', 'Samantha', '-r', '190', text]);
+      this.currentAudioProcess = proc;
+
+      proc.on('close', () => {
+        this.currentAudioProcess = null;
+        resolve();
+      });
+      proc.on('error', () => {
+        this.currentAudioProcess = null;
+        resolve();
+      });
+    });
   }
 
   /**
    * Play a 24kHz PCM audio chunk received from Gemini Live directly through the speakers.
-   * Host terminal playback is suppressed; frontend plays audio directly.
    */
   public playPcmChunk(pcmBase64: string): void {
-    // Suppressed on terminal host to ensure pure frontend audio
+    // Suppressed on terminal host when using ElevenLabs neural speech
   }
 
   /**
@@ -226,6 +279,14 @@ export class SystemSpeaker extends EventEmitter {
     this.speechQueue.forEach((item) => item.resolve());
     this.speechQueue = [];
     this.isProcessingQueue = false;
+
+    // Stop local audio child process if running
+    if (this.currentAudioProcess) {
+      try {
+        this.currentAudioProcess.kill('SIGKILL');
+      } catch {}
+      this.currentAudioProcess = null;
+    }
 
     // Stop ElevenLabs if active
     elevenLabsEngine.stopPlayback();

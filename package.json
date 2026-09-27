@@ -4,13 +4,14 @@
   "private": true,
   "description": "January - Local Autonomous AI Agent with Gemini & Claude",
   "scripts": {
-    "dev": "concurrently -n \"SERVER,CLIENT\" -c \"cyan.bold,magenta.bold\" --kill-others \"npm run dev:server\" \"npm run dev:client\"",
-    "dev:server": "npm run dev --prefix server",
+    "dev": "npm run cli --prefix server",
+    "start": "npm run cli --prefix server",
+    "cli": "npm run cli --prefix server",
+    "server": "npm run server --prefix server",
+    "web": "concurrently -n \"SERVER,CLIENT\" -c \"cyan.bold,magenta.bold\" --kill-others \"npm run server\" \"npm run dev:client\"",
+    "dev:server": "npm run server --prefix server",
     "dev:client": "npm run dev --prefix client",
-    "start": "concurrently -n \"SERVER,CLIENT\" -c \"cyan.bold,magenta.bold\" --kill-others \"npm run dev:server\" \"npm run dev:client\"",
-    "server": "npm run dev --prefix server",
     "client": "npm run dev --prefix client",
-
     "build": "npm run build --prefix server && npm run build --prefix client",
     "build:server": "npm run build --prefix server",
     "build:client": "npm run build --prefix client"
