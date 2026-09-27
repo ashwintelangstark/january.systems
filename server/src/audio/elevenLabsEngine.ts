@@ -171,7 +171,7 @@ export class ElevenLabsEngine extends EventEmitter {
   }
 
   /**
-   * Synthesizes and immediately plays the voice through macOS afplay
+   * Synthesizes audio buffer via ElevenLabs
    */
   public async speak(
     text: string,
@@ -186,37 +186,8 @@ export class ElevenLabsEngine extends EventEmitter {
       return false;
     }
 
-    const tempFile = path.join(os.tmpdir(), `january_elevenlabs_${Date.now()}.mp3`);
-    fs.writeFileSync(tempFile, audioBuffer);
-
-    this.isSpeaking = true;
-    this.emit('start');
-
-    return new Promise((resolve) => {
-      const proc = spawn('afplay', [tempFile]);
-      this.currentProcess = proc;
-
-      proc.on('close', () => {
-        this.currentProcess = null;
-        this.isSpeaking = false;
-        try {
-          if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile);
-        } catch {}
-        this.emit('end');
-        resolve(true);
-      });
-
-      proc.on('error', (err) => {
-        console.warn('[ElevenLabs] afplay playback error:', err.message);
-        this.currentProcess = null;
-        this.isSpeaking = false;
-        try {
-          if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile);
-        } catch {}
-        this.emit('end');
-        resolve(false);
-      });
-    });
+    this.emit('audio_buffer', audioBuffer);
+    return true;
   }
 
   /**

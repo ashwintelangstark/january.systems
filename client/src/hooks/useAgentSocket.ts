@@ -27,6 +27,17 @@ export function useAgentSocket(activeSessionId?: string) {
   const socketRef = useRef<WebSocket | null>(null);
   const audioInputRef = useRef<AudioInputManager | null>(null);
   const audioOutputRef = useRef<AudioOutputManager | null>(null);
+  const isMicMutedRef = useRef<boolean>(isMicMuted);
+  const agentStateRef = useRef<AgentState>(agentState);
+
+  // Keep ref synchronized
+  useEffect(() => {
+    isMicMutedRef.current = isMicMuted;
+  }, [isMicMuted]);
+
+  useEffect(() => {
+    agentStateRef.current = agentState;
+  }, [agentState]);
 
   // Initialize Audio Managers
   useEffect(() => {
@@ -101,7 +112,7 @@ export function useAgentSocket(activeSessionId?: string) {
               if (msg.state === 'speaking') {
                 audioInputRef.current.setMute(true);
               } else {
-                audioInputRef.current.setMute(isMicMuted);
+                audioInputRef.current.setMute(isMicMutedRef.current);
               }
             }
             break;
@@ -116,7 +127,14 @@ export function useAgentSocket(activeSessionId?: string) {
 
           case 'audio_output': {
             if (audioOutputRef.current && msg.data) {
-              audioOutputRef.current.playChunk(msg.data);
+              audioOutputRef.current.playChunk(msg.data, msg.mimeType || 'audio/mpeg');
+            }
+            break;
+          }
+
+          case 'browser_speak': {
+            if (audioOutputRef.current && msg.text) {
+              audioOutputRef.current.speakSynthesizedText(msg.text, msg.emotion);
             }
             break;
           }
@@ -199,7 +217,7 @@ export function useAgentSocket(activeSessionId?: string) {
 
           case 'interrupt': {
             if (audioOutputRef.current) audioOutputRef.current.flush();
-            if (audioInputRef.current) audioInputRef.current.setMute(false);
+            if (audioInputRef.current) audioInputRef.current.setMute(isMicMutedRef.current);
             break;
           }
 
@@ -230,7 +248,7 @@ export function useAgentSocket(activeSessionId?: string) {
     return () => {
       ws.close();
     };
-  }, [isMicMuted]);
+  }, []);
 
   // Send Text Message
   const sendTextMessage = useCallback(
@@ -324,6 +342,84 @@ export function useAgentSocket(activeSessionId?: string) {
       return next;
     });
   }, []);
+
+  // Continuous In-Browser Speech-to-Text Recognition
+  useEffect(() => {
+    const SpeechRecognitionClass =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognitionClass) {
+      return;
+    }
+
+    let recognition: any = null;
+    let isActive = true;
+    const shouldListen = !isMicMuted && agentState !== 'speaking';
+
+    if (shouldListen) {
+      try {
+        recognition = new SpeechRecognitionClass();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+
+        recognition.onresult = (event: any) => {
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const result = event.results[i];
+            const transcript = result[0]?.transcript?.trim() || '';
+
+            if (result.isFinal && transcript) {
+              console.log(`🎙️ [Web STT] Spoken query: "${transcript}"`);
+              const lower = transcript.toLowerCase();
+
+              if (lower === 'rise' || lower === 'wake up' || lower === 'hey january') {
+                triggerWake('voice');
+              } else if (lower === 'good night' || lower === 'sleep' || lower === 'go to sleep' || lower === 'standby') {
+                triggerSleep();
+              } else if (lower.includes('open eyes') || lower.includes('open camera')) {
+                toggleEyes();
+              } else if (lower.includes('close eyes') || lower.includes('close camera')) {
+                toggleEyes();
+              } else {
+                sendTextMessage(transcript);
+              }
+            } else if (transcript) {
+              if (agentStateRef.current === 'passive') {
+                setAgentState('listening');
+              }
+            }
+          }
+        };
+
+        recognition.onerror = (event: any) => {
+          if (event.error !== 'no-speech' && event.error !== 'aborted') {
+            console.debug('[Web STT] Notice:', event.error);
+          }
+        };
+
+        recognition.onend = () => {
+          if (isActive && !isMicMutedRef.current && agentStateRef.current !== 'speaking') {
+            try {
+              recognition.start();
+            } catch {}
+          }
+        };
+
+        recognition.start();
+      } catch (err: any) {
+        console.warn('[Web STT] Start notice:', err.message);
+      }
+    }
+
+    return () => {
+      isActive = false;
+      if (recognition) {
+        try {
+          recognition.abort();
+        } catch {}
+      }
+    };
+  }, [isMicMuted, agentState, sendTextMessage, triggerWake, triggerSleep, toggleEyes]);
 
   return {
     agentState,

@@ -116,13 +116,16 @@ def detect_language(text: str) -> str:
     # Default to English / Indian English
     return "en"
 
-async def synthesize_and_play(text: str, voice_override: str = None, pitch: str = "+0Hz", rate: str = "+0%"):
+async def synthesize_and_play(text: str, voice_override: str = None, pitch: str = "+0Hz", rate: str = "+0%", output_path: str = None):
     if not text or not text.strip():
         return
 
     text = text.strip()
-    temp_dir = tempfile.gettempdir()
-    output_file = os.path.join(temp_dir, f"january_speech_{uuid.uuid4().hex[:8]}.mp3")
+    if output_path:
+        target_file = output_path
+    else:
+        temp_dir = tempfile.gettempdir()
+        target_file = os.path.join(temp_dir, f"january_speech_{uuid.uuid4().hex[:8]}.mp3")
 
     # Determine voice
     if voice_override and voice_override in VOICE_MAP.values():
@@ -138,19 +141,21 @@ async def synthesize_and_play(text: str, voice_override: str = None, pitch: str 
     try:
         import edge_tts
         communicate = edge_tts.Communicate(text, voice, pitch=pitch, rate=rate)
-        await communicate.save(output_file)
+        await communicate.save(target_file)
 
-        # Play directly through system speaker using macOS native player
-        subprocess.run(["afplay", output_file], check=True)
+        if not output_path:
+            # Play directly through system speaker using macOS native player
+            subprocess.run(["afplay", target_file], check=True)
     except Exception as e:
         sys.stderr.write(f"[TTS Engine] Edge-TTS error, falling back to native say: {e}\n")
-        # Native macOS fallback
-        mac_voice = "Lekha" if any(ord(c) >= 0x0900 and ord(c) <= 0x0D7F for c in text) else "Samantha"
-        subprocess.run(["say", "-v", mac_voice, text])
+        if not output_path:
+            # Native macOS fallback
+            mac_voice = "Lekha" if any(ord(c) >= 0x0900 and ord(c) <= 0x0D7F for c in text) else "Samantha"
+            subprocess.run(["say", "-v", mac_voice, text])
     finally:
-        if os.path.exists(output_file):
+        if not output_path and os.path.exists(target_file):
             try:
-                os.remove(output_file)
+                os.remove(target_file)
             except OSError:
                 pass
 
@@ -160,17 +165,18 @@ def main():
     parser.add_argument("--voice", default=os.environ.get("TTS_VOICE", None), help="Explicit voice or language code")
     parser.add_argument("--pitch", default=os.environ.get("TTS_PITCH", "+0Hz"), help="Pitch adjustment like +4Hz or -2Hz")
     parser.add_argument("--rate", default=os.environ.get("TTS_RATE", "+0%"), help="Rate adjustment like +5 percent or -5 percent")
+    parser.add_argument("--output", default=None, help="Save synthesized MP3 to file path instead of playing locally")
     args = parser.parse_args()
 
     if args.text:
         text = " ".join(args.text)
-        asyncio.run(synthesize_and_play(text, voice_override=args.voice, pitch=args.pitch, rate=args.rate))
+        asyncio.run(synthesize_and_play(text, voice_override=args.voice, pitch=args.pitch, rate=args.rate, output_path=args.output))
     else:
         # Read from stdin line by line
         for line in sys.stdin:
             line = line.strip()
             if line:
-                asyncio.run(synthesize_and_play(line, voice_override=args.voice, pitch=args.pitch, rate=args.rate))
+                asyncio.run(synthesize_and_play(line, voice_override=args.voice, pitch=args.pitch, rate=args.rate, output_path=args.output))
 
 if __name__ == "__main__":
     main()

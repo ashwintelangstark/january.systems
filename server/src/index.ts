@@ -473,8 +473,6 @@ geminiClient.on('audio', (pcmChunkBase64: string, mimeType: string) => {
     data: pcmChunkBase64,
     mimeType,
   });
-  // Output directly through laptop's physical speakers
-  systemSpeaker.playPcmChunk(pcmChunkBase64);
 });
 
 geminiClient.on('transcript', (role: 'user' | 'assistant', text: string, isFinal?: boolean) => {
@@ -538,6 +536,24 @@ geminiClient.on('error', (err: Error) => {
 // ----------------------------------------------------
 // System Physical Microphone & Speaker Echo Cancellation Wiring
 // ----------------------------------------------------
+// System Speaker Event Handlers -> Frontend WebSocket Streaming
+// ----------------------------------------------------
+systemSpeaker.on('audio_output', (payload: { data: string; mimeType: string; text?: string }) => {
+  broadcast({
+    type: 'audio_output',
+    data: payload.data,
+    mimeType: payload.mimeType || 'audio/mpeg',
+  });
+});
+
+systemSpeaker.on('browser_speak', (payload: { text: string; emotion?: string }) => {
+  broadcast({
+    type: 'browser_speak',
+    text: payload.text,
+    emotion: payload.emotion,
+  });
+});
+
 systemSpeaker.on('start', () => {
   if (micUnmuteTimeout) {
     clearTimeout(micUnmuteTimeout);
@@ -1204,11 +1220,8 @@ server.listen(config.port, config.host, () => {
   // Start Gemini Live connection
   geminiClient.connect();
 
-  // Start Wake-Word listener
+  // Initialize Wake-Word engine
   wakeDetector.start();
-
-  // Start Physical Laptop Microphone & STT Engine
-  systemMic.start();
 });
 
 
@@ -1216,7 +1229,6 @@ server.listen(config.port, config.host, () => {
 function handleShutdown(): void {
   console.log('\n[Coordinator] Shutting down January AI Core...');
   visualActivityMonitor.closeEyes();
-  systemMic.stop();
   systemSpeaker.stopPlayback();
   process.exit(0);
 }

@@ -186,55 +186,42 @@ export class SystemSpeaker extends EventEmitter {
     speechText: string,
     options?: { pitch?: string; rate?: string; emotion?: string }
   ): Promise<void> {
+    if (this.isMuted) return;
+
     this.isSpeaking = true;
     this.emit('start');
 
     // Tier 1: ElevenLabs High-Fidelity Neural Emotional Voice Engine
     if (config.elevenlabsApiKey && config.useElevenLabs !== false) {
       try {
-        const success = await elevenLabsEngine.speak(speechText, {
+        console.log(`🎙️ [SystemSpeaker:ElevenLabs] Synthesizing speech via ElevenLabs...`);
+        const audioBuffer = await elevenLabsEngine.synthesize(speechText, {
           emotion: options?.emotion,
           voiceId: config.elevenlabsVoiceId,
           modelId: config.elevenlabsModelId,
         });
-        if (success) {
+
+        if (audioBuffer && audioBuffer.length > 0) {
+          console.log(`📡 [SystemSpeaker] Streaming ElevenLabs audio to frontend (${audioBuffer.length} bytes)...`);
+          this.emit('audio_output', {
+            data: audioBuffer.toString('base64'),
+            mimeType: 'audio/mpeg',
+            text: speechText,
+          });
+
+          // Allow realistic pacing for the utterance before resolving
+          const words = speechText.trim().split(/\s+/).length;
+          const estimatedDurationMs = Math.max(1000, Math.min(30000, Math.round((words / 2.7) * 1000)));
+          await new Promise((r) => setTimeout(r, estimatedDurationMs));
           return;
         }
-        console.warn('⚠️ [SystemSpeaker] ElevenLabs synthesis did not complete, falling back to secondary speech tier.');
+        console.warn('⚠️ [SystemSpeaker] ElevenLabs synthesis did not return audio, falling back to secondary speech tier.');
       } catch (err: any) {
         console.warn('⚠️ [SystemSpeaker] ElevenLabs error, falling back:', err.message);
       }
     }
 
-    const useEdgeTts = process.env.USE_EDGE_TTS === 'true';
-    const isDevanagari = /[\u0900-\u097F]/.test(speechText);
-    const hasOtherIndianScript = /[\u0980-\u0D7F]/.test(speechText);
-
-    // If native mode (default for real-time responsiveness)
-    if (!useEdgeTts && !hasOtherIndianScript) {
-      const voice = isDevanagari ? 'Lekha' : (process.env.MACOS_VOICE || 'Samantha');
-      const rate = options?.rate?.includes('+') ? '195' : options?.rate?.includes('-') ? '170' : '185';
-
-      console.log(`🔊 [SystemSpeaker:Native] Speaking (${voice}, ${rate} wpm): "${speechText.slice(0, 50)}..."`);
-
-      return new Promise((resolve) => {
-        const proc = spawn('say', ['-v', voice, '-r', rate, speechText]);
-        this.currentProcess = proc;
-
-        proc.on('close', () => {
-          this.currentProcess = null;
-          resolve();
-        });
-
-        proc.on('error', (err) => {
-          console.warn('[SystemSpeaker:Native] say error:', err.message);
-          this.currentProcess = null;
-          resolve();
-        });
-      });
-    }
-
-    // Neural Edge-TTS Mode via persistent venv
+    // Tier 2: Neural Edge-TTS Mode via persistent venv (generates MP3 without local afplay)
     const pythonPath = fs.existsSync(path.resolve(__dirname, '../../../server/.venv/bin/python3'))
       ? path.resolve(__dirname, '../../../server/.venv/bin/python3')
       : fs.existsSync(path.resolve(__dirname, '../../.venv/bin/python3'))
@@ -243,60 +230,73 @@ export class SystemSpeaker extends EventEmitter {
 
     const pitch = options?.pitch || '+0Hz';
     const rate = options?.rate || '+0%';
+    const tempOutput = path.join(os.tmpdir(), `january_edge_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.mp3`);
 
-    console.log(`🔊 [SystemSpeaker:Neural] Speaking (pitch: ${pitch}, rate: ${rate}): "${speechText.slice(0, 50)}..."`);
+    console.log(`🔊 [SystemSpeaker:Neural] Synthesizing Edge-TTS MP3 (pitch: ${pitch}, rate: ${rate})...`);
 
-    return new Promise((resolve) => {
-      const proc = spawn(
-        pythonPath,
-        [this.ttsScriptPath, speechText, '--pitch', pitch, '--rate', rate],
-        { stdio: ['ignore', 'pipe', 'pipe'] }
-      );
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const proc = spawn(
+          pythonPath,
+          [this.ttsScriptPath, speechText, '--output', tempOutput, '--pitch', pitch, '--rate', rate],
+          { stdio: ['ignore', 'pipe', 'pipe'] }
+        );
+        this.currentProcess = proc;
 
-      this.currentProcess = proc;
-
-      proc.on('close', () => {
-        this.currentProcess = null;
-        resolve();
-      });
-
-      proc.on('error', (err) => {
-        console.warn('[SystemSpeaker] Neural TTS error, falling back to say:', err.message);
-        const fallbackVoice = isDevanagari ? 'Lekha' : 'Samantha';
-        const sayProc = spawn('say', ['-v', fallbackVoice, speechText]);
-        this.currentProcess = sayProc;
-        sayProc.on('close', () => {
+        proc.on('close', (code) => {
           this.currentProcess = null;
-          resolve();
+          if (code === 0 && fs.existsSync(tempOutput)) {
+            resolve();
+          } else {
+            reject(new Error(`Edge-TTS exited with code ${code}`));
+          }
+        });
+
+        proc.on('error', (err) => {
+          this.currentProcess = null;
+          reject(err);
         });
       });
+
+      if (fs.existsSync(tempOutput)) {
+        const edgeBuffer = fs.readFileSync(tempOutput);
+        try { fs.unlinkSync(tempOutput); } catch {}
+        if (edgeBuffer.length > 0) {
+          console.log(`📡 [SystemSpeaker] Streaming Edge-TTS audio to frontend (${edgeBuffer.length} bytes)...`);
+          this.emit('audio_output', {
+            data: edgeBuffer.toString('base64'),
+            mimeType: 'audio/mpeg',
+            text: speechText,
+          });
+
+          const words = speechText.trim().split(/\s+/).length;
+          const estimatedDurationMs = Math.max(1000, Math.min(30000, Math.round((words / 2.7) * 1000)));
+          await new Promise((r) => setTimeout(r, estimatedDurationMs));
+          return;
+        }
+      }
+    } catch (err: any) {
+      console.warn('[SystemSpeaker] Neural Edge-TTS error, falling back to browser speech:', err.message);
+      try { if (fs.existsSync(tempOutput)) fs.unlinkSync(tempOutput); } catch {}
+    }
+
+    // Tier 3: Browser Web Speech API Fallback
+    console.log(`🌐 [SystemSpeaker:Browser] Delegating speech synthesis to web browser frontend...`);
+    this.emit('browser_speak', {
+      text: speechText,
+      emotion: options?.emotion,
     });
+    const words = speechText.trim().split(/\s+/).length;
+    const estimatedDurationMs = Math.max(1000, Math.min(30000, Math.round((words / 2.7) * 1000)));
+    await new Promise((r) => setTimeout(r, estimatedDurationMs));
   }
 
   /**
-   * Play a 24kHz PCM audio chunk received from Gemini Live directly through the speakers
+   * Play a 24kHz PCM audio chunk received from Gemini Live directly through the speakers.
+   * Host terminal playback is suppressed; frontend plays audio directly.
    */
   public playPcmChunk(pcmBase64: string): void {
-    if (this.isMuted) return;
-    try {
-      const buffer = Buffer.from(pcmBase64, 'base64');
-      const wavHeader = this.createWavHeader(buffer.length, 24000, 1, 16);
-      const fullWav = Buffer.concat([wavHeader, buffer]);
-
-      const tempFile = path.join(os.tmpdir(), `january_gemini_${Date.now()}.wav`);
-      fs.writeFileSync(tempFile, fullWav);
-
-      const playProc = spawn('afplay', [tempFile]);
-      this.currentProcess = playProc;
-
-      playProc.on('close', () => {
-        try {
-          if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile);
-        } catch (e) {}
-      });
-    } catch (err: any) {
-      console.error('[SystemSpeaker] Error playing PCM chunk:', err.message);
-    }
+    // Suppressed on terminal host to ensure pure frontend audio
   }
 
   /**
