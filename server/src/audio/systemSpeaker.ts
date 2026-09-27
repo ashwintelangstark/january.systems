@@ -180,18 +180,18 @@ export class SystemSpeaker extends EventEmitter {
     this.isSpeaking = true;
     this.emit('start');
 
-    // Tier 1: ElevenLabs High-Fidelity Neural Emotional Voice Engine with Free Female Voicepacks
+    // Tier 1: ElevenLabs High-Fidelity Neural Emotional Voice Engine with Free Voice ID
     if (config.elevenlabsApiKey && config.useElevenLabs !== false) {
       try {
-        console.log(`🎙️ [SystemSpeaker:ElevenLabs] Synthesizing speech via ElevenLabs free female voicepacks...`);
+        console.log(`🎙️ [SystemSpeaker:ElevenLabs] Synthesizing speech via ElevenLabs (${config.elevenlabsVoiceId || 'OZ0L6eISlOejga3XjDFt'})...`);
         const audioBuffer = await elevenLabsEngine.synthesize(speechText, {
           emotion: options?.emotion,
-          voiceId: config.elevenlabsVoiceId,
+          voiceId: config.elevenlabsVoiceId || 'OZ0L6eISlOejga3XjDFt',
           modelId: config.elevenlabsModelId,
         });
 
         if (audioBuffer && audioBuffer.length > 0) {
-          console.log(`📡 [SystemSpeaker] Streaming ElevenLabs female voice audio to frontend (${audioBuffer.length} bytes)...`);
+          console.log(`📡 [SystemSpeaker] Streaming ElevenLabs voice audio to frontend (${audioBuffer.length} bytes)...`);
           this.emit('audio_output', {
             data: audioBuffer.toString('base64'),
             mimeType: 'audio/mpeg',
@@ -204,21 +204,10 @@ export class SystemSpeaker extends EventEmitter {
           await new Promise((r) => setTimeout(r, estimatedDurationMs));
           return;
         }
-        console.warn('⚠️ [SystemSpeaker] ElevenLabs free voicepacks unavailable, falling back to browser female voice.');
       } catch (err: any) {
-        console.warn('⚠️ [SystemSpeaker] ElevenLabs error, falling back to browser speech:', err.message);
+        console.warn('⚠️ [SystemSpeaker] ElevenLabs error:', err.message);
       }
     }
-
-    // Direct Browser Speech Fallback (Web Speech API with Female Voices)
-    console.log(`🌐 [SystemSpeaker:Browser] Delegating speech synthesis to web browser female voices...`);
-    this.emit('browser_speak', {
-      text: speechText,
-      emotion: options?.emotion,
-    });
-    const words = speechText.trim().split(/\s+/).length;
-    const estimatedDurationMs = Math.max(1000, Math.min(30000, Math.round((words / 2.7) * 1000)));
-    await new Promise((r) => setTimeout(r, estimatedDurationMs));
   }
 
   /**

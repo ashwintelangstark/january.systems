@@ -154,13 +154,6 @@ export function useAgentSocket(activeSessionId?: string, onVoiceTranscript?: (te
                 break;
               }
 
-              case 'browser_speak': {
-                if (audioOutputRef.current && msg.text) {
-                  audioOutputRef.current.speakSynthesizedText(msg.text, msg.emotion);
-                }
-                break;
-              }
-
               case 'transcript': {
                 const { role, text, isFinal, source: msgSource } = msg.payload;
 
@@ -360,11 +353,18 @@ export function useAgentSocket(activeSessionId?: string, onVoiceTranscript?: (te
     }
   }, [agentState, triggerSleep, triggerWake]);
 
+  const setEyes = useCallback((open: boolean) => {
+    setIsEyesOpen(open);
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({ type: 'set_camera_eyes', open, fps: 60 }));
+    }
+  }, []);
+
   const toggleEyes = useCallback(() => {
     setIsEyesOpen((prev) => {
       const next = !prev;
       if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-        socketRef.current.send(JSON.stringify({ type: 'set_camera_eyes', open: next }));
+        socketRef.current.send(JSON.stringify({ type: 'set_camera_eyes', open: next, fps: 60 }));
       }
       return next;
     });
@@ -423,16 +423,60 @@ export function useAgentSocket(activeSessionId?: string, onVoiceTranscript?: (te
                 console.log(`🎙️ [Web STT] Spoken query captured: "${clean}"`);
                 setInterimTranscript('');
 
-                const lower = clean.toLowerCase();
-                if (lower === 'rise' || lower === 'wake up' || lower === 'hey january') {
+                const lower = clean.toLowerCase().replace(/[^\w\s]/g, '').trim();
+
+                // Voice Command: Rise / Wake
+                if (
+                  lower === 'rise' ||
+                  lower === 'wake up' ||
+                  lower === 'wake' ||
+                  lower === 'arise' ||
+                  lower === 'hey january'
+                ) {
                   triggerWake('voice');
-                } else if (lower === 'good night' || lower === 'sleep' || lower === 'go to sleep' || lower === 'standby') {
+                }
+                // Voice Command: Good Night / Sleep
+                else if (
+                  lower === 'good night' ||
+                  lower === 'goodnight' ||
+                  lower === 'sleep' ||
+                  lower === 'go to sleep' ||
+                  lower === 'standby'
+                ) {
                   triggerSleep();
-                } else if (lower.includes('open eyes') || lower.includes('open camera') || lower.includes('eyes open')) {
-                  toggleEyes();
-                } else if (lower.includes('close eyes') || lower.includes('close camera') || lower.includes('eyes closed')) {
-                  toggleEyes();
-                } else {
+                }
+                // Voice Command: Eyes Open / Open Camera
+                else if (
+                  lower === 'eyes open' ||
+                  lower === 'open eyes' ||
+                  lower === 'camera open' ||
+                  lower === 'open camera' ||
+                  lower === 'eyes on' ||
+                  lower === 'turn on camera' ||
+                  lower === 'enable camera' ||
+                  lower.includes('eyes open') ||
+                  lower.includes('open eyes') ||
+                  lower.includes('open camera')
+                ) {
+                  setEyes(true);
+                }
+                // Voice Command: Eyes Closed / Close Camera
+                else if (
+                  lower === 'eyes closed' ||
+                  lower === 'close eyes' ||
+                  lower === 'camera closed' ||
+                  lower === 'close camera' ||
+                  lower === 'eyes off' ||
+                  lower === 'turn off camera' ||
+                  lower === 'disable camera' ||
+                  lower.includes('eyes closed') ||
+                  lower.includes('close eyes') ||
+                  lower.includes('close camera')
+                ) {
+                  setEyes(false);
+                }
+                // Voice Query -> Send to January Brain & LLM Response
+                else {
                   if (onVoiceTranscriptRef.current) {
                     onVoiceTranscriptRef.current(clean);
                   } else {
@@ -612,6 +656,7 @@ export function useAgentSocket(activeSessionId?: string, onVoiceTranscript?: (te
     triggerSleep,
     toggleListening,
     toggleEyes,
+    setEyes,
     interrupt,
     toggleMuteMic,
     toggleMuteAudio,

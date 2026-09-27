@@ -115,13 +115,14 @@ export class ElevenLabsEngine extends EventEmitter {
       return null;
     }
 
-    const primaryVoiceId = options?.voiceId || config.elevenlabsVoiceId || 'EXAVITQu4vr4xnSDxMaL';
+    const primaryVoiceId = options?.voiceId || config.elevenlabsVoiceId || 'OZ0L6eISlOejga3XjDFt';
     const modelId = options?.modelId || config.elevenlabsModelId || 'eleven_turbo_v2_5';
     const voiceSettings = this.getEmotionalVoiceSettings(options?.emotion);
 
-    // List of candidate free female voices in fallback order
+    // List of candidate free female voices in fallback order with user's voice ID first
     const candidateVoices = [
       primaryVoiceId,
+      'OZ0L6eISlOejga3XjDFt',
       'EXAVITQu4vr4xnSDxMaL', // Sarah
       '21m00Tcm4TlvDq8ikWAM', // Rachel
       'Xb7hH8MSUJpSbSDYk0k2', // Alice

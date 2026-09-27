@@ -544,14 +544,6 @@ systemSpeaker.on('audio_output', (payload: { data: string; mimeType: string; tex
   });
 });
 
-systemSpeaker.on('browser_speak', (payload: { text: string; emotion?: string }) => {
-  broadcast({
-    type: 'browser_speak',
-    text: payload.text,
-    emotion: payload.emotion,
-  });
-});
-
 // ----------------------------------------------------
 // System Physical Speaker Event Wiring
 // ----------------------------------------------------

@@ -54,7 +54,6 @@ export type ClientMessage =
 export type ServerMessage =
   | { type: 'state_change'; state: AgentState; reason?: string }
   | { type: 'audio_output'; data: string; mimeType: string } // Base64 PCM 24kHz or MPEG
-  | { type: 'browser_speak'; text: string; emotion?: string }
   | { type: 'transcript'; payload: TranscriptPayload }
   | { type: 'emotion_update'; payload: EmotionPayload }
   | { type: 'tool_call'; payload: ToolCallPayload }
