@@ -65,7 +65,7 @@ export const FloatingPromptBar: React.FC<FloatingPromptBarProps> = ({
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-2xl px-4 select-none">
       <form
         onSubmit={handleSubmit}
-        className="relative flex items-center gap-1.5 p-1.5 rounded-2xl bg-[#0a0d14]/85 border border-white/[0.09] shadow-[0_20px_50px_rgba(0,0,0,0.7),inset_0_1px_0_0_rgba(255,255,255,0.06)] backdrop-blur-2xl transition-all focus-within:border-cyan-500/40 focus-within:shadow-[0_20px_50px_rgba(0,0,0,0.7),0_0_20px_rgba(6,182,212,0.15)]"
+        className="relative flex items-center gap-1.5 p-1.5 rounded-2xl liquid-glass-bar transition-all focus-within:border-white/80 focus-within:shadow-[0_20px_45px_rgba(0,30,60,0.15),0_0_20px_rgba(255,255,255,0.45)]"
       >
         {/* Hidden File Input */}
         <input
@@ -80,15 +80,15 @@ export const FloatingPromptBar: React.FC<FloatingPromptBarProps> = ({
         <button
           type="button"
           onClick={onToggleEyes}
-          className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${
+          className={`w-9 h-9 rounded-xl glass-btn flex items-center justify-center transition-all cursor-pointer ${
             isEyesOpen
-              ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.2)]'
-              : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/[0.05]'
+              ? 'bg-emerald-500/25 border-emerald-400 text-emerald-800 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
+              : 'text-slate-700 hover:text-slate-950'
           }`}
           title={isEyesOpen ? 'Camera Eyes: OPEN (60 FPS)' : 'Click to open camera eyes'}
         >
           {isEyesOpen ? (
-            <Eye className="w-4 h-4 text-emerald-400 animate-pulse" />
+            <Eye className="w-4 h-4 text-emerald-700 animate-pulse" />
           ) : (
             <EyeOff className="w-4 h-4" />
           )}
@@ -98,14 +98,14 @@ export const FloatingPromptBar: React.FC<FloatingPromptBarProps> = ({
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="w-9 h-9 rounded-xl border border-transparent flex items-center justify-center text-slate-400 hover:text-slate-200 hover:bg-white/[0.05] transition-all cursor-pointer"
+          className="w-9 h-9 rounded-xl glass-btn flex items-center justify-center text-slate-700 hover:text-slate-950 transition-all cursor-pointer"
           title="Attach blueprint, 3D CAD, image, or code file"
         >
           <Paperclip className="w-4 h-4" />
         </button>
 
         {/* Subtle Vertical Hairline Separator */}
-        <div className="w-px h-5 bg-white/[0.08] mx-0.5" />
+        <div className="w-px h-5 bg-white/40 mx-0.5" />
 
         {/* Main Text Input Field */}
         <input
@@ -114,7 +114,7 @@ export const FloatingPromptBar: React.FC<FloatingPromptBarProps> = ({
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Ask January anything, engineer 3D scenes, or speak..."
-          className="flex-1 bg-transparent px-2.5 py-2 text-xs md:text-[13px] font-sans text-slate-100 placeholder-slate-400/70 focus:outline-none tracking-normal"
+          className="flex-1 bg-transparent px-2.5 py-2 text-xs md:text-[13px] font-sans text-slate-900 placeholder-slate-500/80 focus:outline-none tracking-normal font-medium"
         />
 
         {/* Action Controls: Interrupt, Speaker Toggle, Mic Toggle, Send */}
@@ -124,7 +124,7 @@ export const FloatingPromptBar: React.FC<FloatingPromptBarProps> = ({
             <button
               type="button"
               onClick={onInterrupt}
-              className="w-9 h-9 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 flex items-center justify-center transition-all shadow-[0_0_12px_rgba(244,63,94,0.3)] animate-pulse cursor-pointer"
+              className="w-9 h-9 rounded-xl glass-btn bg-rose-500/25 hover:bg-rose-500/35 border-rose-400 text-rose-700 flex items-center justify-center transition-all shadow-[0_0_12px_rgba(244,63,94,0.25)] animate-pulse cursor-pointer"
               title="Interrupt January Speech"
             >
               <Square className="w-3.5 h-3.5 fill-current" />
@@ -135,10 +135,10 @@ export const FloatingPromptBar: React.FC<FloatingPromptBarProps> = ({
           <button
             type="button"
             onClick={onToggleAudio}
-            className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${
+            className={`w-9 h-9 rounded-xl glass-btn flex items-center justify-center transition-all cursor-pointer ${
               isAudioMuted
-                ? 'bg-rose-500/15 border-rose-500/30 text-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.15)]'
-                : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/[0.05]'
+                ? 'bg-rose-500/20 border-rose-400 text-rose-700'
+                : 'text-slate-700 hover:text-slate-950'
             }`}
             title={isAudioMuted ? 'Speaker is OFF (Click to turn ON)' : 'Speaker is ON (Click to turn OFF)'}
           >
@@ -153,17 +153,17 @@ export const FloatingPromptBar: React.FC<FloatingPromptBarProps> = ({
           <button
             type="button"
             onClick={onToggleMic}
-            className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${
+            className={`w-9 h-9 rounded-xl glass-btn flex items-center justify-center transition-all cursor-pointer ${
               isMicMuted
-                ? 'bg-rose-500/15 border-rose-500/30 text-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.15)]'
-                : 'bg-cyan-500/15 border-cyan-400/30 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.2)]'
+                ? 'bg-rose-500/20 border-rose-400 text-rose-700'
+                : 'bg-cyan-500/25 border-cyan-400 text-cyan-800 shadow-[0_0_12px_rgba(6,182,212,0.2)]'
             }`}
             title={isMicMuted ? 'Microphone is OFF (Click to turn ON)' : 'Microphone is ON (Click to turn OFF)'}
           >
             {isMicMuted ? (
               <MicOff className="w-4 h-4" />
             ) : (
-              <Mic className="w-4 h-4 text-cyan-300" />
+              <Mic className="w-4 h-4 text-cyan-800" />
             )}
           </button>
 
@@ -171,10 +171,10 @@ export const FloatingPromptBar: React.FC<FloatingPromptBarProps> = ({
           <button
             type="submit"
             disabled={!inputText.trim()}
-            className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
+            className={`w-9 h-9 rounded-xl glass-btn flex items-center justify-center transition-all ${
               inputText.trim()
-                ? 'bg-white hover:bg-slate-200 text-black shadow-[0_0_15px_rgba(255,255,255,0.25)] cursor-pointer active:scale-95'
-                : 'bg-white/[0.04] text-slate-500 border border-transparent cursor-not-allowed opacity-40'
+                ? 'bg-white/70 hover:bg-white/90 text-slate-950 border-white/80 shadow-md cursor-pointer'
+                : 'text-slate-400 opacity-40 cursor-not-allowed border-white/20'
             }`}
             title="Send Command (Enter)"
           >

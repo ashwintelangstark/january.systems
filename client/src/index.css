@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light dark;
 }
 
 body {
@@ -12,80 +12,91 @@ body {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background-color: #030509;
+  background-color: #B6C3D0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
-/* Glassmorphism Design Tokens */
+/* Glassmorphism Design Tokens for Frosted Ice Blue (#B6C3D0) Palette */
+
+/* 1. Translucent Glass Drawer */
 .liquid-glass-drawer {
-  background: linear-gradient(
-    135deg,
-    rgba(14, 18, 36, 0.65) 0%,
-    rgba(8, 12, 24, 0.8) 100%
-  );
-  backdrop-filter: blur(28px) saturate(190%);
-  -webkit-backdrop-filter: blur(28px) saturate(190%);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(32px) saturate(190%);
+  -webkit-backdrop-filter: blur(32px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.45);
   box-shadow: 
-    0 24px 60px rgba(0, 0, 0, 0.75),
-    0 0 35px rgba(0, 245, 255, 0.12),
-    inset 0 1px 1px rgba(255, 255, 255, 0.2);
+    0 24px 60px rgba(15, 35, 60, 0.12),
+    inset 0 1.5px 2px rgba(255, 255, 255, 0.7),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.03);
 }
 
-.liquid-glass-glow-border {
-  position: relative;
+/* 2. Fully Transparent Glass Prompt Bar & Bars */
+.liquid-glass-bar {
+  background: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(32px) saturate(200%);
+  -webkit-backdrop-filter: blur(32px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.48);
+  box-shadow: 
+    0 20px 45px rgba(0, 30, 60, 0.1),
+    inset 0 1.5px 2px rgba(255, 255, 255, 0.75),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.02);
 }
 
-.liquid-glass-glow-border::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(
-    145deg,
-    rgba(0, 245, 255, 0.7) 0%,
-    rgba(139, 92, 246, 0.4) 40%,
-    rgba(236, 72, 153, 0.6) 80%,
-    rgba(255, 123, 0, 0.5) 100%
-  );
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
+/* 3. 100% Transparent Glass Touch Buttons */
+.glass-btn {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: 
+    0 4px 12px rgba(0, 20, 40, 0.06),
+    inset 0 1px 1.5px rgba(255, 255, 255, 0.7);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.glass-btn:hover {
+  background: rgba(255, 255, 255, 0.38);
+  border-color: rgba(255, 255, 255, 0.65);
+  box-shadow: 
+    0 6px 18px rgba(0, 20, 40, 0.1),
+    inset 0 1px 2px rgba(255, 255, 255, 0.9);
+  transform: translateY(-1px);
+}
+
+.glass-btn:active {
+  background: rgba(255, 255, 255, 0.5);
+  transform: scale(0.96);
+  box-shadow: 
+    0 2px 8px rgba(0, 20, 40, 0.08),
+    inset 0 1px 1px rgba(255, 255, 255, 0.95);
+}
+
+/* 4. 100% Transparent Glass Selection & Conversation Items */
 .liquid-glass-pill-active {
-  background: linear-gradient(
-    135deg,
-    rgba(37, 99, 235, 0.7) 0%,
-    rgba(29, 78, 216, 0.5) 100%
-  );
-  border: 1px solid rgba(147, 197, 253, 0.6);
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.75);
   box-shadow: 
-    0 0 25px rgba(37, 99, 235, 0.45),
-    inset 0 1px 1px rgba(255, 255, 255, 0.4);
+    0 8px 24px rgba(20, 50, 80, 0.12),
+    inset 0 1.5px 2px rgba(255, 255, 255, 0.95);
 }
 
 .liquid-glass-item {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .liquid-glass-item:hover {
-  background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(255, 255, 255, 0.1);
-  transform: translateX(2px);
-}
-
-.liquid-glass-bar {
-  background: rgba(10, 14, 28, 0.7);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.55);
   box-shadow: 
-    0 16px 40px rgba(0, 0, 0, 0.6),
-    0 0 25px rgba(0, 245, 255, 0.1);
+    0 4px 16px rgba(0, 20, 40, 0.06),
+    inset 0 1px 1px rgba(255, 255, 255, 0.8);
+  transform: translateY(-1px);
 }
 
 /* Custom Slim Scrollbar */

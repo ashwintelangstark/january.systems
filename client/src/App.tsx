@@ -141,18 +141,9 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-[#030509] select-none font-sans">
-      {/* 1. Cinematic 8K Cosmic Landscape Background */}
-      <div
-        className="absolute inset-0 w-full h-full bg-cover bg-center bg-no-repeat transition-all duration-1000 scale-100"
-        style={{
-          backgroundImage: "url('/cosmic_background.jpg')",
-        }}
-      >
-        {/* Subtle Vignette & Gradient Tone Mappings */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/40" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-transparent via-black/20 to-black/70 pointer-events-none" />
-      </div>
+    <div className="relative w-screen h-screen overflow-hidden bg-[#B6C3D0] select-none font-sans">
+      {/* 1. Frosted Ice Blue Plain Background */}
+      <div className="absolute inset-0 w-full h-full bg-[#B6C3D0] transition-colors duration-700 pointer-events-none" />
 
       {/* 2. Interactive Three.js 2,000 Particle Cosmic Orb with Dual Energy Vortex */}
       <JanuaryCosmicOrb
