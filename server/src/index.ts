@@ -1,5 +1,6 @@
 import path from 'path';
 import fs from 'fs';
+import { exec } from 'child_process';
 import { fileURLToPath } from 'url';
 import express from 'express';
 import http from 'http';
@@ -462,6 +463,10 @@ geminiClient.on('ready', () => {
 });
 
 geminiClient.on('audio', (pcmChunkBase64: string, mimeType: string) => {
+  // If ElevenLabs or Edge-TTS is configured, suppress Gemini Live raw audio to avoid interfering voice packs and dual responses
+  if (config.useElevenLabs !== false || config.useEdgeTts) {
+    return;
+  }
   setAgentState('speaking', 'Gemini speaking audio stream');
   broadcast({
     type: 'audio_output',
@@ -592,6 +597,20 @@ systemMic.on('sleep', (data) => {
 wakeDetector.on('wake', (data) => {
   setAgentState('listening', 'Wake trigger received (Rise)');
   systemMic.setMute(false);
+  const wakeMsg = 'I am awake and listening. How can I help you?';
+  broadcast({
+    type: 'transcript',
+    payload: {
+      role: 'assistant',
+      text: wakeMsg,
+      isFinal: true,
+      timestamp: Date.now(),
+    },
+  });
+  setAgentState('speaking', 'Wake confirmation speech');
+  systemSpeaker.speakText(wakeMsg, { emotion: 'joy' }).then(() => {
+    setAgentState('listening', 'Listening for prompt');
+  });
 });
 
 wakeDetector.on('sleep', (data) => {
@@ -610,6 +629,10 @@ wakeDetector.on('sleep', (data) => {
       timestamp: Date.now(),
     },
   });
+});
+
+visualActivityMonitor.on('eyesStateChange', ({ isEyesOpen, fps }) => {
+  broadcast({ type: 'camera_state', isEyesOpen, fps });
 });
 
 systemMic.on('camera_wake', async (data) => {
@@ -636,7 +659,7 @@ systemMic.on('camera_sleep', async (data) => {
   setAgentState('passive', 'Speech completed');
 });
 
-async function handleUnifiedPrompt(text: string, source: 'voice' | 'text' = 'voice'): Promise<void> {
+async function handleUnifiedPrompt(text: string, source: 'voice' | 'text' = 'voice', sessionId?: string): Promise<void> {
   const clean = text.trim();
   if (!clean) return;
 
@@ -749,8 +772,8 @@ async function handleUnifiedPrompt(text: string, source: 'voice' | 'text' = 'voi
 
   setAgentState('working', `Processing ${source} command`);
 
-  // Persist user prompt into SQLite Brain memory
-  brainService.recordUserMessage(clean, { metadata: { source } });
+  // Persist user prompt into SQLite Brain memory under the active session
+  brainService.recordUserMessage(clean, { sessionId, metadata: { source } });
 
   try {
     const result = await geminiService.analyzeAndRespond(clean);
@@ -771,23 +794,13 @@ async function handleUnifiedPrompt(text: string, source: 'voice' | 'text' = 'voi
 
     // 2. Code Generation (Python / C / C++)
     if (result.isCode) {
-      console.log(`\n\x1b[36m\x1b[1m╔═══════════════════════════════════════════════════════════════════╗\x1b[0m`);
-      console.log(`\x1b[36m\x1b[1m║ 💻 [CODE GENERATED IN TERMINAL: ${(result.language || 'CODE').toUpperCase()}] — ${(result.modelUsed || 'Coding Engine')}\x1b[0m`);
-      console.log(`\x1b[36m\x1b[1m╠═══════════════════════════════════════════════════════════════════╣\x1b[0m`);
-      const lines = (result.text || result.codeSnippet || '').split('\n');
-      for (const l of lines) {
-        console.log(`\x1b[36m\x1b[1m║\x1b[0m ${l}`);
-      }
-      if (result.compilationCommand) {
-        console.log(`\x1b[36m\x1b[1m╠═══════════════════════════════════════════════════════════════════╣\x1b[0m`);
-        console.log(`\x1b[36m\x1b[1m║\x1b[0m \x1b[33m\x1b[1m▶ Run Command:\x1b[0m \x1b[96m${result.compilationCommand}\x1b[0m`);
-      }
-      console.log(`\x1b[36m\x1b[1m╚═══════════════════════════════════════════════════════════════════╝\x1b[0m\n`);
+      console.log(`[Coordinator] 💻 Generated ${(result.language || 'code').toUpperCase()} via ${result.modelUsed || 'Coding Engine'} (delivered to UI)`);
 
-      const speechSummary = result.verbalSummary || `I've generated the ${(result.language || 'code').toUpperCase()} code for you in your terminal.`;
+      const speechSummary = result.verbalSummary || `I've generated the ${(result.language || 'code').toUpperCase()} code for you on screen.`;
       
       // Persist assistant code message and code artifact into Brain
       brainService.recordAssistantMessage(result.text, {
+        sessionId,
         verbalSummary: speechSummary,
         emotion: result.emotion?.emotion,
         modelName: result.modelUsed || 'Coding Engine',
@@ -825,14 +838,36 @@ async function handleUnifiedPrompt(text: string, source: 'voice' | 'text' = 'voi
       return;
     }
 
-    // 3. Regular Voice/Text Response (System Apps/Files/Videos, Live Web Search, Multilingual Indian Languages)
+    // 3. Regular Voice/Text Response (System Apps/Files/Videos, Live Web Search, 3D Models, Multilingual)
     console.log(`\x1b[32m[January]\x1b[0m ${result.text}`);
-    
-    // Persist assistant message into Brain
+
+    // Check if 3D model creation tool was executed
+    const created3DTool = result.toolCalls?.find(
+      (tc: any) => tc.name === 'create_3d_model' || tc.name === 'convert_floorplan_to_3d'
+    );
+    const artifacts: any[] = [];
+    if (created3DTool && created3DTool.result) {
+      const res3d = created3DTool.result;
+      artifacts.push({
+        type: '3d_model_created',
+        name: res3d.modelName || 'january_3d_model',
+        filePath: res3d.blendFilePath || res3d.glbFilePath || res3d.objFilePath,
+        metadata: {
+          blendFilePath: res3d.blendFilePath,
+          objFilePath: res3d.objFilePath,
+          glbFilePath: res3d.glbFilePath,
+          verbalSummary: res3d.verbalSummary,
+        },
+      });
+    }
+
+    // Persist assistant message and any 3D/multimodal artifacts into Brain
     brainService.recordAssistantMessage(result.text, {
+      sessionId,
       verbalSummary: result.verbalSummary || result.text,
       emotion: result.emotion?.emotion,
       modelName: result.modelUsed || 'Gemini',
+      artifacts: artifacts.length > 0 ? artifacts : undefined,
     });
 
     broadcast({
@@ -1032,6 +1067,12 @@ wss.on('connection', (ws: WebSocket) => {
   } satisfies ServerMessage));
 
   ws.send(JSON.stringify({
+    type: 'camera_state',
+    isEyesOpen: visualActivityMonitor.getEyesStatus().isEyesOpen,
+    fps: visualActivityMonitor.getEyesStatus().fps,
+  } satisfies ServerMessage));
+
+  ws.send(JSON.stringify({
     type: 'emotion_update',
     payload: emotionEngine.getCurrentEmotion(),
   } satisfies ServerMessage));
@@ -1077,7 +1118,16 @@ wss.on('connection', (ws: WebSocket) => {
 
         case 'text_input': {
           if (!msg.text.trim()) return;
-          await handleUnifiedPrompt(msg.text.trim(), 'text');
+          await handleUnifiedPrompt(msg.text.trim(), 'text', msg.sessionId);
+          break;
+        }
+
+        case 'set_camera_eyes': {
+          if (msg.open) {
+            visualActivityMonitor.openEyes(msg.fps || 60);
+          } else {
+            visualActivityMonitor.closeEyes();
+          }
           break;
         }
 
@@ -1098,6 +1148,10 @@ wss.on('connection', (ws: WebSocket) => {
         case 'set_mic_mute': {
           isMicMuted = !!msg.muted;
           systemMic.setMute(isMicMuted);
+          try {
+            const vol = isMicMuted ? 0 : 75;
+            exec(`osascript -e "set volume input volume ${vol}"`);
+          } catch {}
           broadcast({
             type: 'system_log',
             message: `Hardware microphone ${isMicMuted ? 'muted' : 'unmuted'} by UI`,
@@ -1109,6 +1163,12 @@ wss.on('connection', (ws: WebSocket) => {
         case 'set_speaker_mute': {
           isSpeakerMuted = !!msg.muted;
           systemSpeaker.setMute(isSpeakerMuted);
+          if (isSpeakerMuted) {
+            systemSpeaker.stopPlayback();
+          }
+          try {
+            exec(`osascript -e "set volume output muted ${isSpeakerMuted}"`);
+          } catch {}
           broadcast({
             type: 'system_log',
             message: `Speaker output ${isSpeakerMuted ? 'muted' : 'unmuted'} by UI`,

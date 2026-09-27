@@ -172,7 +172,7 @@ export async function delegateCoding(args: DelegateCodingArgs): Promise<Delegate
       try {
         console.log(`[CodingEngine] Generating ${targetLang.toUpperCase()} code with ${keyConfig.name} (${model})...`);
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 4000);
+        const timeout = setTimeout(() => controller.abort(), 20000);
 
         const response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${keyConfig.key}`,
@@ -242,9 +242,10 @@ export async function delegateCoding(args: DelegateCodingArgs): Promise<Delegate
   // =========================================================================
   if (config.openrouterApiKey) {
     const openRouterCodingModels = [
-      'openrouter/free',
+      'deepseek/deepseek-chat',
+      'google/gemini-2.5-flash',
       'qwen/qwen-2.5-coder-32b-instruct',
-      'cohere/north-mini-code:free',
+      'meta-llama/llama-3.3-70b-instruct',
       'openrouter/auto',
     ];
 
@@ -252,7 +253,7 @@ export async function delegateCoding(args: DelegateCodingArgs): Promise<Delegate
       try {
         console.log(`[CodingEngine] ⚡ Ultra-Fast Routing to OpenRouter coding model (${model})...`);
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 4500);
+        const timeout = setTimeout(() => controller.abort(), 20000);
 
         const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
           method: 'POST',

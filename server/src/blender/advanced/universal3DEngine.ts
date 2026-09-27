@@ -473,12 +473,12 @@ def create_pbr_material(name, base_color, metallic=0.0, roughness=0.5, clearcoat
 
 8. Ensure the code is 100% bug-free, self-contained, and uses standard Blender 5.2 API.`;
 
-    // 1. Prioritize OpenRouter Astra GPT-6 models
+    // 1. Prioritize OpenRouter top-tier coding & reasoning models
     if (config.openrouterApiKey) {
       const astraCandidates = [
-        'openai/gpt-6-astra-pro',
-        'openai/gpt-6-astra',
-        '~openai/gpt-astra-latest',
+        'deepseek/deepseek-chat',
+        'google/gemini-2.5-flash',
+        'qwen/qwen-2.5-coder-32b-instruct',
       ];
 
       for (const astraModel of astraCandidates) {
@@ -737,7 +737,7 @@ Return ONLY the single complete Python script inside \`\`\`python ... \`\`\`.`;
             'X-Title': 'January AI',
           },
           body: JSON.stringify({
-            model: 'openai/gpt-6-astra',
+            model: 'deepseek/deepseek-chat',
             messages: [{ role: 'user', content: healPrompt }],
             reasoning: { effort: 'low' },
             max_tokens: 2500,
@@ -844,23 +844,9 @@ except:
 
     // 4. Sanitize common LLM syntax slips:
     clean = clean.replace(/([(\s,])0+(\d+)(?=[,\s)])/g, '$1$2');
-    clean = clean.replace(/([0-9a-zA-Z_'")\]])\s{2,}([a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*)*\s*=)/g, '$1\n$2');
-    clean = clean.replace(/(\d+(?:\.\d+)?)\s*([a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*)*\s*=)/g, '$1\n$2');
     clean = clean.replace(/\.data\.use_auto_smooth\s*=\s*(?:True|False)/g, '');
     clean = clean.replace(/\.use_auto_smooth\s*=\s*(?:True|False)/g, '');
     clean = clean.replace(/\.auto_smooth_angle\s*=[^\n;]+/g, '');
-
-    // Auto-expand 3-item RGB to 4-item RGBA in _set
-    clean = clean.replace(
-      /bsdf\.inputs\[s\]\.default_value\s*=\s*val/g,
-      `try:
-                        target = bsdf.inputs[s].default_value
-                        if hasattr(target, '__len__') and len(target) == 4 and hasattr(val, '__len__') and len(val) == 3:
-                            val = (*val, 1.0)
-                        bsdf.inputs[s].default_value = val
-                    except Exception:
-                        pass`
-    );
 
     // Replace deprecated Principled BSDF socket names
     clean = clean.replace(/bsdf\.inputs\[["']Clearcoat["']\]\.default_value\s*=/g, "if 'Coat Weight' in bsdf.inputs: bsdf.inputs['Coat Weight'].default_value =");

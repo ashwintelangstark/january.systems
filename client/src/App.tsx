@@ -10,7 +10,6 @@ import {
   createSession,
   deleteSessionApi,
   fetchSessionMessages,
-  toggleCameraEyes,
   uploadAttachment,
 } from './utils/api';
 import { BrainSession } from './types';
@@ -19,8 +18,6 @@ export const App: React.FC = () => {
   const [sessions, setSessions] = useState<BrainSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string>('');
   const [isDrawerOpen, setIsDrawerOpen] = useState(true);
-  const [isEyesOpen, setIsEyesOpen] = useState(false);
-
   const [isChatExpanded, setIsChatExpanded] = useState(false);
 
   const {
@@ -33,9 +30,11 @@ export const App: React.FC = () => {
     outputLevel,
     isMicMuted,
     isAudioMuted,
+    isEyesOpen,
     sendTextMessage,
     triggerWake,
     toggleListening,
+    toggleEyes,
     interrupt,
     toggleMuteMic,
     toggleMuteAudio,
@@ -59,14 +58,6 @@ export const App: React.FC = () => {
         setMessages([]);
       }
     });
-
-    // Check camera status
-    fetch('/api/camera/status')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.isEyesOpen) setIsEyesOpen(true);
-      })
-      .catch(() => {});
   }, []);
 
   // Handle Switching Sessions
@@ -113,14 +104,8 @@ export const App: React.FC = () => {
   };
 
   // Handle Camera Eyes Toggle
-  const handleToggleEyes = async () => {
-    try {
-      const targetAction = isEyesOpen ? 'close' : 'open';
-      const result = await toggleCameraEyes(targetAction, 60);
-      setIsEyesOpen(result.isEyesOpen || false);
-    } catch (err) {
-      console.warn('[Camera] Failed to toggle eyes:', err);
-    }
+  const handleToggleEyes = () => {
+    toggleEyes();
   };
 
   // Handle Sending Text Message

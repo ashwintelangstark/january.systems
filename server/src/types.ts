@@ -42,10 +42,11 @@ export type ClientMessage =
   | { type: 'sleep_trigger'; source?: 'voice' | 'manual' }
 
   | { type: 'audio_input'; data: string; mimeType?: string } // Base64 PCM 16kHz
-  | { type: 'text_input'; text: string }
+  | { type: 'text_input'; text: string; sessionId?: string }
   | { type: 'set_state'; state: AgentState }
   | { type: 'set_mic_mute'; muted: boolean }
   | { type: 'set_speaker_mute'; muted: boolean }
+  | { type: 'set_camera_eyes'; open: boolean; fps?: number }
   | { type: 'interrupt' }
   | { type: 'ping' };
 
@@ -57,7 +58,9 @@ export type ServerMessage =
   | { type: 'emotion_update'; payload: EmotionPayload }
   | { type: 'tool_call'; payload: ToolCallPayload }
   | { type: 'tool_result'; payload: ToolResultPayload }
+  | { type: 'camera_state'; isEyesOpen: boolean; fps: number }
   | { type: 'interrupt' }
   | { type: 'audio_level'; level: number }
   | { type: 'system_log'; message: string; level?: 'info' | 'warn' | 'error' }
   | { type: 'pong' };
+

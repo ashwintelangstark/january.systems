@@ -21,6 +21,7 @@ export function useAgentSocket(activeSessionId?: string) {
   const [outputLevel, setOutputLevel] = useState(0);
   const [isMicMuted, setIsMicMuted] = useState(false);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
+  const [isEyesOpen, setIsEyesOpen] = useState(false);
   const [config, setConfig] = useState<ClientConfig | null>(null);
 
   const socketRef = useRef<WebSocket | null>(null);
@@ -206,6 +207,11 @@ export function useAgentSocket(activeSessionId?: string) {
             setInputLevel(msg.level);
             break;
           }
+
+          case 'camera_state': {
+            setIsEyesOpen(!!msg.isEyesOpen);
+            break;
+          }
         }
       } catch (err: any) {
         console.error('[useAgentSocket] Error parsing server message:', err.message);
@@ -309,6 +315,15 @@ export function useAgentSocket(activeSessionId?: string) {
     }
   }, [agentState, triggerSleep, triggerWake]);
 
+  const toggleEyes = useCallback(() => {
+    setIsEyesOpen((prev) => {
+      const next = !prev;
+      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+        socketRef.current.send(JSON.stringify({ type: 'set_camera_eyes', open: next }));
+      }
+      return next;
+    });
+  }, []);
 
   return {
     agentState,
@@ -321,11 +336,13 @@ export function useAgentSocket(activeSessionId?: string) {
     outputLevel,
     isMicMuted,
     isAudioMuted,
+    isEyesOpen,
     config,
     sendTextMessage,
     triggerWake,
     triggerSleep,
     toggleListening,
+    toggleEyes,
     interrupt,
     toggleMuteMic,
     toggleMuteAudio,

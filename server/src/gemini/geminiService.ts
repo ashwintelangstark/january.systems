@@ -226,8 +226,9 @@ function inspectPromptLanguage(prompt: string): { action: 'switch_english' | 'se
 
 export class GeminiService {
   private candidateModels = [
-    'models/gemini-flash-lite-latest',
     'models/gemini-flash-latest',
+    'models/gemini-2.5-flash',
+    'models/gemini-flash-lite-latest',
   ];
   private candidateOpenAIModels = [
     'gpt-4o-mini',
@@ -235,10 +236,11 @@ export class GeminiService {
     'gpt-3.5-turbo',
   ];
   private candidateOpenRouterModels = [
-    'openrouter/free',
+    'deepseek/deepseek-chat',
+    'google/gemini-2.5-flash',
+    'meta-llama/llama-3.3-70b-instruct',
+    'qwen/qwen-2.5-72b-instruct',
     'openrouter/auto',
-    'liquid/lfm-2.5-2.6b:free',
-    'cohere/north-mini-code:free',
   ];
   // Key Circuit-Breaker: Maps API Key -> Cooldown Expiry Timestamp
   private keyCooldowns: Map<string, number> = new Map();
@@ -745,7 +747,7 @@ export class GeminiService {
           console.log(`[GeminiService] Analyzing question with ${keyConfig.name} (${model}) [Emotion: ${emotionResult.emotion}, Active Lang: ${activeLang?.langName || 'English'}]...`);
 
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 2800);
+          const timeoutId = setTimeout(() => controller.abort(), 15000);
 
           const response = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${keyConfig.key}`,
@@ -906,7 +908,7 @@ export class GeminiService {
         console.log(`[GeminiService] 🔄 Routing to OpenAI fallback model (${model})...`);
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
 
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
@@ -992,7 +994,7 @@ export class GeminiService {
         console.log(`[GeminiService] ⚡ Ultra-Fast Routing to OpenRouter model: ${model} (task: ${taskType})...`);
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3500);
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
 
         const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
           method: 'POST',

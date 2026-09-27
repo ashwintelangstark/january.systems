@@ -15,6 +15,7 @@ export interface ElevenLabsVoiceSettings {
 export class ElevenLabsEngine extends EventEmitter {
   private currentProcess: ChildProcess | null = null;
   private isSpeaking = false;
+  private quotaExceededUntil = 0;
 
   /**
    * Maps January's 7 Emotional Archetypes directly to ElevenLabs Voice Parameters
@@ -101,14 +102,19 @@ export class ElevenLabsEngine extends EventEmitter {
       return null;
     }
 
-    const voiceId = options?.voiceId || config.elevenlabsVoiceId || '2zRM7PkgwBPiau2jvVXc';
+    // Circuit breaker: If free quota was exhausted within last 5 minutes, skip in 0ms
+    if (Date.now() < this.quotaExceededUntil) {
+      return null;
+    }
+
+    const voiceId = options?.voiceId || config.elevenlabsVoiceId || 'EXAVITQu4vr4xnSDxMaL';
     const modelId = options?.modelId || config.elevenlabsModelId || 'eleven_turbo_v2_5';
     const voiceSettings = this.getEmotionalVoiceSettings(options?.emotion);
 
     const makeRequest = async (targetVoice: string) => {
       const url = `https://api.elevenlabs.io/v1/text-to-speech/${targetVoice}/stream?optimize_streaming_latency=3`;
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 14000);
+      const timeout = setTimeout(() => controller.abort(), 8000);
 
       const response = await fetch(url, {
         method: 'POST',
@@ -136,10 +142,19 @@ export class ElevenLabsEngine extends EventEmitter {
         const errText = await response.text();
         console.warn(`[ElevenLabs] API returned ${response.status} for voice "${voiceId}": ${errText.slice(0, 160)}`);
 
-        // If library voice requires paid plan on ElevenLabs, seamlessly fallback to premier high-fidelity neural voice
+        // If library voice requires paid plan on ElevenLabs, retry once with premier free-tier voice
         if (response.status === 402 || errText.includes('paid_plan_required')) {
-          console.log(`ℹ️ [ElevenLabs] Library voice "${voiceId}" requires a paid tier. Falling back to premier realistic neural voice "Sarah" (EXAVITQu4vr4xnSDxMaL).`);
-          response = await makeRequest('EXAVITQu4vr4xnSDxMaL');
+          if (voiceId !== 'EXAVITQu4vr4xnSDxMaL') {
+            console.log(`ℹ️ [ElevenLabs] Voice "${voiceId}" requires paid tier. Trying premier free voice "Sarah" (EXAVITQu4vr4xnSDxMaL)...`);
+            response = await makeRequest('EXAVITQu4vr4xnSDxMaL');
+          }
+        }
+
+        // Check for quota exhaustion
+        if (errText.includes('quota_exceeded') || errText.includes('exceeds your quota') || response.status === 429) {
+          console.log(`ℹ️ [ElevenLabs] Free tier character quota exhausted (10,000/10,000 chars). Activating high-speed Neural Speech Fallback.`);
+          this.quotaExceededUntil = Date.now() + 5 * 60 * 1000; // 5 min cooldown
+          return null;
         }
 
         if (!response.ok) {

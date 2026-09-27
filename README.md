@@ -7,11 +7,22 @@
 
 **January** is an advanced, emotionally attuned, autonomous operating system agent engineered to run directly on your Mac hardware. It listens through your MacBook's physical microphone using local **Faster-Whisper** speech-to-text, sees through your native Mac webcam with **AVFoundation 60 FPS hardware streaming** and sub-20ms **local edge face detection**, reasons across **458+ AI models** via a **Dynamic Multi-Tier Model Router**, acts on your desktop as an autonomous **Computer-Using Agent (CUA)**, creates interactive **3D models and architectural BIM buildings in Blender**, generates production-grade **Python, C, and C++** code, queries real-time internet and weather data, and speaks aloud through physical laptop speakers with **ElevenLabs Ultra-Realistic Neural Voices** dynamically modulated by a **7-Archetype Emotion Engine**, backed by **Microsoft Edge-TTS** and native speech fallback.
 
-January operates primarily through a high-end web interface backed by its local daemon:
-1. **Single-Command Full-Stack App (`npm run dev`)**: Launches both the Vite client (`localhost:5173`) and the backend server (`localhost:3001`) simultaneously with unified, color-coded logging.
-2. **High-End Liquid-Glass Web Interface (`http://localhost:5173`)**: The primary command center. An ultra-aesthetic Three.js web application featuring an interactive 20,000 motion particle cosmic core with real-time cursor/voice reactivity, collapsible liquid-glass session drawer with persistent SQLite chat history, transparent prompt dock with hardware Mic and Speaker toggles, camera eyes toggle, and live fallback AI intelligence.
-3. **Autonomous Background Daemon (`localhost:3001`)**: Coordinates speech synthesis, intelligent echo suppression, and dynamic AI model routing without duplicate responses.
-4. **Optional Interactive Terminal CLI (`npm run cli`)**: An auxiliary dual-section REPL (`[ME]` & `[JANUARY]`) that automatically pauses the background microphone during keyboard interaction and resumes room listening upon exit.
+January operates as a unified, seamless full-stack web application designed for zero-latency interactions without requiring terminal sessions:
+1. **Single-Command Launch (`npm run dev`)**: Starts both the Vite Frontend client (`http://localhost:5173`) and the Node.js/WebSocket backend server (`http://localhost:3001`) simultaneously with unified, quiet logging.
+2. **Liquid-Glass Web Interface (`http://localhost:5173`)**: The primary command center. An ultra-aesthetic Three.js interface featuring:
+   - **Interactive 20,000 Particle Cosmic Orb**: Dual energy vortex responsive to cursor physics, input vocal volume, and output speech levels.
+   - **Hardware-Synchronized Control Dock**:
+     - 🎙️ **Microphone Toggle**: Instantly mutes browser input and toggles macOS system microphone hardware input volume (`0%` ⇋ `75%`).
+     - 🔊 **Speaker Toggle**: Mutes browser audio context, halts active speech playback, and syncs macOS hardware audio output mute.
+     - 👁️ **Camera Eyes (60 FPS)**: Directly controls native macOS AVFoundation hardware camera capture lifecycle (green LED indicator reflects hardware state).
+     - 🛑 **Verbal Stop / Interrupt**: Dedicated popup control on the prompt bar to immediately halt verbal responses.
+   - **Top Status HUD & Shortcuts**: Interactive pill button toggling between **"Good Night"** (sleep standby) and **"Rise"** (wake) shortcuts with emotional attunement indicators.
+   - **Persistent SQLite Brain Drawer**: Collapsible glass sidebar managing chat sessions, message histories, and multimodal artifacts (3D models, code, uploaded files) with synchronized database deletion.
+3. **Autonomous Backend Service (`localhost:3001`)**:
+   - **Unified Speech Engine**: Driven exclusively by ElevenLabs Realistic Neural Voices modulated by the 7-Archetype Emotion Engine, backed by instant, zero-lag Microsoft Edge-TTS neural speech fallback.
+   - **Fast Real-Time Multi-Model Fallback**: Google Gemini Flash ➜ Fallback Gemini ➜ OpenRouter (458+ models: DeepSeek, Qwen Coder, Claude) active at all times.
+   - **Blender 5.2 GUI & CUA Integration**: Synthesizes 3D objects, procedural BIM floor plans, and CAD models with automatic macOS Blender application launch and window activation.
+   - **Zero Terminal Distraction**: Eliminates CLI clutter; all text, code snippets, and multimodal cards are rendered directly inside the frontend web application.
 
 
 ---
