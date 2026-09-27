@@ -29,6 +29,8 @@ export const App: React.FC = () => {
     inputLevel,
     outputLevel,
     isMicMuted,
+    isListening,
+    interimTranscript,
     isAudioMuted,
     isEyesOpen,
     sendTextMessage,
@@ -38,7 +40,9 @@ export const App: React.FC = () => {
     interrupt,
     toggleMuteMic,
     toggleMuteAudio,
-  } = useAgentSocket(activeSessionId);
+  } = useAgentSocket(activeSessionId, (text: string) => {
+    handleVoiceTranscript(text);
+  });
 
   // Load Brain Sessions on Mount
   useEffect(() => {
@@ -120,7 +124,22 @@ export const App: React.FC = () => {
       setActiveSessionId(newSession.id);
       targetSessionId = newSession.id;
     }
-    sendTextMessage(text, targetSessionId);
+    sendTextMessage(text, targetSessionId, 'text');
+  };
+
+  // Handle Spoken Voice Transcript
+  const handleVoiceTranscript = async (text: string) => {
+    setIsDrawerOpen(true);
+    setIsChatExpanded(true);
+    let targetSessionId = activeSessionId;
+    if (!targetSessionId) {
+      const title = text.length > 30 ? `${text.substring(0, 30)}...` : text;
+      const newSession = await createSession(title);
+      setSessions((prev) => [newSession, ...prev]);
+      setActiveSessionId(newSession.id);
+      targetSessionId = newSession.id;
+    }
+    sendTextMessage(text, targetSessionId, 'voice');
   };
 
   // Handle File Upload Attachment
@@ -188,6 +207,9 @@ export const App: React.FC = () => {
       <FloatingPromptBar
         agentState={agentState}
         isMicMuted={isMicMuted}
+        isListening={isListening}
+        interimTranscript={interimTranscript}
+        inputLevel={inputLevel}
         isAudioMuted={isAudioMuted}
         isEyesOpen={isEyesOpen}
         onSendText={handleSendText}

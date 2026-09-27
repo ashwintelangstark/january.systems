@@ -1,24 +1,13 @@
-import { spawn, ChildProcess } from 'child_process';
-import path from 'path';
-import fs from 'fs';
-import os from 'os';
 import { EventEmitter } from 'events';
-import { fileURLToPath } from 'url';
 import { elevenLabsEngine } from './elevenLabsEngine.js';
 import { config } from '../config.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 export class SystemSpeaker extends EventEmitter {
-  private currentProcess: ChildProcess | null = null;
   private isSpeaking = false;
   private isMuted = false;
-  private ttsScriptPath: string;
 
   constructor() {
     super();
-    this.ttsScriptPath = path.resolve(__dirname, '../../audio_engine/tts_engine.py');
   }
 
   public setMute(muted: boolean): void {
@@ -191,10 +180,10 @@ export class SystemSpeaker extends EventEmitter {
     this.isSpeaking = true;
     this.emit('start');
 
-    // Tier 1: ElevenLabs High-Fidelity Neural Emotional Voice Engine
+    // Tier 1: ElevenLabs High-Fidelity Neural Emotional Voice Engine with Free Female Voicepacks
     if (config.elevenlabsApiKey && config.useElevenLabs !== false) {
       try {
-        console.log(`🎙️ [SystemSpeaker:ElevenLabs] Synthesizing speech via ElevenLabs...`);
+        console.log(`🎙️ [SystemSpeaker:ElevenLabs] Synthesizing speech via ElevenLabs free female voicepacks...`);
         const audioBuffer = await elevenLabsEngine.synthesize(speechText, {
           emotion: options?.emotion,
           voiceId: config.elevenlabsVoiceId,
@@ -202,7 +191,7 @@ export class SystemSpeaker extends EventEmitter {
         });
 
         if (audioBuffer && audioBuffer.length > 0) {
-          console.log(`📡 [SystemSpeaker] Streaming ElevenLabs audio to frontend (${audioBuffer.length} bytes)...`);
+          console.log(`📡 [SystemSpeaker] Streaming ElevenLabs female voice audio to frontend (${audioBuffer.length} bytes)...`);
           this.emit('audio_output', {
             data: audioBuffer.toString('base64'),
             mimeType: 'audio/mpeg',
@@ -215,96 +204,14 @@ export class SystemSpeaker extends EventEmitter {
           await new Promise((r) => setTimeout(r, estimatedDurationMs));
           return;
         }
-        console.warn('⚠️ [SystemSpeaker] ElevenLabs synthesis did not return audio, falling back to secondary speech tier.');
+        console.warn('⚠️ [SystemSpeaker] ElevenLabs free voicepacks unavailable, falling back to browser female voice.');
       } catch (err: any) {
-        console.warn('⚠️ [SystemSpeaker] ElevenLabs error, falling back:', err.message);
+        console.warn('⚠️ [SystemSpeaker] ElevenLabs error, falling back to browser speech:', err.message);
       }
     }
 
-    // Tier 2: Neural Edge-TTS Mode via persistent venv (generates MP3 without local afplay)
-    const venvCandidates = [
-      path.resolve(process.cwd(), 'server/.venv/bin/python3'),
-      path.resolve(process.cwd(), '.venv/bin/python3'),
-      path.resolve(__dirname, '../../../server/.venv/bin/python3'),
-      path.resolve(__dirname, '../../.venv/bin/python3'),
-      path.resolve(__dirname, '../.venv/bin/python3'),
-    ];
-    let pythonPath = 'python3';
-    for (const p of venvCandidates) {
-      if (fs.existsSync(p)) {
-        pythonPath = p;
-        break;
-      }
-    }
-
-    const ttsScriptCandidates = [
-      path.resolve(process.cwd(), 'server/audio_engine/tts_engine.py'),
-      path.resolve(process.cwd(), 'audio_engine/tts_engine.py'),
-      path.resolve(__dirname, '../../audio_engine/tts_engine.py'),
-      path.resolve(__dirname, '../../../server/audio_engine/tts_engine.py'),
-    ];
-    let ttsScript = this.ttsScriptPath;
-    for (const sp of ttsScriptCandidates) {
-      if (fs.existsSync(sp)) {
-        ttsScript = sp;
-        break;
-      }
-    }
-
-    const pitch = options?.pitch || '+0Hz';
-    const rate = options?.rate || '+0%';
-    const tempOutput = path.join(os.tmpdir(), `january_edge_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.mp3`);
-
-    console.log(`🔊 [SystemSpeaker:Neural] Synthesizing Edge-TTS MP3 (pitch: ${pitch}, rate: ${rate})...`);
-
-    try {
-      await new Promise<void>((resolve, reject) => {
-        const proc = spawn(
-          pythonPath,
-          [ttsScript, speechText, '--output', tempOutput, '--pitch', pitch, '--rate', rate],
-          { stdio: ['ignore', 'pipe', 'pipe'] }
-        );
-        this.currentProcess = proc;
-
-        proc.on('close', (code) => {
-          this.currentProcess = null;
-          if (code === 0 && fs.existsSync(tempOutput)) {
-            resolve();
-          } else {
-            reject(new Error(`Edge-TTS exited with code ${code}`));
-          }
-        });
-
-        proc.on('error', (err) => {
-          this.currentProcess = null;
-          reject(err);
-        });
-      });
-
-      if (fs.existsSync(tempOutput)) {
-        const edgeBuffer = fs.readFileSync(tempOutput);
-        try { fs.unlinkSync(tempOutput); } catch {}
-        if (edgeBuffer.length > 0) {
-          console.log(`📡 [SystemSpeaker] Streaming Edge-TTS audio to frontend (${edgeBuffer.length} bytes)...`);
-          this.emit('audio_output', {
-            data: edgeBuffer.toString('base64'),
-            mimeType: 'audio/mpeg',
-            text: speechText,
-          });
-
-          const words = speechText.trim().split(/\s+/).length;
-          const estimatedDurationMs = Math.max(1000, Math.min(30000, Math.round((words / 2.7) * 1000)));
-          await new Promise((r) => setTimeout(r, estimatedDurationMs));
-          return;
-        }
-      }
-    } catch (err: any) {
-      console.warn('[SystemSpeaker] Neural Edge-TTS error, falling back to browser speech:', err.message);
-      try { if (fs.existsSync(tempOutput)) fs.unlinkSync(tempOutput); } catch {}
-    }
-
-    // Tier 3: Browser Web Speech API Fallback
-    console.log(`🌐 [SystemSpeaker:Browser] Delegating speech synthesis to web browser frontend...`);
+    // Direct Browser Speech Fallback (Web Speech API with Female Voices)
+    console.log(`🌐 [SystemSpeaker:Browser] Delegating speech synthesis to web browser female voices...`);
     this.emit('browser_speak', {
       text: speechText,
       emotion: options?.emotion,
@@ -334,11 +241,6 @@ export class SystemSpeaker extends EventEmitter {
     // Stop ElevenLabs if active
     elevenLabsEngine.stopPlayback();
 
-    if (this.currentProcess) {
-      console.log('[SystemSpeaker] Stopping current speaker playback.');
-      this.currentProcess.kill('SIGTERM');
-      this.currentProcess = null;
-    }
     this.isSpeaking = false;
     this.emit('end');
   }

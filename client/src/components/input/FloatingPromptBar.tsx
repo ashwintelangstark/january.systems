@@ -15,6 +15,9 @@ import { AgentState } from '../../types';
 interface FloatingPromptBarProps {
   agentState: AgentState;
   isMicMuted: boolean;
+  isListening?: boolean;
+  interimTranscript?: string;
+  inputLevel?: number;
   isAudioMuted: boolean;
   isEyesOpen: boolean;
   onSendText: (text: string) => void;
@@ -28,6 +31,9 @@ interface FloatingPromptBarProps {
 export const FloatingPromptBar: React.FC<FloatingPromptBarProps> = ({
   agentState,
   isMicMuted,
+  isListening = false,
+  interimTranscript = '',
+  inputLevel = 0,
   isAudioMuted,
   isEyesOpen,
   onSendText,
@@ -92,6 +98,18 @@ export const FloatingPromptBar: React.FC<FloatingPromptBarProps> = ({
         </div>
       )}
 
+      {/* Live In-Flight Speech Recognition Feedback Pill */}
+      {interimTranscript && (
+        <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900/90 border border-cyan-400/80 shadow-[0_8px_24px_rgba(6,182,212,0.4)] text-cyan-200 text-xs font-medium tracking-wide backdrop-blur-xl animate-in fade-in select-none">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span>
+          </span>
+          <Mic className="w-3.5 h-3.5 text-cyan-300 animate-pulse" />
+          <span className="italic max-w-sm md:max-w-md truncate">"{interimTranscript}"</span>
+        </div>
+      )}
+
       <form
         onSubmit={handleSubmit}
         className="relative flex items-center gap-1.5 p-1.5 rounded-2xl liquid-glass-bar transition-all focus-within:border-white/80 focus-within:shadow-[0_20px_45px_rgba(0,30,60,0.12),inset_0_1.5px_2px_rgba(255,255,255,0.9),0_0_25px_rgba(255,255,255,0.35)]"
@@ -150,7 +168,13 @@ export const FloatingPromptBar: React.FC<FloatingPromptBarProps> = ({
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask January anything, engineer 3D scenes, or speak..."
+          placeholder={
+            interimTranscript
+              ? `Listening: "${interimTranscript}"`
+              : isListening
+              ? 'Listening... Speak your prompt aloud to January'
+              : 'Ask January anything, engineer 3D scenes, or speak...'
+          }
           className="flex-1 bg-transparent px-2.5 py-2 text-xs md:text-[13px] font-sans text-slate-900 placeholder-slate-500/80 focus:outline-none tracking-normal font-medium"
         />
 
@@ -195,18 +219,33 @@ export const FloatingPromptBar: React.FC<FloatingPromptBarProps> = ({
             type="button"
             onClick={onToggleMic}
             className={`relative w-9 h-9 rounded-xl glass-shine-btn flex items-center justify-center transition-all cursor-pointer ${
-              isMicMuted
-                ? 'border-rose-400 text-rose-700'
-                : 'border-cyan-400 text-cyan-800 shadow-[0_0_12px_rgba(6,182,212,0.25)]'
+              isListening
+                ? 'border-cyan-400 text-cyan-900 bg-cyan-100/40 shadow-[0_0_16px_rgba(6,182,212,0.5)] animate-pulse'
+                : isMicMuted
+                ? 'border-rose-400/80 text-rose-700 bg-rose-50/20'
+                : 'text-slate-700 hover:text-slate-950'
             }`}
-            title={isMicMuted ? 'Microphone is OFF (Click to turn ON)' : 'Microphone is ON (Click to turn OFF)'}
+            title={
+              isListening
+                ? 'Microphone is Active (Listening) - Click to Mute'
+                : isMicMuted
+                ? 'Microphone is Muted - Click to Speak'
+                : 'Click to Speak (Microphone)'
+            }
           >
             <span className="glass-glare" />
             <span className="glass-click-flash" />
-            {isMicMuted ? (
-              <MicOff className="w-4 h-4" />
+            {isListening ? (
+              <span className="relative flex items-center justify-center">
+                <Mic className="w-4 h-4 text-cyan-700 animate-pulse" />
+                {inputLevel > 0.05 && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                )}
+              </span>
+            ) : isMicMuted ? (
+              <MicOff className="w-4 h-4 text-rose-600" />
             ) : (
-              <Mic className="w-4 h-4 text-cyan-800" />
+              <Mic className="w-4 h-4 text-slate-700" />
             )}
           </button>
 

@@ -143,21 +143,12 @@ async def synthesize_and_play(text: str, voice_override: str = None, pitch: str 
         communicate = edge_tts.Communicate(text, voice, pitch=pitch, rate=rate)
         await communicate.save(target_file)
 
-        if not output_path:
-            # Play directly through system speaker using macOS native player
-            subprocess.run(["afplay", target_file], check=True)
+        # Audio is streamed exclusively through the frontend web client; host speaker playback is disabled.
+        pass
     except Exception as e:
-        sys.stderr.write(f"[TTS Engine] Edge-TTS error, falling back to native say: {e}\n")
-        if not output_path:
-            # Native macOS fallback
-            mac_voice = "Lekha" if any(ord(c) >= 0x0900 and ord(c) <= 0x0D7F for c in text) else "Samantha"
-            subprocess.run(["say", "-v", mac_voice, text])
+        sys.stderr.write(f"[TTS Engine] Edge-TTS error: {e}\n")
     finally:
-        if not output_path and os.path.exists(target_file):
-            try:
-                os.remove(target_file)
-            except OSError:
-                pass
+        pass
 
 def main():
     parser = argparse.ArgumentParser(description="January Multilingual Expressive TTS Engine")

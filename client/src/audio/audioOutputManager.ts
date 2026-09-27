@@ -205,18 +205,35 @@ export class AudioOutputManager {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 1.05;
-    utterance.pitch = emotion === 'joy' ? 1.2 : emotion === 'concerned' ? 0.9 : 1.0;
+    utterance.pitch = emotion === 'joy' ? 1.15 : emotion === 'concerned' ? 0.92 : 1.0;
 
-    const voices = window.speechSynthesis.getVoices();
-    const preferredVoice =
-      voices.find(
-        (v) =>
-          v.name.includes('Samantha') ||
-          v.name.includes('Victoria') ||
-          v.name.includes('Karen') ||
-          v.name.includes('Google UK English Female')
-      ) || voices[0];
-    if (preferredVoice) utterance.voice = preferredVoice;
+    let voices = window.speechSynthesis.getVoices();
+    const findFemaleVoice = (list: SpeechSynthesisVoice[]) => {
+      return (
+        list.find((v) => /samantha/i.test(v.name)) ||
+        list.find((v) => /victoria/i.test(v.name)) ||
+        list.find((v) => /karen/i.test(v.name)) ||
+        list.find((v) => /female/i.test(v.name)) ||
+        list.find((v) => /zira/i.test(v.name)) ||
+        list.find((v) => /moira/i.test(v.name)) ||
+        list.find((v) => /tessa/i.test(v.name)) ||
+        list.find((v) => /fiona/i.test(v.name)) ||
+        list.find((v) => /google uk english female/i.test(v.name)) ||
+        list.find((v) => v.lang.startsWith('en')) ||
+        list[0]
+      );
+    };
+
+    let preferredVoice = findFemaleVoice(voices);
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+    } else {
+      window.speechSynthesis.onvoiceschanged = () => {
+        voices = window.speechSynthesis.getVoices();
+        const v = findFemaleVoice(voices);
+        if (v) utterance.voice = v;
+      };
+    }
 
     utterance.onstart = () => {
       this.playingCount++;

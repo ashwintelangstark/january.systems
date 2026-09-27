@@ -3,7 +3,7 @@ import { AgentState, ChatMessage, ActiveTool, ClientConfig, EmotionState } from 
 import { AudioInputManager } from '../audio/audioInputManager';
 import { AudioOutputManager } from '../audio/audioOutputManager';
 
-export function useAgentSocket(activeSessionId?: string) {
+export function useAgentSocket(activeSessionId?: string, onVoiceTranscript?: (text: string) => void) {
   const [agentState, setAgentState] = useState<AgentState>('passive');
   const [emotionState, setEmotionState] = useState<EmotionState>({
     emotion: 'curious',
@@ -20,6 +20,8 @@ export function useAgentSocket(activeSessionId?: string) {
   const [inputLevel, setInputLevel] = useState(0);
   const [outputLevel, setOutputLevel] = useState(0);
   const [isMicMuted, setIsMicMuted] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [interimTranscript, setInterimTranscript] = useState('');
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isEyesOpen, setIsEyesOpen] = useState(false);
   const [config, setConfig] = useState<ClientConfig | null>(null);
@@ -27,17 +29,28 @@ export function useAgentSocket(activeSessionId?: string) {
   const socketRef = useRef<WebSocket | null>(null);
   const audioInputRef = useRef<AudioInputManager | null>(null);
   const audioOutputRef = useRef<AudioOutputManager | null>(null);
-  const isMicMutedRef = useRef<boolean>(isMicMuted);
+  const recognitionRef = useRef<any>(null);
+  const isListeningRef = useRef<boolean>(false);
+  const isMicMutedRef = useRef<boolean>(false);
   const agentStateRef = useRef<AgentState>(agentState);
+  const onVoiceTranscriptRef = useRef(onVoiceTranscript);
 
-  // Keep ref synchronized
+  // Keep refs synchronized
   useEffect(() => {
     isMicMutedRef.current = isMicMuted;
   }, [isMicMuted]);
 
   useEffect(() => {
+    isListeningRef.current = isListening;
+  }, [isListening]);
+
+  useEffect(() => {
     agentStateRef.current = agentState;
   }, [agentState]);
+
+  useEffect(() => {
+    onVoiceTranscriptRef.current = onVoiceTranscript;
+  }, [onVoiceTranscript]);
 
   // Initialize Audio Managers
   useEffect(() => {
@@ -65,11 +78,6 @@ export function useAgentSocket(activeSessionId?: string) {
     );
     audioInputRef.current = inputMgr;
 
-    // Start mic capture when user interacts
-    inputMgr.start().catch((err) => {
-      console.warn('[useAgentSocket] Microphone access pending user interaction:', err.message);
-    });
-
     return () => {
       inputMgr.stop();
       outputMgr.flush();
@@ -95,7 +103,6 @@ export function useAgentSocket(activeSessionId?: string) {
 
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const host = window.location.hostname || 'localhost';
-      // Priority: use Vite proxy `/ws` if on port 5173, or direct 3001
       const wsUrl =
         window.location.port === '5173'
           ? `${wsProtocol}//${window.location.host}/ws`
@@ -122,7 +129,7 @@ export function useAgentSocket(activeSessionId?: string) {
             switch (msg.type) {
               case 'state_change': {
                 setAgentState(msg.state);
-                // Echo cancellation: auto mute mic while speaking
+                // Echo cancellation: auto mute mic level while speaking
                 if (audioInputRef.current) {
                   if (msg.state === 'speaking') {
                     audioInputRef.current.setMute(true);
@@ -158,8 +165,6 @@ export function useAgentSocket(activeSessionId?: string) {
                 const { role, text, isFinal, source: msgSource } = msg.payload;
 
                 setMessages((prev) => {
-                  // Deduplicate user messages: if user message with identical text was added recently
-                  // (e.g. optimistic text input from the prompt bar), do not append duplicate!
                   if (role === 'user') {
                     const isDuplicate = prev.some(
                       (m) =>
@@ -279,7 +284,7 @@ export function useAgentSocket(activeSessionId?: string) {
 
   // Send Text Message
   const sendTextMessage = useCallback(
-    (text: string, explicitSessionId?: string) => {
+    (text: string, explicitSessionId?: string, source: 'text' | 'voice' = 'text') => {
       const trimmed = text.trim();
       if (!trimmed) return;
 
@@ -290,7 +295,7 @@ export function useAgentSocket(activeSessionId?: string) {
         {
           id: Math.random().toString(36).substring(2, 9),
           role: 'user',
-          source: 'text',
+          source,
           text: trimmed,
           timestamp: Date.now(),
           isStreaming: false,
@@ -302,6 +307,7 @@ export function useAgentSocket(activeSessionId?: string) {
           JSON.stringify({
             type: 'text_input',
             text: trimmed,
+            source,
             sessionId: targetSid,
           })
         );
@@ -335,17 +341,6 @@ export function useAgentSocket(activeSessionId?: string) {
     setAgentState('passive');
   }, []);
 
-  const toggleMuteMic = useCallback(() => {
-    setIsMicMuted((prev) => {
-      const next = !prev;
-      if (audioInputRef.current) audioInputRef.current.setMute(next);
-      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-        socketRef.current.send(JSON.stringify({ type: 'set_mic_mute', muted: next }));
-      }
-      return next;
-    });
-  }, []);
-
   const toggleMuteAudio = useCallback(() => {
     setIsAudioMuted((prev) => {
       const next = !prev;
@@ -375,83 +370,187 @@ export function useAgentSocket(activeSessionId?: string) {
     });
   }, []);
 
-  // Continuous In-Browser Speech-to-Text Recognition
-  useEffect(() => {
+  // Start continuous listening with user gesture
+  const startListening = useCallback(async () => {
     const SpeechRecognitionClass =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognitionClass) {
+      console.warn('[Web STT] SpeechRecognition is not supported in this browser.');
       return;
     }
 
-    let recognition: any = null;
-    let isActive = true;
-    const shouldListen = !isMicMuted && agentState !== 'speaking';
+    try {
+      if (audioInputRef.current) {
+        await audioInputRef.current.start();
+        audioInputRef.current.setMute(false);
+      }
+    } catch (err: any) {
+      console.warn('[Web STT] Mic capture initialization notice:', err.message);
+    }
 
-    if (shouldListen) {
+    setIsMicMuted(false);
+    isMicMutedRef.current = false;
+    setIsListening(true);
+    isListeningRef.current = true;
+
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({ type: 'set_mic_mute', muted: false }));
+    }
+
+    if (!recognitionRef.current) {
       try {
-        recognition = new SpeechRecognitionClass();
+        const recognition = new SpeechRecognitionClass();
         recognition.continuous = true;
         recognition.interimResults = true;
         recognition.lang = 'en-US';
 
+        recognition.onstart = () => {
+          setIsListening(true);
+          isListeningRef.current = true;
+          console.log('🎙️ [Web STT] Microphone is active and listening for your speech.');
+        };
+
         recognition.onresult = (event: any) => {
+          let interimText = '';
           for (let i = event.resultIndex; i < event.results.length; i++) {
             const result = event.results[i];
-            const transcript = result[0]?.transcript?.trim() || '';
+            const transcript = result[0]?.transcript || '';
 
-            if (result.isFinal && transcript) {
-              console.log(`🎙️ [Web STT] Spoken query: "${transcript}"`);
-              const lower = transcript.toLowerCase();
+            if (result.isFinal) {
+              const clean = transcript.trim();
+              if (clean) {
+                console.log(`🎙️ [Web STT] Spoken query captured: "${clean}"`);
+                setInterimTranscript('');
 
-              if (lower === 'rise' || lower === 'wake up' || lower === 'hey january') {
-                triggerWake('voice');
-              } else if (lower === 'good night' || lower === 'sleep' || lower === 'go to sleep' || lower === 'standby') {
-                triggerSleep();
-              } else if (lower.includes('open eyes') || lower.includes('open camera')) {
-                toggleEyes();
-              } else if (lower.includes('close eyes') || lower.includes('close camera')) {
-                toggleEyes();
-              } else {
-                sendTextMessage(transcript);
+                const lower = clean.toLowerCase();
+                if (lower === 'rise' || lower === 'wake up' || lower === 'hey january') {
+                  triggerWake('voice');
+                } else if (lower === 'good night' || lower === 'sleep' || lower === 'go to sleep' || lower === 'standby') {
+                  triggerSleep();
+                } else if (lower.includes('open eyes') || lower.includes('open camera') || lower.includes('eyes open')) {
+                  toggleEyes();
+                } else if (lower.includes('close eyes') || lower.includes('close camera') || lower.includes('eyes closed')) {
+                  toggleEyes();
+                } else {
+                  if (onVoiceTranscriptRef.current) {
+                    onVoiceTranscriptRef.current(clean);
+                  } else {
+                    sendTextMessage(clean, undefined, 'voice');
+                  }
+                }
               }
-            } else if (transcript) {
-              if (agentStateRef.current === 'passive') {
-                setAgentState('listening');
-              }
+            } else {
+              interimText += transcript;
+            }
+          }
+
+          if (interimText.trim()) {
+            setInterimTranscript(interimText.trim());
+            if (agentStateRef.current === 'passive') {
+              setAgentState('listening');
             }
           }
         };
 
         recognition.onerror = (event: any) => {
-          if (event.error !== 'no-speech' && event.error !== 'aborted') {
-            console.debug('[Web STT] Notice:', event.error);
+          if (event.error === 'no-speech' || event.error === 'aborted') {
+            return;
           }
+          if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+            console.warn('⚠️ [Web STT] Microphone access was not permitted by the user or browser.');
+            setIsListening(false);
+            isListeningRef.current = false;
+            setIsMicMuted(true);
+            isMicMutedRef.current = true;
+            return;
+          }
+          console.debug('[Web STT] Recognition event notice:', event.error);
         };
 
         recognition.onend = () => {
-          if (isActive && !isMicMutedRef.current && agentStateRef.current !== 'speaking') {
+          if (isListeningRef.current && !isMicMutedRef.current && agentStateRef.current !== 'speaking') {
             try {
               recognition.start();
-            } catch {}
+            } catch (err: any) {
+              // Ignore if already active
+            }
+          } else {
+            setIsListening(false);
+            isListeningRef.current = false;
           }
         };
 
-        recognition.start();
+        recognitionRef.current = recognition;
       } catch (err: any) {
-        console.warn('[Web STT] Start notice:', err.message);
+        console.warn('[Web STT] SpeechRecognition error:', err.message);
       }
     }
 
-    return () => {
-      isActive = false;
-      if (recognition) {
+    try {
+      recognitionRef.current?.start();
+    } catch (err: any) {
+      // If already started, ignore
+    }
+  }, [triggerWake, triggerSleep, toggleEyes, sendTextMessage]);
+
+  const stopListening = useCallback(() => {
+    setIsListening(false);
+    isListeningRef.current = false;
+    setIsMicMuted(true);
+    isMicMutedRef.current = true;
+    setInterimTranscript('');
+
+    if (audioInputRef.current) {
+      audioInputRef.current.setMute(true);
+    }
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({ type: 'set_mic_mute', muted: true }));
+    }
+
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.abort();
+      } catch (err) {}
+    }
+  }, []);
+
+  const toggleMuteMic = useCallback(async () => {
+    if (isListeningRef.current && !isMicMutedRef.current) {
+      stopListening();
+    } else {
+      await startListening();
+    }
+  }, [startListening, stopListening]);
+
+  // Echo cancellation: pause speech recognition when January is speaking
+  useEffect(() => {
+    if (agentState === 'speaking') {
+      if (recognitionRef.current && isListeningRef.current) {
         try {
-          recognition.abort();
+          recognitionRef.current.abort();
+        } catch {}
+      }
+    } else if (agentState === 'passive' || agentState === 'listening') {
+      if (isListeningRef.current && !isMicMutedRef.current) {
+        try {
+          recognitionRef.current?.start();
+        } catch {}
+      }
+    }
+  }, [agentState]);
+
+  // Clean unmount
+  useEffect(() => {
+    return () => {
+      isListeningRef.current = false;
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
         } catch {}
       }
     };
-  }, [isMicMuted, agentState, sendTextMessage, triggerWake, triggerSleep, toggleEyes]);
+  }, []);
 
   return {
     agentState,
@@ -463,10 +562,14 @@ export function useAgentSocket(activeSessionId?: string) {
     inputLevel,
     outputLevel,
     isMicMuted,
+    isListening,
+    interimTranscript,
     isAudioMuted,
     isEyesOpen,
     config,
     sendTextMessage,
+    startListening,
+    stopListening,
     triggerWake,
     triggerSleep,
     toggleListening,
