@@ -324,10 +324,10 @@ async function handleUserInput(text: string) {
 
   if (lower === 'artifacts' || lower === 'files' || lower === 'models') {
     const activeId = brainService.getActiveSessionId();
-    const session = brainService.getSession(activeId);
-    const artifacts = brainService.listArtifactsForSession(activeId);
+    const session = activeId ? brainService.getSession(activeId) : null;
+    const artifacts = activeId ? brainService.listArtifactsForSession(activeId) : [];
     console.log(`\n${purple(bold('┌── [JANUARY BRAIN : SAVED FILES & 3D MODELS] ───────────────────────'))}`);
-    console.log(`│ ${bold('Session:')} ${brightCyan(session?.title || 'Active Session')} ${dim(`(${activeId.slice(0, 8)})`)}`);
+    console.log(`│ ${bold('Session:')} ${brightCyan(session?.title || 'Active Session')} ${dim(activeId ? `(${activeId.slice(0, 8)})` : '(none)')}`);
     if (artifacts.length === 0) {
       console.log(`│ ${dim('No files, images, or 3D models saved under this session yet.')}`);
     } else {

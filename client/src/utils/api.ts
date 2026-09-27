@@ -2,99 +2,12 @@ import { BrainSession, ChatMessage } from '../types';
 
 export const API_BASE = '';
 
-/**
- * Default sample sessions matching the reference design
- */
-export const DEFAULT_SESSIONS: BrainSession[] = [
-  {
-    id: 's-1',
-    title: 'Computer Vision Pipeline',
-    summary: 'Analyzed 3 images • Generated code',
-    createdAt: Date.now() - 3600000 * 2,
-    updatedAt: Date.now() - 3600000 * 2,
-    category: 'Today',
-    icon: 'camera',
-  },
-  {
-    id: 's-2',
-    title: 'Posture Analysis',
-    summary: '30s observation • JSON output',
-    createdAt: Date.now() - 3600000 * 3,
-    updatedAt: Date.now() - 3600000 * 3,
-    category: 'Today',
-    icon: 'activity',
-  },
-  {
-    id: 's-3',
-    title: 'EduForge Development',
-    summary: 'Next.js • Database schema',
-    createdAt: Date.now() - 3600000 * 4,
-    updatedAt: Date.now() - 3600000 * 4,
-    category: 'Today',
-    icon: 'code',
-  },
-  {
-    id: 's-4',
-    title: 'YOLO Cancer Training',
-    summary: 'Training results • Visualization',
-    createdAt: Date.now() - 3600000 * 6,
-    updatedAt: Date.now() - 3600000 * 6,
-    category: 'Today',
-    icon: 'chart',
-  },
-  {
-    id: 's-5',
-    title: 'Resume Optimization',
-    summary: 'Updated for AI Engineering role',
-    createdAt: Date.now() - 86400000,
-    updatedAt: Date.now() - 86400000,
-    category: 'Yesterday',
-    icon: 'file',
-  },
-  {
-    id: 's-6',
-    title: 'Solar Dryer Dashboard',
-    summary: 'ESP32 integration • Web UI',
-    createdAt: Date.now() - 86400000 - 3600000 * 4,
-    updatedAt: Date.now() - 86400000 - 3600000 * 4,
-    category: 'Yesterday',
-    icon: 'monitor',
-  },
-  {
-    id: 's-7',
-    title: 'Quillora Global Strategy',
-    summary: 'Marketing plan • Content ideas',
-    createdAt: Date.now() - 86400000 - 3600000 * 7,
-    updatedAt: Date.now() - 86400000 - 3600000 * 7,
-    category: 'Yesterday',
-    icon: 'target',
-  },
-  {
-    id: 's-8',
-    title: 'JANUARY UI/UX Design',
-    summary: 'Generated interface concepts',
-    createdAt: Date.now() - 86400000 * 3,
-    updatedAt: Date.now() - 86400000 * 3,
-    category: 'Previous 7 Days',
-    icon: 'palette',
-  },
-  {
-    id: 's-9',
-    title: 'InQuote Desktop App',
-    summary: 'Electron • SQLite • Build setup',
-    createdAt: Date.now() - 86400000 * 5,
-    updatedAt: Date.now() - 86400000 * 5,
-    category: 'Previous 7 Days',
-    icon: 'database',
-  },
-];
-
 export async function fetchSessions(): Promise<BrainSession[]> {
   try {
     const res = await fetch(`${API_BASE}/api/brain/sessions?limit=50`);
     if (res.ok) {
       const data = await res.json();
-      if (Array.isArray(data.sessions) && data.sessions.length > 0) {
+      if (Array.isArray(data.sessions)) {
         return data.sessions.map((s: any) => {
           const updatedDate = new Date(s.updatedAt || s.createdAt);
           const now = new Date();
@@ -118,9 +31,21 @@ export async function fetchSessions(): Promise<BrainSession[]> {
       }
     }
   } catch (err) {
-    console.warn('[API] Could not fetch sessions from server, using sample list:', err);
+    console.warn('[API] Could not fetch sessions from server:', err);
   }
-  return DEFAULT_SESSIONS;
+  return [];
+}
+
+export async function clearAllSessionsApi(): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE}/api/brain/clear-all`, {
+      method: 'POST',
+    });
+    return res.ok;
+  } catch (err) {
+    console.warn('[API] Failed to clear all sessions from database:', err);
+    return false;
+  }
 }
 
 export async function createSession(title: string): Promise<BrainSession> {

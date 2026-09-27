@@ -151,11 +151,30 @@ app.patch('/api/brain/sessions/:id', (req, res) => {
   }
 });
 
-// Delete Session
+// Delete Single Session from DB
 app.delete('/api/brain/sessions/:id', (req, res) => {
   try {
     const success = brainService.deleteSession(req.params.id);
     res.json({ status: 'ok', success });
+  } catch (err: any) {
+    res.status(500).json({ status: 'error', error: err.message });
+  }
+});
+
+app.delete('/api/sessions/:id', (req, res) => {
+  try {
+    const success = brainService.deleteSession(req.params.id);
+    res.json({ status: 'ok', success });
+  } catch (err: any) {
+    res.status(500).json({ status: 'error', error: err.message });
+  }
+});
+
+// Clear All Sessions, Messages, and Artifacts from DB
+app.post('/api/brain/clear-all', (req, res) => {
+  try {
+    brainService.clearAll();
+    res.json({ status: 'ok', message: 'All conversations and messages cleared from database' });
   } catch (err: any) {
     res.status(500).json({ status: 'error', error: err.message });
   }

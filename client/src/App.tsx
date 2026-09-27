@@ -17,7 +17,7 @@ import { BrainSession } from './types';
 
 export const App: React.FC = () => {
   const [sessions, setSessions] = useState<BrainSession[]>([]);
-  const [activeSessionId, setActiveSessionId] = useState<string>('s-1');
+  const [activeSessionId, setActiveSessionId] = useState<string>('');
   const [isDrawerOpen, setIsDrawerOpen] = useState(true);
   const [isEyesOpen, setIsEyesOpen] = useState(false);
 
@@ -54,6 +54,9 @@ export const App: React.FC = () => {
             setMessages(msgs);
           }
         } catch {}
+      } else {
+        setActiveSessionId('');
+        setMessages([]);
       }
     });
 
@@ -71,9 +74,7 @@ export const App: React.FC = () => {
     setActiveSessionId(sessionId);
     setIsChatExpanded(true);
     const sessionMsgs = await fetchSessionMessages(sessionId);
-    if (sessionMsgs.length > 0) {
-      setMessages(sessionMsgs);
-    }
+    setMessages(sessionMsgs || []);
   };
 
   // Handle Creating New Chat Session
@@ -87,7 +88,7 @@ export const App: React.FC = () => {
     setIsChatExpanded(true);
   };
 
-  // Handle Deleting Chat Session
+  // Handle Deleting Chat Session (Deletes from DB + Local State)
   const handleDeleteSession = async (sessionId: string) => {
     try {
       await deleteSessionApi(sessionId);
@@ -123,9 +124,15 @@ export const App: React.FC = () => {
   };
 
   // Handle Sending Text Message
-  const handleSendText = (text: string) => {
+  const handleSendText = async (text: string) => {
     setIsDrawerOpen(true);
     setIsChatExpanded(true);
+    if (!activeSessionId) {
+      const title = text.length > 30 ? `${text.substring(0, 30)}...` : text;
+      const newSession = await createSession(title);
+      setSessions((prev) => [newSession, ...prev]);
+      setActiveSessionId(newSession.id);
+    }
     sendTextMessage(text);
   };
 

@@ -23,23 +23,6 @@ export class BrainDatabase {
     const dataDir = getWritableDataDir('brain');
     this.dbPath = customPath || path.join(dataDir, 'january_brain.sqlite');
 
-    // If target database doesn't exist yet, check for bundled seed DB
-    if (!fs.existsSync(this.dbPath)) {
-      const candidateSeeds = [
-        path.resolve(__dirname, '../../../data/brain/january_brain.sqlite'),
-        path.resolve(process.cwd(), 'data/brain/january_brain.sqlite'),
-      ];
-      for (const seed of candidateSeeds) {
-        if (fs.existsSync(seed)) {
-          try {
-            fs.copyFileSync(seed, this.dbPath);
-            console.log(`[BrainDatabase] Initialized brain database from seed: ${seed}`);
-            break;
-          } catch {}
-        }
-      }
-    }
-
     this.initializeConnection();
   }
 
