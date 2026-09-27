@@ -37,14 +37,14 @@ export const TopStatusBar: React.FC<TopStatusBarProps> = ({
     switch (agentState) {
       case 'listening':
         return {
-          label: 'January is listening...',
+          label: 'Listening (Good Night)',
           dot: 'bg-cyan-500 animate-ping',
           textColor: 'text-cyan-950',
           borderColor: 'border-cyan-400/60 shadow-[0_0_16px_rgba(6,182,212,0.3)]',
         };
       case 'speaking':
         return {
-          label: 'January is speaking...',
+          label: 'Speaking...',
           dot: 'bg-purple-500 animate-bounce',
           textColor: 'text-purple-950',
           borderColor: 'border-purple-400/60 shadow-[0_0_16px_rgba(168,85,247,0.3)]',
@@ -58,15 +58,15 @@ export const TopStatusBar: React.FC<TopStatusBarProps> = ({
         };
       case 'sleeping':
         return {
-          label: 'Deep Sleep',
-          dot: 'bg-indigo-500 opacity-70',
+          label: 'Sleeping (Rise)',
+          dot: 'bg-indigo-500 opacity-70 animate-pulse',
           textColor: 'text-indigo-950',
           borderColor: 'border-indigo-400/60 shadow-[0_0_14px_rgba(99,102,241,0.25)]',
         };
       case 'passive':
       default:
         return {
-          label: 'Standby',
+          label: 'Standby (Good Night)',
           dot: 'bg-amber-500',
           textColor: 'text-slate-800',
           borderColor: 'border-white/50 shadow-sm',
@@ -78,20 +78,21 @@ export const TopStatusBar: React.FC<TopStatusBarProps> = ({
 
   return (
     <div className="fixed top-6 right-6 z-30 flex items-center gap-2.5 select-none font-mono text-xs">
-      {/* 1. January Listening / Sleeping Interactive Button (100% Transparent Glass + Shine Effect) */}
+      {/* 1. January Good Night / Rise Interactive Button (100% Transparent Glass + Shine Effect) */}
       <button
         type="button"
         onClick={handleStatusClick}
         className={`relative flex items-center gap-2 px-3.5 py-1.5 rounded-full glass-shine-btn ${
           shiningBtn === 'status' ? 'is-shining' : ''
         } border ${status.borderColor} shadow-lg transition-all cursor-pointer`}
-        title={agentState === 'sleeping' ? 'Click to Wake January' : 'Click to Toggle Sleep Mode'}
+        title={agentState === 'sleeping' ? 'Click to Rise (Wake January)' : 'Click for Good Night (Put January to Sleep)'}
       >
         <span className="glass-glare" />
         <span className="glass-click-flash" />
         <span className={`w-2 h-2 rounded-full ${status.dot}`} />
         <span className={`font-semibold ${status.textColor}`}>{status.label}</span>
       </button>
+
 
       {/* 2. Emotion Attunement Interactive Pill Button (100% Transparent Glass + Shine Effect) */}
       {emotionState && (

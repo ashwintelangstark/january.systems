@@ -26,7 +26,8 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const stateRef = useRef({ agentState, emotionState, inputLevel, outputLevel, isDrawerOpen, isChatExpanded });
   const isClickedRef = useRef(false);
-  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
 
   // Synchronize state ref without unmounting Three.js instance
   useEffect(() => {

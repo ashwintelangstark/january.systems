@@ -38,10 +38,9 @@ export interface EmotionPayload {
 
 // Client -> Server messages
 export type ClientMessage =
-  | { type: 'cli_attach' }
-  | { type: 'cli_detach' }
   | { type: 'wake_trigger'; source?: 'voice' | 'manual' }
   | { type: 'sleep_trigger'; source?: 'voice' | 'manual' }
+
   | { type: 'audio_input'; data: string; mimeType?: string } // Base64 PCM 16kHz
   | { type: 'text_input'; text: string }
   | { type: 'set_state'; state: AgentState }

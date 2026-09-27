@@ -71,12 +71,34 @@ export const FloatingPromptBar: React.FC<FloatingPromptBarProps> = ({
 
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-2xl px-4 select-none">
+      {/* Pop-Up Stop Speaking Pill Button (When January is Responding Verbally) */}
+      {agentState === 'speaking' && (
+        <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-50 flex items-center justify-center animate-bounce">
+          <button
+            type="button"
+            onClick={onInterrupt}
+            className="relative flex items-center gap-2 px-4 py-1.5 rounded-full glass-shine-btn bg-white/30 border border-rose-400/80 shadow-[0_8px_24px_rgba(244,63,94,0.35)] text-rose-950 text-xs font-semibold tracking-wide backdrop-blur-xl hover:bg-rose-50/60 hover:scale-105 active:scale-95 transition-all cursor-pointer select-none"
+            title="Stop January from Speaking"
+          >
+            <span className="glass-glare" />
+            <span className="glass-click-flash" />
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-600"></span>
+            </span>
+            <Square className="w-3 h-3 fill-rose-600 text-rose-600" />
+            <span>Stop Speaking</span>
+          </button>
+        </div>
+      )}
+
       <form
         onSubmit={handleSubmit}
         className="relative flex items-center gap-1.5 p-1.5 rounded-2xl liquid-glass-bar transition-all focus-within:border-white/80 focus-within:shadow-[0_20px_45px_rgba(0,30,60,0.12),inset_0_1.5px_2px_rgba(255,255,255,0.9),0_0_25px_rgba(255,255,255,0.35)]"
       >
         {/* Subtle Top Specular Glass Refraction Edge */}
         <div className="absolute top-0 left-6 right-6 h-[1px] bg-gradient-to-r from-transparent via-white/70 to-transparent pointer-events-none" />
+
 
         {/* Hidden File Input */}
         <input

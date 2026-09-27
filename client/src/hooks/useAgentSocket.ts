@@ -272,7 +272,11 @@ export function useAgentSocket(activeSessionId?: string) {
 
   const interrupt = useCallback(() => {
     if (audioOutputRef.current) audioOutputRef.current.flush();
-    if (socketRef.current) socketRef.current.send(JSON.stringify({ type: 'interrupt' }));
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({ type: 'interrupt' }));
+    }
+    fetch('/api/voice/stop', { method: 'POST' }).catch(() => {});
+    setAgentState('passive');
   }, []);
 
   const toggleMuteMic = useCallback(() => {
@@ -298,12 +302,13 @@ export function useAgentSocket(activeSessionId?: string) {
   }, []);
 
   const toggleListening = useCallback(() => {
-    if (agentState === 'listening') {
-      triggerSleep();
-    } else {
+    if (agentState === 'sleeping') {
       triggerWake('manual');
+    } else {
+      triggerSleep();
     }
   }, [agentState, triggerSleep, triggerWake]);
+
 
   return {
     agentState,

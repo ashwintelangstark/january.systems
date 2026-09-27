@@ -420,46 +420,20 @@ emotionEngine.on('emotionChange', (emotion) => {
   broadcast({ type: 'emotion_update', payload: emotion });
 });
 
-// Track connected browser clients and CLI sessions
+// Track connected browser clients
 const clients = new Set<WebSocket>();
-const activeCliSockets = new Set<WebSocket>();
-let isCliActiveHttp = false;
 let isSpeakerMuted = false;
 let isMicMuted = false;
 let micUnmuteTimeout: NodeJS.Timeout | null = null;
 
-function updateCliMode(): void {
-  const isCliAttached = activeCliSockets.size > 0 || isCliActiveHttp;
-  if (isCliAttached) {
-    console.log('💻 [Coordinator] Terminal CLI session active. Background microphone is PAUSED.');
-    systemMic.setMute(true);
-    broadcast({
-      type: 'system_log',
-      message: 'Terminal CLI attached. Background microphone paused.',
-      level: 'info',
-    });
-  } else {
-    console.log('🎙️ [Coordinator] Terminal CLI disconnected. Background microphone is ACTIVE and LISTENING.');
-    systemMic.setMute(false);
-    broadcast({
-      type: 'system_log',
-      message: 'Terminal CLI detached. Background microphone resumed.',
-      level: 'info',
-    });
-  }
-}
-
-// REST endpoints for CLI coordination
-app.post('/api/cli/attach', (req, res) => {
-  isCliActiveHttp = true;
-  updateCliMode();
-  res.json({ status: 'ok', cliActive: true, micPaused: true });
-});
-
-app.post('/api/cli/detach', (req, res) => {
-  isCliActiveHttp = false;
-  updateCliMode();
-  res.json({ status: 'ok', cliActive: false, micPaused: false });
+// Stop Speech REST endpoint
+app.post('/api/voice/stop', (req, res) => {
+  geminiClient.emit('interrupt');
+  systemSpeaker.stopPlayback();
+  setAgentState('passive', 'User stopped speech via UI');
+  broadcast({ type: 'interrupt' });
+  broadcast({ type: 'state_change', state: 'passive', reason: 'User stopped speech via UI' });
+  res.json({ status: 'ok', stopped: true });
 });
 
 function broadcast(message: ServerMessage): void {
@@ -470,6 +444,7 @@ function broadcast(message: ServerMessage): void {
     }
   }
 }
+
 
 function setAgentState(newState: AgentState, reason?: string): void {
   if (currentState !== newState) {
@@ -535,28 +510,11 @@ geminiClient.on('toolResult', (payload) => {
     type: 'tool_result',
     payload,
   });
-
-  if (payload.name === 'delegate_coding' && payload.result?.success) {
-    const r = payload.result;
-    console.log(`\n\x1b[36m\x1b[1m╔═══════════════════════════════════════════════════════════════════╗\x1b[0m`);
-    console.log(`\x1b[36m\x1b[1m║ 💻 [CODE GENERATED IN TERMINAL: ${(r.language || 'CODE').toUpperCase()}] — ${(r.model || 'Gemini/Claude')}\x1b[0m`);
-    console.log(`\x1b[36m\x1b[1m╠═══════════════════════════════════════════════════════════════════╣\x1b[0m`);
-    const lines = (r.response || r.codeSnippet || '').split('\n');
-    for (const l of lines) {
-      console.log(`\x1b[36m\x1b[1m║\x1b[0m ${l}`);
-    }
-    if (r.compilationCommand) {
-      console.log(`\x1b[36m\x1b[1m╠═══════════════════════════════════════════════════════════════════╣\x1b[0m`);
-      console.log(`\x1b[36m\x1b[1m║\x1b[0m \x1b[33m\x1b[1m▶ Run Command:\x1b[0m \x1b[96m${r.compilationCommand}\x1b[0m`);
-    }
-    console.log(`\x1b[36m\x1b[1m╚═══════════════════════════════════════════════════════════════════╝\x1b[0m\n`);
-  }
 });
 
 geminiClient.on('interrupt', () => {
-  console.log('[Coordinator] User interrupted.');
   systemSpeaker.stopPlayback();
-  setAgentState('listening', 'User interrupt');
+  setAgentState('passive', 'User interrupted speech');
   broadcast({ type: 'interrupt' });
 });
 
@@ -590,7 +548,7 @@ systemSpeaker.on('end', () => {
   // Debounce unmute by 700ms to allow acoustic decay in the room, and only unmute if not muted by UI
   micUnmuteTimeout = setTimeout(() => {
     micUnmuteTimeout = null;
-    if (!isMicMuted && activeCliSockets.size === 0 && !isCliActiveHttp) {
+    if (!isMicMuted) {
       systemMic.setMute(false);
     }
   }, 700);
@@ -605,7 +563,6 @@ systemMic.on('ready', () => {
 });
 
 systemMic.on('wake', (data) => {
-  console.log(`🌟 [Coordinator] PHYSICAL MIC WAKE WORD HEARD ("${config.wakePhrase.toUpperCase()}")!`);
   setAgentState('listening', `Physical microphone wake phrase recognized`);
   broadcast({
     type: 'system_log',
@@ -615,7 +572,6 @@ systemMic.on('wake', (data) => {
 });
 
 systemMic.on('sleep', (data) => {
-  console.log(`🌙 [Coordinator] PHYSICAL MIC SLEEP WORD HEARD ("${config.sleepPhrase.toUpperCase()}")!`);
   systemSpeaker.stopPlayback();
   setAgentState('sleeping', `Physical microphone sleep phrase recognized`);
   const capWake = config.wakePhrase.charAt(0).toUpperCase() + config.wakePhrase.slice(1);
@@ -630,25 +586,38 @@ systemMic.on('sleep', (data) => {
       timestamp: Date.now(),
     },
   });
+});
+
+// Wire WakeDetector events
+wakeDetector.on('wake', (data) => {
+  setAgentState('listening', 'Wake trigger received (Rise)');
+  systemMic.setMute(false);
+});
+
+wakeDetector.on('sleep', (data) => {
+  systemSpeaker.stopPlayback();
+  setAgentState('sleeping', 'Sleep trigger received (Good Night)');
+  systemMic.setMute(true);
+  const capWake = config.wakePhrase.charAt(0).toUpperCase() + config.wakePhrase.slice(1);
+  const sleepMsg = `Good night. Standing by until you say ${capWake}.`;
+  systemSpeaker.speakText(sleepMsg);
   broadcast({
-    type: 'system_log',
-    message: `Physical Mic: Sleep word "${config.sleepPhrase}" recognized`,
-    level: 'info',
+    type: 'transcript',
+    payload: {
+      role: 'assistant',
+      text: sleepMsg,
+      isFinal: true,
+      timestamp: Date.now(),
+    },
   });
 });
 
 systemMic.on('camera_wake', async (data) => {
-  console.log(`👁️ [Coordinator] PHYSICAL MIC CAMERA WAKE WORD HEARD ("${config.cameraWakePhrase.toUpperCase()}")!`);
   visualActivityMonitor.openEyes(60);
   const msg = 'Eyes open. Real-time 60 FPS camera vision activated.';
   broadcast({
     type: 'transcript',
     payload: { role: 'assistant', text: msg, isFinal: true, timestamp: Date.now() },
-  });
-  broadcast({
-    type: 'system_log',
-    message: `Physical Mic: Camera wake phrase "${config.cameraWakePhrase}" recognized`,
-    level: 'info',
   });
   setAgentState('speaking', 'Camera eyes opened');
   await systemSpeaker.speakText(msg, { emotion: 'joy' });
@@ -656,17 +625,11 @@ systemMic.on('camera_wake', async (data) => {
 });
 
 systemMic.on('camera_sleep', async (data) => {
-  console.log(`🌙 [Coordinator] PHYSICAL MIC CAMERA SLEEP WORD HEARD ("${config.cameraSleepPhrase.toUpperCase()}")!`);
   visualActivityMonitor.closeEyes();
   const msg = 'Eyes closed. Camera monitoring paused and hardware turned off.';
   broadcast({
     type: 'transcript',
     payload: { role: 'assistant', text: msg, isFinal: true, timestamp: Date.now() },
-  });
-  broadcast({
-    type: 'system_log',
-    message: `Physical Mic: Camera sleep phrase "${config.cameraSleepPhrase}" recognized`,
-    level: 'info',
   });
   setAgentState('speaking', 'Camera eyes closed');
   await systemSpeaker.speakText(msg, { emotion: 'calm' });
@@ -680,11 +643,6 @@ async function handleUnifiedPrompt(text: string, source: 'voice' | 'text' = 'voi
   // Interrupt previous audio immediately on fresh input
   systemSpeaker.stopPlayback();
 
-  // If active CLI is attached in a separate terminal process, suppress background voice to prevent collisions
-  if (activeCliSockets.size > 0 && source === 'voice') {
-    console.log('[Coordinator] Terminal CLI session is active. Voice prompt ignored.');
-    return;
-  }
 
   console.log(`\n🎙️ [Coordinator] Processing ${source.toUpperCase()} prompt: "${clean}"`);
   broadcast({
@@ -1089,18 +1047,6 @@ wss.on('connection', (ws: WebSocket) => {
       const msg: ClientMessage = JSON.parse(raw.toString());
 
       switch (msg.type) {
-        case 'cli_attach': {
-          activeCliSockets.add(ws);
-          updateCliMode();
-          break;
-        }
-
-        case 'cli_detach': {
-          activeCliSockets.delete(ws);
-          updateCliMode();
-          break;
-        }
-
         case 'wake_trigger': {
           wakeDetector.triggerWake(msg.source || 'voice');
           break;
@@ -1143,13 +1089,15 @@ wss.on('connection', (ws: WebSocket) => {
         case 'interrupt': {
           geminiClient.emit('interrupt');
           systemSpeaker.stopPlayback();
+          setAgentState('passive', 'User stopped speech via UI');
+          broadcast({ type: 'interrupt' });
+          broadcast({ type: 'state_change', state: 'passive', reason: 'User stopped speech via UI' });
           break;
         }
 
         case 'set_mic_mute': {
           isMicMuted = !!msg.muted;
           systemMic.setMute(isMicMuted);
-          console.log(`🎙️ [Coordinator] Hardware Mic mute set to: ${isMicMuted}`);
           broadcast({
             type: 'system_log',
             message: `Hardware microphone ${isMicMuted ? 'muted' : 'unmuted'} by UI`,
@@ -1161,7 +1109,6 @@ wss.on('connection', (ws: WebSocket) => {
         case 'set_speaker_mute': {
           isSpeakerMuted = !!msg.muted;
           systemSpeaker.setMute(isSpeakerMuted);
-          console.log(`🔊 [Coordinator] Speaker mute set to: ${isSpeakerMuted}`);
           broadcast({
             type: 'system_log',
             message: `Speaker output ${isSpeakerMuted ? 'muted' : 'unmuted'} by UI`,
@@ -1181,40 +1128,18 @@ wss.on('connection', (ws: WebSocket) => {
   });
 
   ws.on('close', () => {
-    console.log('[Coordinator] Client disconnected.');
     clients.delete(ws);
-    if (activeCliSockets.has(ws)) {
-      activeCliSockets.delete(ws);
-      updateCliMode();
-    }
   });
 
   ws.on('error', (err) => {
-    console.error('[Coordinator] Client WebSocket error:', err.message);
     clients.delete(ws);
-    if (activeCliSockets.has(ws)) {
-      activeCliSockets.delete(ws);
-      updateCliMode();
-    }
   });
 });
 
+
 // Start server and connect engines
 server.listen(config.port, config.host, () => {
-  console.log(`
-=====================================================
-🚀 JANUARY AI AGENT CORE RUNNING
-=====================================================
-Port:             ${config.port}
-Host:             ${config.host}
-Gemini Model:     ${config.geminiModel}
-Gemini Voice:     ${config.geminiVoice}
-Claude Model:     ${config.claudeModel}
-Wake Phrase:      "${config.wakePhrase.toUpperCase()}"
-System Mic:       Faster-Whisper (tiny.en via sounddevice)
-System Speaker:   Edge-TTS / macOS afplay
-=====================================================
-`);
+  console.log(`⚡ [January Core] Server running on http://${config.host}:${config.port}`);
 
   // Start Gemini Live connection
   geminiClient.connect();
@@ -1224,10 +1149,8 @@ System Speaker:   Edge-TTS / macOS afplay
 
   // Start Physical Laptop Microphone & STT Engine
   systemMic.start();
-
-  // Ambient Camera Eyes starts in CLOSED state (LED off) until commanded with "eyes open"
-  console.log('👁️ [Coordinator] Camera eyes are CLOSED by default (LED off). Say or type "eyes open" to activate 60 FPS live video tracking.');
 });
+
 
 // Graceful cleanup on server termination
 function handleShutdown(): void {

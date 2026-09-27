@@ -8,9 +8,9 @@
     "dev:server": "npm run dev --prefix server",
     "dev:client": "npm run dev --prefix client",
     "start": "concurrently -n \"SERVER,CLIENT\" -c \"cyan.bold,magenta.bold\" --kill-others \"npm run dev:server\" \"npm run dev:client\"",
-    "cli": "npm run cli --prefix server",
     "server": "npm run dev --prefix server",
     "client": "npm run dev --prefix client",
+
     "build": "npm run build --prefix server && npm run build --prefix client",
     "build:server": "npm run build --prefix server",
     "build:client": "npm run build --prefix client"
