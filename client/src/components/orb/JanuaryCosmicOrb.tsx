@@ -9,6 +9,8 @@ interface JanuaryCosmicOrbProps {
   outputLevel?: number;
   onActivate?: () => void;
   className?: string;
+  isDrawerOpen?: boolean;
+  isChatExpanded?: boolean;
 }
 
 export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
@@ -18,22 +20,24 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
   outputLevel = 0,
   onActivate,
   className = '',
+  isDrawerOpen = false,
+  isChatExpanded = false,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const stateRef = useRef({ agentState, emotionState, inputLevel, outputLevel });
+  const stateRef = useRef({ agentState, emotionState, inputLevel, outputLevel, isDrawerOpen, isChatExpanded });
 
   // Update state ref for requestAnimationFrame without re-mounting Three.js scene
   useEffect(() => {
-    stateRef.current = { agentState, emotionState, inputLevel, outputLevel };
-  }, [agentState, emotionState, inputLevel, outputLevel]);
+    stateRef.current = { agentState, emotionState, inputLevel, outputLevel, isDrawerOpen, isChatExpanded };
+  }, [agentState, emotionState, inputLevel, outputLevel, isDrawerOpen, isChatExpanded]);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    // --- Exact 2,000 Motion Particles (As Requested) ---
+    // --- Exact 2,000 Motion Particles with obstruction-free scale ---
     const PARTICLE_COUNT = 2000;
-    const SPHERE_RADIUS = 3.6;
+    const SPHERE_RADIUS = 2.4;
 
     // --- Scene Setup ---
     const scene = new THREE.Scene();
@@ -43,12 +47,12 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
       0.1,
       1000
     );
-    camera.position.set(0, 0, 16);
+    camera.position.set(0, 0, 20);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setClearColor(0x000000, 0); // 100% transparent to show cosmic landscape
+    renderer.setClearColor(0x000000, 0); // 100% transparent clear background
     container.appendChild(renderer.domElement);
 
     // --- Custom GLSL Vertex Shader for Dual-Energy Swirling Core ---
@@ -209,7 +213,7 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
     const orbitalGroup = new THREE.Group();
 
     // Ring 1 (Primary Cyan/Blue Ring inclined at 45 deg)
-    const ring1Geom = new THREE.TorusGeometry(5.2, 0.035, 16, 120);
+    const ring1Geom = new THREE.TorusGeometry(3.6, 0.026, 16, 120);
     const ring1Mat = new THREE.MeshBasicMaterial({
       color: 0x00f5ff,
       transparent: true,
@@ -222,7 +226,7 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
     orbitalGroup.add(ring1);
 
     // Ring 2 (Secondary Magenta/Orange Ring inclined at -35 deg)
-    const ring2Geom = new THREE.TorusGeometry(4.8, 0.03, 16, 120);
+    const ring2Geom = new THREE.TorusGeometry(3.2, 0.022, 16, 120);
     const ring2Mat = new THREE.MeshBasicMaterial({
       color: 0xff4899,
       transparent: true,
@@ -235,7 +239,7 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
     orbitalGroup.add(ring2);
 
     // Ring 3 (Outer Equatorial Constellation Track)
-    const ring3Geom = new THREE.TorusGeometry(6.2, 0.02, 16, 140);
+    const ring3Geom = new THREE.TorusGeometry(4.2, 0.016, 16, 140);
     const ring3Mat = new THREE.MeshBasicMaterial({
       color: 0x8b5cf6,
       transparent: true,
@@ -247,7 +251,7 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
     orbitalGroup.add(ring3);
 
     // Star Node Beads on Orbital Rings (Glistening Starbursts)
-    const starGeom = new THREE.SphereGeometry(0.12, 12, 12);
+    const starGeom = new THREE.SphereGeometry(0.09, 12, 12);
     const starMatCyan = new THREE.MeshBasicMaterial({ color: 0x00ffff });
     const starMatOrange = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
     const starNodes: THREE.Mesh[] = [];
@@ -298,12 +302,20 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
     // --- Animation Loop ---
     const clock = new THREE.Clock();
     let animationFrameId: number;
+    let currentOffsetX = 0;
 
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
 
       const elapsedTime = clock.getElapsedTime();
       const current = stateRef.current;
+
+      // Dynamic centering offset so the particle orb is NEVER overlapped by left drawer or prompt bar
+      let targetOffsetX = 0;
+      if (current.isDrawerOpen) {
+        targetOffsetX = current.isChatExpanded ? 3.0 : 1.4;
+      }
+      currentOffsetX = THREE.MathUtils.lerp(currentOffsetX, targetOffsetX, 0.05);
 
       // Speed & Audio Calculations
       let speedFactor = 0.0;
@@ -338,7 +350,7 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
 
       // Animate Star Nodes on Ring 1 and Ring 2
       starNodes.forEach((node, idx) => {
-        const ringRadius = idx < 3 ? 5.2 : 4.8;
+        const ringRadius = idx < 3 ? 3.6 : 3.2;
         const angle = elapsedTime * (0.4 + idx * 0.08) + (idx * Math.PI) / 3;
         node.position.x = Math.cos(angle) * ringRadius;
         node.position.z = Math.sin(angle) * ringRadius;
@@ -346,10 +358,11 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
         node.scale.setScalar(1.0 + Math.sin(elapsedTime * 4.0 + idx) * 0.3);
       });
 
-      // Camera micro-sway
-      camera.position.x = Math.sin(elapsedTime * 0.2) * 0.5 + mouse.x * 0.8;
-      camera.position.y = Math.cos(elapsedTime * 0.2) * 0.5 + mouse.y * 0.8;
-      camera.lookAt(0, 0, 0);
+      // Camera positioning with obstruction avoidance
+      camera.position.x = currentOffsetX + Math.sin(elapsedTime * 0.2) * 0.3 + mouse.x * 0.5;
+      camera.position.y = Math.cos(elapsedTime * 0.2) * 0.3 + mouse.y * 0.5;
+      camera.position.z = 20;
+      camera.lookAt(currentOffsetX, 0, 0);
 
       renderer.render(scene, camera);
     };

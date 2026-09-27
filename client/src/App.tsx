@@ -151,6 +151,8 @@ export const App: React.FC = () => {
         emotionState={emotionState}
         inputLevel={inputLevel}
         outputLevel={outputLevel}
+        isDrawerOpen={isDrawerOpen}
+        isChatExpanded={isChatExpanded}
         onActivate={() => triggerWake('manual')}
         className="z-10"
       />
