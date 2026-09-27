@@ -8,9 +8,11 @@
 **January** is an advanced, emotionally attuned, autonomous operating system agent engineered to run directly on your Mac hardware. It listens through your MacBook's physical microphone using local **Faster-Whisper** speech-to-text, sees through your native Mac webcam with **AVFoundation 60 FPS hardware streaming** and sub-20ms **local edge face detection**, reasons across **458+ AI models** via a **Dynamic Multi-Tier Model Router**, acts on your desktop as an autonomous **Computer-Using Agent (CUA)**, creates interactive **3D models and architectural BIM buildings in Blender**, generates production-grade **Python, C, and C++** code, queries real-time internet and weather data, and speaks aloud through physical laptop speakers with **ElevenLabs Ultra-Realistic Neural Voices** dynamically modulated by a **7-Archetype Emotion Engine**, backed by **Microsoft Edge-TTS** and native speech fallback.
 
 January operates primarily through a high-end web interface backed by its local daemon:
-1. **High-End Liquid-Glass Web Interface (`npm run client` / `http://localhost:5173`)**: The primary command center. An ultra-aesthetic Three.js web application featuring an interactive 2,000 motion particle cosmic core with dual-energy swirling vortex responsive to voice and cursor touch, collapsible liquid-glass session drawer with pristine chat history, floating prompt dock with hardware Mic and Speaker toggles, camera eyes toggle, and live fallback AI intelligence.
-2. **Autonomous Background Daemon (`npm run server`)**: Runs headlessly on `localhost:3001`, coordinating single-instance speech, intelligent echo suppression, and room listening without duplicate responses.
-3. **Optional Interactive Terminal CLI (`npm run cli`)**: An auxiliary dual-section REPL (`[ME]` & `[JANUARY]`) that automatically pauses the background microphone during keyboard interaction and resumes room listening upon exit.
+1. **Single-Command Full-Stack App (`npm run dev`)**: Launches both the Vite client (`localhost:5173`) and the backend server (`localhost:3001`) simultaneously with unified, color-coded logging.
+2. **High-End Liquid-Glass Web Interface (`http://localhost:5173`)**: The primary command center. An ultra-aesthetic Three.js web application featuring an interactive 20,000 motion particle cosmic core with real-time cursor/voice reactivity, collapsible liquid-glass session drawer with persistent SQLite chat history, transparent prompt dock with hardware Mic and Speaker toggles, camera eyes toggle, and live fallback AI intelligence.
+3. **Autonomous Background Daemon (`localhost:3001`)**: Coordinates speech synthesis, intelligent echo suppression, and dynamic AI model routing without duplicate responses.
+4. **Optional Interactive Terminal CLI (`npm run cli`)**: An auxiliary dual-section REPL (`[ME]` & `[JANUARY]`) that automatically pauses the background microphone during keyboard interaction and resumes room listening upon exit.
+
 
 ---
 
@@ -978,17 +980,20 @@ CAMERA_SLEEP_PHRASE="eyes closed"
 
 ## 🏃 Running January
 
-### 1. Launch the System (UI & Backend)
-Start January with the high-end web interface and backend daemon:
+### 1. Launch the Full-Stack Application (Single Command)
+Start both the high-end web interface and backend daemon concurrently:
 
 ```bash
-# Terminal 1: Launch Backend Engine
-npm run server
-
-# Terminal 2: Launch Liquid-Glass Web Interface
-npm run client
+npm run dev
 ```
+
+> **What this does**:
+> - Launches the **Node.js Backend & AI Routing Engine** on `http://localhost:3001` (`[SERVER]` in cyan).
+> - Launches the **Vite Liquid-Glass Web Interface** on `http://localhost:5173` (`[CLIENT]` in magenta).
+> - Colored logs from both processes stream unified into your terminal. Pressing `Ctrl + C` cleanly terminates both processes.
+
 Open **`http://localhost:5173`** in your browser.
+
 
 > **UI-First Operation**: No terminal interaction is required. The web UI serves as January's complete command center:
 > - **Mic & Speaker Toggles**: The floating prompt dock includes physical hardware mute/unmute buttons for both your microphone and speakers with instant visual state feedback.
