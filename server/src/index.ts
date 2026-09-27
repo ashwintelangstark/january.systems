@@ -10,7 +10,6 @@ import { config, validateConfig } from './config.js';
 import { GeminiLiveClient } from './gemini/liveClient.js';
 import { WakeDetector } from './wake/wakeDetector.js';
 import { SystemSpeaker } from './audio/systemSpeaker.js';
-import { SystemMicrophone } from './audio/systemMic.js';
 import { EmotionEngine } from './emotions/emotionEngine.js';
 import { GeminiService } from './gemini/geminiService.js';
 import { VisualActivityMonitor } from './vision/activityMonitor.js';
@@ -42,7 +41,6 @@ const geminiClient = new GeminiLiveClient();
 const geminiService = new GeminiService();
 const wakeDetector = new WakeDetector();
 const systemSpeaker = new SystemSpeaker();
-const systemMic = new SystemMicrophone();
 const emotionEngine = geminiService.getEmotionEngine();
 const visualActivityMonitor = new VisualActivityMonitor();
 
@@ -554,65 +552,26 @@ systemSpeaker.on('browser_speak', (payload: { text: string; emotion?: string }) 
   });
 });
 
+// ----------------------------------------------------
+// System Physical Speaker Event Wiring
+// ----------------------------------------------------
 systemSpeaker.on('start', () => {
   if (micUnmuteTimeout) {
     clearTimeout(micUnmuteTimeout);
     micUnmuteTimeout = null;
   }
-  systemMic.setMute(true);
 });
 
 systemSpeaker.on('end', () => {
   if (micUnmuteTimeout) {
     clearTimeout(micUnmuteTimeout);
-  }
-  // Debounce unmute by 700ms to allow acoustic decay in the room, and only unmute if not muted by UI
-  micUnmuteTimeout = setTimeout(() => {
     micUnmuteTimeout = null;
-    if (!isMicMuted) {
-      systemMic.setMute(false);
-    }
-  }, 700);
-});
-
-systemMic.on('ready', () => {
-  broadcast({
-    type: 'system_log',
-    message: 'System physical microphone & Faster-Whisper ready',
-    level: 'info',
-  });
-});
-
-systemMic.on('wake', (data) => {
-  setAgentState('listening', `Physical microphone wake phrase recognized`);
-  broadcast({
-    type: 'system_log',
-    message: `Physical Mic: "${config.wakePhrase}" recognized`,
-    level: 'info',
-  });
-});
-
-systemMic.on('sleep', (data) => {
-  systemSpeaker.stopPlayback();
-  setAgentState('sleeping', `Physical microphone sleep phrase recognized`);
-  const capWake = config.wakePhrase.charAt(0).toUpperCase() + config.wakePhrase.slice(1);
-  const sleepMsg = `Good night. Standing by until you say ${capWake}.`;
-  systemSpeaker.speakText(sleepMsg);
-  broadcast({
-    type: 'transcript',
-    payload: {
-      role: 'assistant',
-      text: sleepMsg,
-      isFinal: true,
-      timestamp: Date.now(),
-    },
-  });
+  }
 });
 
 // Wire WakeDetector events
 wakeDetector.on('wake', (data) => {
   setAgentState('listening', 'Wake trigger received (Rise)');
-  systemMic.setMute(false);
   const wakeMsg = 'I am awake and listening. How can I help you?';
   broadcast({
     type: 'transcript',
@@ -632,7 +591,6 @@ wakeDetector.on('wake', (data) => {
 wakeDetector.on('sleep', (data) => {
   systemSpeaker.stopPlayback();
   setAgentState('sleeping', 'Sleep trigger received (Good Night)');
-  systemMic.setMute(true);
   const capWake = config.wakePhrase.charAt(0).toUpperCase() + config.wakePhrase.slice(1);
   const sleepMsg = `Good night. Standing by until you say ${capWake}.`;
   systemSpeaker.speakText(sleepMsg);
@@ -649,30 +607,6 @@ wakeDetector.on('sleep', (data) => {
 
 visualActivityMonitor.on('eyesStateChange', ({ isEyesOpen, fps }) => {
   broadcast({ type: 'camera_state', isEyesOpen, fps });
-});
-
-systemMic.on('camera_wake', async (data) => {
-  visualActivityMonitor.openEyes(60);
-  const msg = 'Eyes open. Real-time 60 FPS camera vision activated.';
-  broadcast({
-    type: 'transcript',
-    payload: { role: 'assistant', text: msg, isFinal: true, timestamp: Date.now() },
-  });
-  setAgentState('speaking', 'Camera eyes opened');
-  await systemSpeaker.speakText(msg, { emotion: 'joy' });
-  setAgentState('passive', 'Speech completed');
-});
-
-systemMic.on('camera_sleep', async (data) => {
-  visualActivityMonitor.closeEyes();
-  const msg = 'Eyes closed. Camera monitoring paused and hardware turned off.';
-  broadcast({
-    type: 'transcript',
-    payload: { role: 'assistant', text: msg, isFinal: true, timestamp: Date.now() },
-  });
-  setAgentState('speaking', 'Camera eyes closed');
-  await systemSpeaker.speakText(msg, { emotion: 'calm' });
-  setAgentState('passive', 'Speech completed');
 });
 
 async function handleUnifiedPrompt(text: string, source: 'voice' | 'text' = 'voice', sessionId?: string): Promise<void> {
@@ -916,36 +850,6 @@ async function handleUnifiedPrompt(text: string, source: 'voice' | 'text' = 'voi
   }
 }
 
-systemMic.on('speech', async (text: string) => {
-  const stripped = text.toLowerCase().replace(/[^\w\s]/g, '').trim();
-
-  // If agent is sleeping, only wake phrases awaken it
-  if (currentState === 'sleeping') {
-    const isWake =
-      stripped === config.wakePhrase ||
-      ['rise', 'arise', 'wake up', 'wake'].includes(stripped) ||
-      /\b(rise|arise|wake up)\b/i.test(stripped);
-
-    if (isWake) {
-      console.log(`⚡ [Coordinator] Wake word spoken during sleep: "${text}"`);
-      setAgentState('listening', 'Wake word received from sleep');
-      await systemSpeaker.speakText('I am awake and listening.');
-      return;
-    }
-    console.log(`[Coordinator] Agent is sleeping. Ignoring non-wake speech: "${text}"`);
-    return;
-  }
-
-  await handleUnifiedPrompt(text, 'voice');
-});
-
-systemMic.on('level', (level: number) => {
-  broadcast({
-    type: 'audio_level',
-    level,
-  });
-});
-
 // ----------------------------------------------------
 // Wake Word Detector (Dual-stream worker) Event Wiring
 // ----------------------------------------------------
@@ -1163,7 +1067,6 @@ wss.on('connection', (ws: WebSocket) => {
 
         case 'set_mic_mute': {
           isMicMuted = !!msg.muted;
-          systemMic.setMute(isMicMuted);
           try {
             const vol = isMicMuted ? 0 : 75;
             exec(`osascript -e "set volume input volume ${vol}"`);
