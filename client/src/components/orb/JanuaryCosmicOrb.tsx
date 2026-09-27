@@ -25,8 +25,10 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const stateRef = useRef({ agentState, emotionState, inputLevel, outputLevel, isDrawerOpen, isChatExpanded });
+  const isClickedRef = useRef(false);
+  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Update state ref for requestAnimationFrame without re-mounting Three.js scene
+  // Synchronize state ref without unmounting Three.js instance
   useEffect(() => {
     stateRef.current = { agentState, emotionState, inputLevel, outputLevel, isDrawerOpen, isChatExpanded };
   }, [agentState, emotionState, inputLevel, outputLevel, isDrawerOpen, isChatExpanded]);
@@ -35,11 +37,11 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
     const container = containerRef.current;
     if (!container) return;
 
-    // --- Exact 2,000 Motion Particles with High-Definition Core ---
-    const PARTICLE_COUNT = 2000;
-    const SPHERE_RADIUS = 2.4;
+    // --- Exactly 20,000 Tiny Interactive Motion Particles ---
+    const PARTICLE_COUNT = 20000;
+    const SPHERE_RADIUS = 2.45;
 
-    // --- Scene Setup ---
+    // --- Scene & Camera Setup ---
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(
       45,
@@ -47,149 +49,259 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
       0.1,
       1000
     );
-    camera.position.set(0, 0, 20);
+    camera.position.set(0, 0, 19);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+      powerPreference: 'high-performance',
+    });
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setClearColor(0x000000, 0); // 100% transparent clear canvas
     container.appendChild(renderer.domElement);
 
-    // Master Group for smooth dynamic offset (clearing drawer without UI overlap)
+    // Master Group for responsive centering (prevents overlap with drawer and prompt bar)
     const orbMasterGroup = new THREE.Group();
     scene.add(orbMasterGroup);
 
-    // --- Custom GLSL Vertex Shader for Dual-Energy Swirling Core ---
+    // --- High-Performance GLSL Shaders with 3D Curl Turbulence ---
     const vertexShader = `
       uniform float uTime;
       uniform vec2 uMouseWorld;
       uniform float uMouseForce;
       uniform float uAudioLevel;
       uniform float uSpeedFactor;
-      uniform vec3 uColorCyan;
-      uniform vec3 uColorOrange;
-      uniform vec3 uColorCenter;
+      uniform vec3 uParticleColor;
+      uniform vec3 uGlowColor;
 
-      attribute float aPhase;
-      attribute float aScale;
-      attribute vec3 aDirection;
+      attribute vec3 aBasePos;
+      attribute vec4 aRandoms; // [phase, scale, speed, seed]
 
       varying vec3 vColor;
-      varying float vDist;
+      varying float vAlpha;
+      varying float vGlow;
+
+      // 3D Simplex noise implementation for organic curl vector field
+      vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+      vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+      vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
+      vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+
+      float snoise(vec3 v) {
+        const vec2 C = vec2(1.0/6.0, 1.0/3.0);
+        const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+
+        vec3 i  = floor(v + dot(v, C.yyy));
+        vec3 x0 = v - i + dot(i, C.xxx);
+
+        vec3 g = step(x0.yzx, x0.xyz);
+        vec3 l = 1.0 - g;
+        vec3 i1 = min(g.xyz, l.zxy);
+        vec3 i2 = max(g.xyz, l.zxy);
+
+        vec3 x1 = x0 - i1 + C.xxx;
+        vec3 x2 = x0 - i2 + C.yyy;
+        vec3 x3 = x0 - D.yyy;
+
+        i = mod289(i);
+        vec4 p = permute(permute(permute(
+                   i.z + vec4(0.0, i1.z, i2.z, 1.0))
+                 + i.y + vec4(0.0, i1.y, i2.y, 1.0))
+                 + i.x + vec4(0.0, i1.x, i2.x, 1.0));
+
+        float n_ = 0.142857142857;
+        vec3 ns = n_ * D.wyz - D.xzx;
+
+        vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+
+        vec4 x_ = floor(j * ns.z);
+        vec4 y_ = floor(j - 7.0 * x_);
+
+        vec4 x = x_ *ns.x + ns.yyyy;
+        vec4 y = y_ *ns.x + ns.yyyy;
+        vec4 h = 1.0 - abs(x) - abs(y);
+
+        vec4 b0 = vec4(x.xy, y.xy);
+        vec4 b1 = vec4(x.zw, y.zw);
+
+        vec4 s0 = floor(b0)*2.0 + 1.0;
+        vec4 s1 = floor(b1)*2.0 + 1.0;
+        vec4 sh = -step(h, vec4(0.0));
+
+        vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
+        vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
+
+        vec3 p0 = vec3(a0.xy, h.x);
+        vec3 p1 = vec3(a0.zw, h.y);
+        vec3 p2 = vec3(a1.xy, h.z);
+        vec3 p3 = vec3(a1.zw, h.w);
+
+        vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));
+        p0 *= norm.x;
+        p1 *= norm.y;
+        p2 *= norm.z;
+        p3 *= norm.w;
+
+        vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+        m = m * m;
+        return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
+      }
+
+      vec3 curlNoise(vec3 p) {
+        const float e = 0.08;
+        float n1 = snoise(vec3(p.x, p.y + e, p.z));
+        float n2 = snoise(vec3(p.x, p.y - e, p.z));
+        float n3 = snoise(vec3(p.x, p.y, p.z + e));
+        float n4 = snoise(vec3(p.x, p.y, p.z - e));
+        float n5 = snoise(vec3(p.x + e, p.y, p.z));
+        float n6 = snoise(vec3(p.x - e, p.y, p.z));
+
+        float x = (n1 - n2) - (n3 - n4);
+        float y = (n3 - n4) - (n5 - n6);
+        float z = (n5 - n6) - (n1 - n2);
+
+        return normalize(vec3(x, y, z));
+      }
 
       void main() {
-        vec3 pos = position;
+        vec3 base = aBasePos;
 
-        // 1. Dual-Vortex Swirling Flow (Counter-rotating polar vortices)
-        float polarAngle = atan(pos.z, pos.x);
-        float distFromY = length(pos.xz);
-        
-        // Swirl speed increases dynamically with audio, voice input, and synthesis activity
-        float swirlSpeed = (1.4 + uSpeedFactor * 0.9) * (1.0 + uAudioLevel * 1.6);
-        float swirlAngle = uTime * swirlSpeed * 0.5 + aPhase * 6.2831;
+        // 1. Dual Spherical Orbital Motion
+        float distFromY = length(base.xz);
+        float polarAngle = atan(base.z, base.x);
 
-        // Bipolar spiral twisting
-        float twist = (pos.y > 0.0 ? 1.0 : -1.0) * (2.2 / (distFromY + 0.7));
-        float totalAngle = polarAngle + swirlAngle * 0.45 + twist * sin(uTime * 0.9 + aPhase * 3.14);
+        float orbitSpeed = (0.4 + uSpeedFactor * 0.6) * aRandoms.z * (1.0 + uAudioLevel * 0.9);
+        float currentAngle = polarAngle + uTime * orbitSpeed * 0.45 + aRandoms.x * 6.2831;
 
-        pos.x = cos(totalAngle) * distFromY;
-        pos.z = sin(totalAngle) * distFromY;
+        // Polar recirculation flow
+        float twist = sin(uTime * 0.6 + base.y * 1.8) * 0.35;
+        currentAngle += twist;
 
-        // 2. Harmonic Audio Wave Breathing & Shockwaves during inputs/responses
-        float breath = sin(uTime * 2.4 + aPhase * 6.28) * 0.18;
+        vec3 orbPos = vec3(
+          cos(currentAngle) * distFromY,
+          base.y + sin(uTime * 0.8 + aRandoms.x * 6.28) * 0.12,
+          sin(currentAngle) * distFromY
+        );
+
+        // 2. Realistic 3D Curl Turbulence along Spherical Surface
+        vec3 noiseCoord = orbPos * 0.45 + vec3(uTime * 0.1 * aRandoms.z, uTime * 0.08, aRandoms.w);
+        vec3 curl = curlNoise(noiseCoord);
+
+        float curlAmp = 0.22 + uSpeedFactor * 0.15 + uAudioLevel * 0.25;
+        vec3 displaced = orbPos + curl * curlAmp;
+
+        // Spherical surface constraint: softly pulls back to ideal spherical radius
+        float currentRadius = length(displaced);
+        float targetRadius = length(base);
+        vec3 finalPos = normalize(displaced) * mix(currentRadius, targetRadius, 0.55);
+
+        // 3. Audio & Vocal Acoustic Breathing
+        float breath = sin(uTime * 2.2 + aRandoms.x * 6.28) * 0.08;
         if (uAudioLevel > 0.01) {
-          float audioPulse = sin(length(pos) * 3.5 - uTime * 9.0) * (uAudioLevel * 1.1);
-          pos += normalize(pos) * (breath + audioPulse);
+          float acousticPulse = sin(length(finalPos) * 3.8 - uTime * 9.0) * (uAudioLevel * 0.8);
+          finalPos += normalize(finalPos) * (breath + acousticPulse);
         } else {
-          pos += normalize(pos) * breath;
+          finalPos += normalize(finalPos) * breath;
         }
 
-        // 3. Fluid Mouse Interactive Deflection (Accurately projected to 3D cursor position)
-        vec2 mouseDelta = pos.xy - uMouseWorld;
+        // 4. Mouse Interactive Deflection (Accurately projected to 3D cursor position)
+        vec2 mouseDelta = finalPos.xy - uMouseWorld;
         float mouseDist = length(mouseDelta);
-        if (mouseDist < 4.2) {
+        if (mouseDist < 4.0) {
           vec2 repelDir = normalize(mouseDelta);
-          float force = (4.2 - mouseDist) / 4.2;
-          pos.xy += repelDir * (force * uMouseForce * 2.2);
-          pos.z += sin(force * 3.1415) * 1.4;
+          float force = (4.0 - mouseDist) / 4.0;
+          float smoothForce = force * force * (3.0 - 2.0 * force);
+          finalPos.xy += repelDir * (smoothForce * uMouseForce * 2.0);
+          finalPos.z += sin(smoothForce * 3.1415) * 1.4;
         }
 
-        // 4. Color Calculation (Electric Cyan/Blue vs Solar Orange/Magenta)
-        float hemisphereFactor = smoothstep(-1.2, 1.2, pos.y);
-        vec3 streamColor = mix(uColorOrange, uColorCyan, hemisphereFactor);
+        // 5. Realistic Color & Shading Dynamics
+        float distFromCenter = length(finalPos);
+        float rimFactor = smoothstep(1.2, 2.7, distFromCenter);
+        
+        // Dynamic blend between core particle color and outer rim refraction
+        vColor = mix(uParticleColor, uGlowColor, rimFactor * 0.35);
+        vAlpha = 0.85 + aRandoms.x * 0.15;
+        vGlow = rimFactor;
 
-        // Core starburst brightness
-        float centerDist = length(pos);
-        float centerGlow = 1.0 - smoothstep(0.0, 2.5, centerDist);
-        vColor = mix(streamColor, uColorCenter, centerGlow * (0.7 + uAudioLevel * 0.3));
-
-        vDist = centerDist;
-
-        vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
-        // Bold, punchy point size that scales with perspective and audio
-        float pointSize = (aScale * 44.0 + uAudioLevel * 30.0) * (20.0 / -mvPosition.z);
-        gl_PointSize = clamp(pointSize, 3.0, 65.0);
+        // Tiny, ultra-refined micro-particles with perspective scaling
+        vec4 mvPosition = modelViewMatrix * vec4(finalPos, 1.0);
+        float pSize = (aRandoms.y * 18.0 + uAudioLevel * 14.0) * (19.0 / -mvPosition.z);
+        gl_PointSize = clamp(pSize, 1.5, 26.0);
         gl_Position = projectionMatrix * mvPosition;
       }
     `;
 
-    // --- Custom GLSL Fragment Shader for Crisp, Bright & Bold Particles ---
+    // --- Custom GLSL Fragment Shader for Photorealistic Quantum Dust ---
     const fragmentShader = `
       varying vec3 vColor;
-      varying float vDist;
+      varying float vAlpha;
+      varying float vGlow;
 
       void main() {
         float r = length(gl_PointCoord - vec2(0.5));
         if (r > 0.5) discard;
 
-        // Solid, bright core with smooth anti-aliased perimeter
-        float alpha = smoothstep(0.5, 0.08, r);
+        // Photorealistic point spread function (Gaussian core + silky photonic glow)
+        float core = smoothstep(0.5, 0.05, r);
+        float glow = exp(-r * 6.0);
+        float alpha = mix(glow, core, 0.75) * vAlpha;
 
-        // Radiant specular core
-        vec3 finalColor = mix(vColor, vec3(1.0, 1.0, 1.0), (1.0 - smoothstep(0.0, 0.22, r)) * 0.55);
+        // Specular highlight at the center of each micro-particle
+        vec3 specular = vec3(1.0) * pow(max(0.0, 1.0 - r * 2.2), 3.0) * 0.45;
+        vec3 finalColor = vColor + specular;
 
         gl_FragColor = vec4(finalColor, alpha);
       }
     `;
 
-    // --- 2,000 Particle Geometry Allocation ---
+    // --- 20,000 Particle Geometry Allocation via Fibonacci Spherical Lattice ---
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(PARTICLE_COUNT * 3);
-    const scales = new Float32Array(PARTICLE_COUNT);
-    const phases = new Float32Array(PARTICLE_COUNT);
-    const directions = new Float32Array(PARTICLE_COUNT * 3);
+    const basePositions = new Float32Array(PARTICLE_COUNT * 3);
+    const randoms = new Float32Array(PARTICLE_COUNT * 4);
+
+    const goldenRatio = (1.0 + Math.sqrt(5.0)) / 2.0;
 
     for (let i = 0; i < PARTICLE_COUNT; i++) {
       const i3 = i * 3;
+      const i4 = i * 4;
 
-      const u = Math.random();
-      const v = Math.random();
-      const theta = u * 2.0 * Math.PI;
-      const phi = Math.acos(2.0 * v - 1.0);
-      
-      const radiusVariation = Math.pow(Math.random(), 0.65) * SPHERE_RADIUS;
+      // Fibonacci sphere mapping with volumetric shell depth
+      const theta = 2.0 * Math.PI * i / goldenRatio;
+      const phi = Math.acos(1.0 - 2.0 * (i + 0.5) / PARTICLE_COUNT);
 
-      positions[i3] = radiusVariation * Math.sin(phi) * Math.cos(theta);
-      positions[i3 + 1] = radiusVariation * Math.cos(phi);
-      positions[i3 + 2] = radiusVariation * Math.sin(phi) * Math.sin(theta);
+      // Layered shell distribution for rich 3D volume
+      const shellVariation = SPHERE_RADIUS * (0.84 + Math.pow(Math.random(), 2.0) * 0.36);
 
-      scales[i] = 0.6 + Math.random() * 0.8;
-      phases[i] = Math.random();
+      const x = shellVariation * Math.sin(phi) * Math.cos(theta);
+      const y = shellVariation * Math.cos(phi);
+      const z = shellVariation * Math.sin(phi) * Math.sin(theta);
 
-      directions[i3] = (Math.random() - 0.5) * 0.2;
-      directions[i3 + 1] = (Math.random() - 0.5) * 0.2;
-      directions[i3 + 2] = (Math.random() - 0.5) * 0.2;
+      positions[i3] = x;
+      positions[i3 + 1] = y;
+      positions[i3 + 2] = z;
+
+      basePositions[i3] = x;
+      basePositions[i3 + 1] = y;
+      basePositions[i3 + 2] = z;
+
+      randoms[i4] = Math.random();                 // Phase offset
+      randoms[i4 + 1] = 0.35 + Math.random() * 0.85; // Micro-scale size
+      randoms[i4 + 2] = 0.7 + Math.random() * 0.7;  // Speed variation
+      randoms[i4 + 3] = Math.random() * 100.0;     // Noise seed
     }
 
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('aScale', new THREE.BufferAttribute(scales, 1));
-    geometry.setAttribute('aPhase', new THREE.BufferAttribute(phases, 1));
-    geometry.setAttribute('aDirection', new THREE.BufferAttribute(directions, 3));
+    geometry.setAttribute('aBasePos', new THREE.BufferAttribute(basePositions, 3));
+    geometry.setAttribute('aRandoms', new THREE.BufferAttribute(randoms, 4));
 
-    // Colors matching user requirements (Electric Cyan, Molten Orange, Blazing White)
-    const colorCyan = new THREE.Color('#00E5FF');   // Brilliant Electric Cyan
-    const colorOrange = new THREE.Color('#FF5500'); // Fiery Molten Solar Orange
-    const colorCenter = new THREE.Color('#FFFFFF'); // Blazing White Starburst
+    // Dynamic Color States
+    const colorCurrent = new THREE.Color('#0A0E17'); // Default: Tiny deep black/carbon obsidian particles
+    const colorTarget = new THREE.Color('#0A0E17');
+    const glowCurrent = new THREE.Color('#1E293B');
+    const glowTarget = new THREE.Color('#1E293B');
 
     const particleMaterial = new THREE.ShaderMaterial({
       uniforms: {
@@ -198,73 +310,18 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
         uMouseForce: { value: 1.0 },
         uAudioLevel: { value: 0 },
         uSpeedFactor: { value: 0 },
-        uColorCyan: { value: colorCyan },
-        uColorOrange: { value: colorOrange },
-        uColorCenter: { value: colorCenter },
+        uParticleColor: { value: colorCurrent },
+        uGlowColor: { value: glowCurrent },
       },
       vertexShader,
       fragmentShader,
       transparent: true,
-      blending: THREE.NormalBlending, // Bold, solid, opaque particles over the Frosted Ice Blue backdrop
+      blending: THREE.NormalBlending, // Crisp, ultra-clean normal blending with smooth alpha
       depthWrite: false,
     });
 
     const particles = new THREE.Points(geometry, particleMaterial);
     orbMasterGroup.add(particles);
-
-    // --- 3D Orbital Light Rings & Star Constellations ---
-    const orbitalGroup = new THREE.Group();
-    orbMasterGroup.add(orbitalGroup);
-
-    // Ring 1 (Primary Cyan/Blue Ring inclined at 45 deg)
-    const ring1Geom = new THREE.TorusGeometry(3.6, 0.035, 16, 120);
-    const ring1Mat = new THREE.MeshBasicMaterial({
-      color: 0x00E5FF,
-      transparent: true,
-      opacity: 0.95,
-      blending: THREE.NormalBlending,
-    });
-    const ring1 = new THREE.Mesh(ring1Geom, ring1Mat);
-    ring1.rotation.x = Math.PI / 3;
-    ring1.rotation.y = Math.PI / 6;
-    orbitalGroup.add(ring1);
-
-    // Ring 2 (Secondary Magenta/Coral Ring inclined at -35 deg)
-    const ring2Geom = new THREE.TorusGeometry(3.2, 0.03, 16, 120);
-    const ring2Mat = new THREE.MeshBasicMaterial({
-      color: 0xFF2D78,
-      transparent: true,
-      opacity: 0.92,
-      blending: THREE.NormalBlending,
-    });
-    const ring2 = new THREE.Mesh(ring2Geom, ring2Mat);
-    ring2.rotation.x = -Math.PI / 4;
-    ring2.rotation.y = Math.PI / 4;
-    orbitalGroup.add(ring2);
-
-    // Ring 3 (Outer Constellation Track)
-    const ring3Geom = new THREE.TorusGeometry(4.2, 0.022, 16, 140);
-    const ring3Mat = new THREE.MeshBasicMaterial({
-      color: 0x6366F1,
-      transparent: true,
-      opacity: 0.8,
-      blending: THREE.NormalBlending,
-    });
-    const ring3 = new THREE.Mesh(ring3Geom, ring3Mat);
-    ring3.rotation.z = Math.PI / 8;
-    orbitalGroup.add(ring3);
-
-    // Star Node Beads on Orbital Rings (Glistening Starbursts)
-    const starGeom = new THREE.SphereGeometry(0.11, 16, 16);
-    const starMatCyan = new THREE.MeshBasicMaterial({ color: 0x00FFFF });
-    const starMatOrange = new THREE.MeshBasicMaterial({ color: 0xFFAA00 });
-    const starNodes: THREE.Mesh[] = [];
-
-    for (let k = 0; k < 6; k++) {
-      const star = new THREE.Mesh(starGeom, k % 2 === 0 ? starMatCyan : starMatOrange);
-      orbitalGroup.add(star);
-      starNodes.push(star);
-    }
 
     // --- Interactive Mouse Dynamics (Direct Window Tracking) ---
     const mouse = new THREE.Vector2(999, 999);
@@ -277,7 +334,15 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
     };
 
     const handlePointerDown = () => {
-      targetMouseForce = 2.8; // Radiant shockwave pulse on click
+      targetMouseForce = 2.6; // Radiant shockwave pulse on click
+      isClickedRef.current = true;
+
+      // Reset click state after 3.5 seconds unless state overrides
+      if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current);
+      clickTimeoutRef.current = setTimeout(() => {
+        isClickedRef.current = false;
+      }, 3500);
+
       if (onActivate) onActivate();
     };
 
@@ -286,10 +351,12 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
     };
 
     window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('pointerdown', handlePointerDown);
+    renderer.domElement.addEventListener('pointerdown', handlePointerDown);
     container.addEventListener('pointerdown', handlePointerDown);
     window.addEventListener('pointerup', handlePointerUp);
 
-    // Resize Observer for perfect responsiveness
+    // Resize Observer for 60FPS fluid responsiveness
     const handleResize = () => {
       if (!container) return;
       const width = container.clientWidth;
@@ -312,7 +379,7 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
       const elapsedTime = clock.getElapsedTime();
       const current = stateRef.current;
 
-      // Dynamic centering offset so the particle orb is NEVER overlapped by left drawer or prompt bar
+      // Obstruction avoidance offset so orb is never overlapped by drawer or prompt bar
       let targetOffsetX = 0;
       if (current.isDrawerOpen) {
         targetOffsetX = current.isChatExpanded ? 3.0 : 1.4;
@@ -320,23 +387,57 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
       currentOffsetX = THREE.MathUtils.lerp(currentOffsetX, targetOffsetX, 0.06);
       orbMasterGroup.position.x = currentOffsetX;
 
-      // Speed & Audio Calculations (Active during inputs and responses)
+      // --- Color State Engine: Mouse Click -> Green, Response -> Cyan, Synthesis -> Amber/Purple, Awake -> Teal, Sleep -> Midnight Slate, Default -> Black ---
+      if (isClickedRef.current) {
+        // Clicked state: Hyper-vivid Emerald Green
+        colorTarget.set('#00FF88');
+        glowTarget.set('#059669');
+      } else if (current.agentState === 'speaking') {
+        // Response state: Radiant Electric Azure Cyan
+        colorTarget.set('#00E5FF');
+        glowTarget.set('#0284C7');
+      } else if (current.agentState === 'working') {
+        // Synthesis state: High-energy Cyber Violet & Amber
+        colorTarget.set('#A855F7');
+        glowTarget.set('#F59E0B');
+      } else if (current.agentState === 'listening') {
+        // Awake / Listening state: Bioluminescent Aqua Teal
+        colorTarget.set('#06B6D4');
+        glowTarget.set('#0D9488');
+      } else if (current.agentState === 'sleeping') {
+        // Sleep state: Deep Midnight Slate Obsidian
+        colorTarget.set('#1E1B4B');
+        glowTarget.set('#0F172A');
+      } else {
+        // Default / Standby: 20,000 Tiny Black Carbon Ink Particles
+        colorTarget.set('#0B0F17');
+        glowTarget.set('#1E293B');
+      }
+
+      // Smooth color morphing
+      colorCurrent.lerp(colorTarget, 0.08);
+      glowCurrent.lerp(glowTarget, 0.08);
+
+      // Speed & Audio Calculations (Fluid organic response during inputs and responses)
       let speedFactor = 0.0;
       let statePulse = 0.0;
       if (current.agentState === 'working') {
-        speedFactor = 2.2;
-        statePulse = 0.5;
+        speedFactor = 2.4;
+        statePulse = 0.55;
       } else if (current.agentState === 'speaking') {
-        speedFactor = 1.4;
-        statePulse = 0.75;
+        speedFactor = 1.6;
+        statePulse = 0.8;
       } else if (current.agentState === 'listening') {
-        speedFactor = 0.8;
-        statePulse = 0.35; // Responsive breathing while listening / taking inputs
+        speedFactor = 0.9;
+        statePulse = 0.35;
+      } else if (isClickedRef.current) {
+        speedFactor = 1.8;
+        statePulse = 0.6;
       }
 
       const effectiveAudio = Math.max(current.inputLevel || 0, current.outputLevel || 0, statePulse);
 
-      // Compute exact 3D world position of cursor at z = 0 relative to orbMasterGroup
+      // 3D Mouse Cursor World Projection
       const aspect = container.clientWidth / container.clientHeight;
       const vHalfHeight = Math.tan((camera.fov * Math.PI) / 360) * camera.position.z;
       const vHalfWidth = vHalfHeight * aspect;
@@ -367,24 +468,14 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
         0.08
       );
 
-      // Slowly rotate orbital constellation rings
-      orbitalGroup.rotation.y = elapsedTime * 0.15;
-      orbitalGroup.rotation.x = Math.sin(elapsedTime * 0.1) * 0.2;
-
-      // Animate Star Nodes on Ring 1 and Ring 2
-      starNodes.forEach((node, idx) => {
-        const ringRadius = idx < 3 ? 3.6 : 3.2;
-        const angle = elapsedTime * (0.4 + idx * 0.08) + (idx * Math.PI) / 3;
-        node.position.x = Math.cos(angle) * ringRadius;
-        node.position.z = Math.sin(angle) * ringRadius;
-        node.position.y = Math.sin(angle * 2.0) * 0.8;
-        node.scale.setScalar(1.0 + Math.sin(elapsedTime * 4.0 + idx) * 0.3);
-      });
+      // Subtle slow continuous organic tumble of the sphere
+      orbMasterGroup.rotation.y = elapsedTime * 0.08;
+      orbMasterGroup.rotation.x = Math.sin(elapsedTime * 0.05) * 0.1;
 
       // Camera micro-sway for depth
-      camera.position.x = Math.sin(elapsedTime * 0.2) * 0.2;
-      camera.position.y = Math.cos(elapsedTime * 0.2) * 0.2;
-      camera.position.z = 20;
+      camera.position.x = Math.sin(elapsedTime * 0.2) * 0.15;
+      camera.position.y = Math.cos(elapsedTime * 0.2) * 0.15;
+      camera.position.z = 19;
       camera.lookAt(0, 0, 0);
 
       renderer.render(scene, camera);
@@ -394,6 +485,7 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
 
     return () => {
       cancelAnimationFrame(animationFrameId);
+      if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current);
       window.removeEventListener('mousemove', handleMouseMove);
       container.removeEventListener('pointerdown', handlePointerDown);
       window.removeEventListener('pointerup', handlePointerUp);
@@ -401,15 +493,6 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
 
       geometry.dispose();
       particleMaterial.dispose();
-      ring1Geom.dispose();
-      ring1Mat.dispose();
-      ring2Geom.dispose();
-      ring2Mat.dispose();
-      ring3Geom.dispose();
-      ring3Mat.dispose();
-      starGeom.dispose();
-      starMatCyan.dispose();
-      starMatOrange.dispose();
       renderer.dispose();
       if (renderer.domElement && container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
