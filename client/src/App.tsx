@@ -112,13 +112,15 @@ export const App: React.FC = () => {
   const handleSendText = async (text: string) => {
     setIsDrawerOpen(true);
     setIsChatExpanded(true);
-    if (!activeSessionId) {
+    let targetSessionId = activeSessionId;
+    if (!targetSessionId) {
       const title = text.length > 30 ? `${text.substring(0, 30)}...` : text;
       const newSession = await createSession(title);
       setSessions((prev) => [newSession, ...prev]);
       setActiveSessionId(newSession.id);
+      targetSessionId = newSession.id;
     }
-    sendTextMessage(text);
+    sendTextMessage(text, targetSessionId);
   };
 
   // Handle File Upload Attachment
@@ -172,6 +174,9 @@ export const App: React.FC = () => {
         onNewChat={handleNewChat}
         messages={messages}
         activeTools={activeTools}
+        agentState={agentState}
+        emotionState={emotionState}
+        isEyesOpen={isEyesOpen}
         isOpen={isDrawerOpen}
         onToggleOpen={() => setIsDrawerOpen(!isDrawerOpen)}
         isChatExpanded={isChatExpanded}

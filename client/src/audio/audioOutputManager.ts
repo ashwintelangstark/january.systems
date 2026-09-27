@@ -11,6 +11,17 @@ export class AudioOutputManager {
 
   constructor(onLevelUpdate: (level: number) => void) {
     this.onLevelUpdate = onLevelUpdate;
+
+    const unlock = () => {
+      this.initContext();
+      if (this.audioCtx && this.audioCtx.state === 'suspended') {
+        this.audioCtx.resume().catch(() => {});
+      }
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('pointerdown', unlock, { once: true });
+      window.addEventListener('keydown', unlock, { once: true });
+    }
   }
 
   private initContext() {
@@ -84,6 +95,10 @@ export class AudioOutputManager {
     try {
       this.initContext();
       if (!this.audioCtx) return;
+
+      if (this.audioCtx.state === 'suspended') {
+        await this.audioCtx.resume().catch(() => {});
+      }
 
       const binary = atob(base64Data);
       const len = binary.length;

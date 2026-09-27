@@ -222,11 +222,34 @@ export class SystemSpeaker extends EventEmitter {
     }
 
     // Tier 2: Neural Edge-TTS Mode via persistent venv (generates MP3 without local afplay)
-    const pythonPath = fs.existsSync(path.resolve(__dirname, '../../../server/.venv/bin/python3'))
-      ? path.resolve(__dirname, '../../../server/.venv/bin/python3')
-      : fs.existsSync(path.resolve(__dirname, '../../.venv/bin/python3'))
-      ? path.resolve(__dirname, '../../.venv/bin/python3')
-      : 'python3';
+    const venvCandidates = [
+      path.resolve(process.cwd(), 'server/.venv/bin/python3'),
+      path.resolve(process.cwd(), '.venv/bin/python3'),
+      path.resolve(__dirname, '../../../server/.venv/bin/python3'),
+      path.resolve(__dirname, '../../.venv/bin/python3'),
+      path.resolve(__dirname, '../.venv/bin/python3'),
+    ];
+    let pythonPath = 'python3';
+    for (const p of venvCandidates) {
+      if (fs.existsSync(p)) {
+        pythonPath = p;
+        break;
+      }
+    }
+
+    const ttsScriptCandidates = [
+      path.resolve(process.cwd(), 'server/audio_engine/tts_engine.py'),
+      path.resolve(process.cwd(), 'audio_engine/tts_engine.py'),
+      path.resolve(__dirname, '../../audio_engine/tts_engine.py'),
+      path.resolve(__dirname, '../../../server/audio_engine/tts_engine.py'),
+    ];
+    let ttsScript = this.ttsScriptPath;
+    for (const sp of ttsScriptCandidates) {
+      if (fs.existsSync(sp)) {
+        ttsScript = sp;
+        break;
+      }
+    }
 
     const pitch = options?.pitch || '+0Hz';
     const rate = options?.rate || '+0%';
@@ -238,7 +261,7 @@ export class SystemSpeaker extends EventEmitter {
       await new Promise<void>((resolve, reject) => {
         const proc = spawn(
           pythonPath,
-          [this.ttsScriptPath, speechText, '--output', tempOutput, '--pitch', pitch, '--rate', rate],
+          [ttsScript, speechText, '--output', tempOutput, '--pitch', pitch, '--rate', rate],
           { stdio: ['ignore', 'pipe', 'pipe'] }
         );
         this.currentProcess = proc;

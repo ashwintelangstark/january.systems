@@ -18,8 +18,9 @@ import {
   Copy,
   Check,
   Trash2,
+  Eye,
 } from 'lucide-react';
-import { BrainSession, ChatMessage, ActiveTool } from '../../types';
+import { BrainSession, ChatMessage, ActiveTool, AgentState, EmotionState } from '../../types';
 
 interface LiquidGlassDrawerProps {
   sessions: BrainSession[];
@@ -34,6 +35,9 @@ interface LiquidGlassDrawerProps {
   isChatExpanded?: boolean;
   onToggleChatExpanded?: () => void;
   onCloseChatExpanded?: () => void;
+  agentState?: AgentState;
+  emotionState?: EmotionState;
+  isEyesOpen?: boolean;
 }
 
 export const LiquidGlassDrawer: React.FC<LiquidGlassDrawerProps> = ({
@@ -49,6 +53,9 @@ export const LiquidGlassDrawer: React.FC<LiquidGlassDrawerProps> = ({
   isChatExpanded: controlledChatExpanded,
   onToggleChatExpanded,
   onCloseChatExpanded,
+  agentState,
+  emotionState,
+  isEyesOpen,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [internalChatExpanded, setInternalChatExpanded] = useState(false);
@@ -155,9 +162,24 @@ export const LiquidGlassDrawer: React.FC<LiquidGlassDrawerProps> = ({
                   className="w-full h-full object-contain rounded-full bg-white/40"
                 />
               </div>
-              <span className="font-extrabold tracking-[0.2em] text-sm text-slate-900 font-display">
-                JANUARY
-              </span>
+              <div className="flex flex-col">
+                <span className="font-extrabold tracking-[0.2em] text-sm text-slate-900 font-display leading-tight">
+                  JANUARY
+                </span>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  {isEyesOpen && (
+                    <span className="inline-flex items-center gap-1 text-[9px] font-mono text-emerald-800 bg-emerald-400/20 px-1.5 py-0.2 rounded border border-emerald-400/40">
+                      <Eye className="w-2.5 h-2.5 text-emerald-700 animate-pulse" />
+                      <span>60 FPS</span>
+                    </span>
+                  )}
+                  {emotionState && (
+                    <span className="text-[9px] font-mono text-slate-600 capitalize">
+                      {emotionState.emotion}
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="flex items-center gap-1.5">
@@ -370,6 +392,34 @@ export const LiquidGlassDrawer: React.FC<LiquidGlassDrawerProps> = ({
                   <pre className="text-[10px] text-slate-700 overflow-x-auto bg-white/40 p-2 rounded border border-white/40">
                     {JSON.stringify(activeTools[0].args, null, 2)}
                   </pre>
+                </div>
+              )}
+
+              {/* Synthesizing / Thinking Visual Indicator */}
+              {agentState === 'working' && activeTools.length === 0 && (
+                <div className="flex flex-col items-start animate-in fade-in duration-200">
+                  <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl bg-white/50 border border-cyan-400/50 shadow-sm backdrop-blur-md">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-600"></span>
+                    </span>
+                    <span className="text-xs font-semibold text-slate-800 font-sans tracking-tight">
+                      January is synthesizing response...
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Speaking Visual Indicator */}
+              {agentState === 'speaking' && (
+                <div className="flex flex-col items-start animate-in fade-in duration-200">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/15 border border-purple-400/40 text-purple-900 shadow-sm backdrop-blur-md text-[11px] font-sans font-medium">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-600"></span>
+                    </span>
+                    <span>Speaking response...</span>
+                  </div>
                 </div>
               )}
 

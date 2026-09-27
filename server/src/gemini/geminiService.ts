@@ -732,13 +732,12 @@ export class GeminiService {
       { key: config.geminiFallbackApiKey, name: 'Fallback Gemini' },
     ].filter((item) => !!item.key);
 
-    const nowMs = Date.now();
-
     for (const keyConfig of geminiKeysToTry) {
+      const currentMs = Date.now();
       // ⚡ Fast Circuit Breaker: If key recently returned 429/400/403, skip in 0ms
       const cooldownUntil = this.keyCooldowns.get(keyConfig.key) || 0;
-      if (nowMs < cooldownUntil) {
-        console.log(`[GeminiService] ⚡ Fast-Skipping ${keyConfig.name} (circuit-breaker active for ${Math.round((cooldownUntil - nowMs) / 1000)}s)...`);
+      if (currentMs < cooldownUntil) {
+        console.log(`[GeminiService] ⚡ Fast-Skipping ${keyConfig.name} (circuit-breaker active for ${Math.round((cooldownUntil - currentMs) / 1000)}s)...`);
         continue;
       }
 
@@ -747,7 +746,7 @@ export class GeminiService {
           console.log(`[GeminiService] Analyzing question with ${keyConfig.name} (${model}) [Emotion: ${emotionResult.emotion}, Active Lang: ${activeLang?.langName || 'English'}]...`);
 
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 15000);
+          const timeoutId = setTimeout(() => controller.abort(), 5000);
 
           const response = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${keyConfig.key}`,
@@ -811,10 +810,10 @@ export class GeminiService {
             }
           }
 
-          // ⚡ Instant Key Bailout: If key has quota limit or is invalid, do not retry other models on the same key!
+          // ⚡ Instant Key Bailout: If key has quota limit or is invalid, set 15m circuit breaker and switch tier immediately!
           if (response.status === 429 || response.status === 400 || response.status === 403 || data?.error?.status === 'RESOURCE_EXHAUSTED') {
-            console.warn(`[GeminiService] ⚡ ${keyConfig.name} returned ${response.status} (Quota/Auth). Opening 60s circuit-breaker and immediately switching tier...`);
-            this.keyCooldowns.set(keyConfig.key, Date.now() + 60000);
+            console.warn(`[GeminiService] ⚡ ${keyConfig.name} returned ${response.status} (Quota/Auth). Opening 15m circuit-breaker and immediately switching tier...`);
+            this.keyCooldowns.set(keyConfig.key, Date.now() + 15 * 60 * 1000);
             break; // Exit model loop for this dead key immediately
           }
 
@@ -987,14 +986,22 @@ export class GeminiService {
     const isReasoningTask = /\b(math|equation|prove|logic|puzzle|riddle|why|analyze)\b/i.test(prompt);
     const taskType = isCodingTask ? 'coding' : (isReasoningTask ? 'reasoning' : 'general');
     const dynamicCandidates = modelRouter.getCandidatesForTask({ taskType, prompt });
-    const modelsToTry = dynamicCandidates.length > 0 ? dynamicCandidates : this.candidateOpenRouterModels;
+    const rawModels = dynamicCandidates.length > 0 ? dynamicCandidates : this.candidateOpenRouterModels;
+    // Always prioritize verified free and responsive endpoints
+    const modelsToTry = [
+      ...rawModels.filter((m) => m === 'openrouter/free'),
+      ...rawModels.filter((m) => m !== 'openrouter/free'),
+    ];
+    if (!modelsToTry.includes('openrouter/free')) {
+      modelsToTry.unshift('openrouter/free');
+    }
 
     for (const model of modelsToTry) {
       try {
         console.log(`[GeminiService] ⚡ Ultra-Fast Routing to OpenRouter model: ${model} (task: ${taskType})...`);
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        const timeoutId = setTimeout(() => controller.abort(), 12000);
 
         const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
           method: 'POST',
@@ -1011,7 +1018,7 @@ export class GeminiService {
               { role: 'system', content: systemInstructionText },
               { role: 'user', content: userMessageContent },
             ],
-            max_tokens: 500,
+            max_tokens: 350,
             temperature: 0.8,
           }),
         });
