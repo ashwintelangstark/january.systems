@@ -7,7 +7,11 @@
     "dev": "npm run dev --prefix server",
     "start": "npm run dev --prefix server",
     "cli": "npm run cli --prefix server",
+    "server": "npm run dev --prefix server",
+    "client": "npm run dev --prefix client",
+    "dev:client": "npm run dev --prefix client",
     "build": "npm run build --prefix server",
-    "server": "npm run dev --prefix server"
+    "build:client": "npm run build --prefix client",
+    "build:all": "npm run build --prefix server && npm run build --prefix client"
   }
 }

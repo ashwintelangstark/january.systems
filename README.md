@@ -7,9 +7,10 @@
 
 **January** is an advanced, emotionally attuned, autonomous operating system agent engineered to run directly on your Mac hardware. It listens through your MacBook's physical microphone using local **Faster-Whisper** speech-to-text, sees through your native Mac webcam with **AVFoundation 60 FPS hardware streaming** and sub-20ms **local edge face detection**, reasons across **458+ AI models** via a **Dynamic Multi-Tier Model Router**, acts on your desktop as an autonomous **Computer-Using Agent (CUA)**, creates interactive **3D models and architectural BIM buildings in Blender**, generates production-grade **Python, C, and C++** code, queries real-time internet and weather data, and speaks aloud through physical laptop speakers with **ElevenLabs Ultra-Realistic Neural Voices** dynamically modulated by a **7-Archetype Emotion Engine**, backed by **Microsoft Edge-TTS** and native speech fallback.
 
-January operates across two seamless modes:
-1. **Autonomous Background Daemon (`npm run dev`)**: Runs headlessly in the background, listening for wake phrases (**"Rise"**) and spoken commands in the room with no open windows required.
-2. **Interactive Terminal CLI (`npm run cli`)**: A dual-section REPL (`[ME]` & `[JANUARY]`) that automatically pauses the background microphone during keyboard interaction and resumes room listening upon exit.
+January operates across three seamless modes:
+1. **Autonomous Background Daemon (`npm run server`)**: Runs headlessly in the background on `localhost:3001`, listening for wake phrases (**"Rise"**) and spoken commands in the room with no open windows required.
+2. **High-End Liquid-Glass Web Interface (`npm run client` / `http://localhost:5173`)**: An ultra-aesthetic Three.js web application featuring an interactive 2,000 motion particle cosmic core with dual-energy swirling vortex responsive to voice and cursor touch, collapsible liquid-glass session drawer matching the master visual design, floating prompt dock, live tool execution inspector, and 60 FPS camera eyes toggle.
+3. **Interactive Terminal CLI (`npm run cli`)**: A dual-section REPL (`[ME]` & `[JANUARY]`) that automatically pauses the background microphone during keyboard interaction and resumes room listening upon exit.
 
 ---
 
