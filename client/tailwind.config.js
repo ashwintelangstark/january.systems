@@ -19,9 +19,33 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
-        display: ['Outfit', 'sans-serif'],
-        mono: ['JetBrains Mono', 'monospace'],
+        sans: [
+          'SF Pro Display',
+          'SF Pro Text',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'SF Pro',
+          'Helvetica Neue',
+          'Helvetica',
+          'Arial',
+          'sans-serif',
+        ],
+        display: [
+          'SF Pro Display',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'SF Pro',
+          'Helvetica Neue',
+          'sans-serif',
+        ],
+        mono: [
+          'SF Mono',
+          'JetBrains Mono',
+          'Menlo',
+          'Monaco',
+          'Consolas',
+          'monospace',
+        ],
       },
       boxShadow: {
         'glow-cyan': '0 0 25px rgba(0, 245, 255, 0.35)',

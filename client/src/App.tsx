@@ -4,6 +4,7 @@ import { JanuaryCosmicOrb } from './components/orb/JanuaryCosmicOrb';
 import { LiquidGlassDrawer } from './components/drawer/LiquidGlassDrawer';
 import { FloatingPromptBar } from './components/input/FloatingPromptBar';
 import { TopStatusBar } from './components/hud/TopStatusBar';
+import { GreetingHeader } from './components/hud/GreetingHeader';
 import {
   fetchSessions,
   createSession,
@@ -145,7 +146,13 @@ export const App: React.FC = () => {
       className="relative w-screen h-screen overflow-hidden select-none font-sans bg-cover bg-center bg-no-repeat"
       style={{ backgroundImage: `url('/january_bg.png')`, backgroundColor: '#B4C5D4' }}
     >
-      {/* 2. Interactive Three.js 2,000 Particle Cosmic Orb with Dual Energy Vortex */}
+      {/* 1. Dynamic Greeting Header (SF Pro Display) */}
+      <GreetingHeader
+        isDrawerOpen={isDrawerOpen}
+        isChatExpanded={isChatExpanded}
+      />
+
+      {/* 2. Interactive Three.js 20,000 Particle Cosmic Orb with Dual Energy Vortex */}
       <JanuaryCosmicOrb
         agentState={agentState}
         emotionState={emotionState}
