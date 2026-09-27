@@ -141,10 +141,10 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-[#B6C3D0] select-none font-sans">
-      {/* 1. Frosted Ice Blue Plain Background */}
-      <div className="absolute inset-0 w-full h-full bg-[#B6C3D0] transition-colors duration-700 pointer-events-none" />
-
+    <div
+      className="relative w-screen h-screen overflow-hidden select-none font-sans bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: `url('/january_bg.png')`, backgroundColor: '#B4C5D4' }}
+    >
       {/* 2. Interactive Three.js 2,000 Particle Cosmic Orb with Dual Energy Vortex */}
       <JanuaryCosmicOrb
         agentState={agentState}

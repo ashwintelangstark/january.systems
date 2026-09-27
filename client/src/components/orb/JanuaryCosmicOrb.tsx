@@ -35,7 +35,7 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
     const container = containerRef.current;
     if (!container) return;
 
-    // --- Exact 2,000 Motion Particles with obstruction-free scale ---
+    // --- Exact 2,000 Motion Particles with High-Definition Core ---
     const PARTICLE_COUNT = 2000;
     const SPHERE_RADIUS = 2.4;
 
@@ -49,16 +49,20 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
     );
     camera.position.set(0, 0, 20);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setClearColor(0x000000, 0); // 100% transparent clear background
+    renderer.setClearColor(0x000000, 0); // 100% transparent clear canvas
     container.appendChild(renderer.domElement);
+
+    // Master Group for smooth dynamic offset (clearing drawer without UI overlap)
+    const orbMasterGroup = new THREE.Group();
+    scene.add(orbMasterGroup);
 
     // --- Custom GLSL Vertex Shader for Dual-Energy Swirling Core ---
     const vertexShader = `
       uniform float uTime;
-      uniform vec2 uMouse;
+      uniform vec2 uMouseWorld;
       uniform float uMouseForce;
       uniform float uAudioLevel;
       uniform float uSpeedFactor;
@@ -74,76 +78,77 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
       varying float vDist;
 
       void main() {
-        // Base spherical coordinates
         vec3 pos = position;
 
         // 1. Dual-Vortex Swirling Flow (Counter-rotating polar vortices)
         float polarAngle = atan(pos.z, pos.x);
         float distFromY = length(pos.xz);
         
-        // Swirl speed increases with audio and agent activity
-        float swirlSpeed = (1.2 + uSpeedFactor * 0.8) * (1.0 + uAudioLevel * 1.5);
+        // Swirl speed increases dynamically with audio, voice input, and synthesis activity
+        float swirlSpeed = (1.4 + uSpeedFactor * 0.9) * (1.0 + uAudioLevel * 1.6);
         float swirlAngle = uTime * swirlSpeed * 0.5 + aPhase * 6.2831;
 
         // Bipolar spiral twisting
-        float twist = (pos.y > 0.0 ? 1.0 : -1.0) * (2.0 / (distFromY + 0.8));
-        float totalAngle = polarAngle + swirlAngle * 0.4 + twist * sin(uTime * 0.8 + aPhase * 3.14);
+        float twist = (pos.y > 0.0 ? 1.0 : -1.0) * (2.2 / (distFromY + 0.7));
+        float totalAngle = polarAngle + swirlAngle * 0.45 + twist * sin(uTime * 0.9 + aPhase * 3.14);
 
         pos.x = cos(totalAngle) * distFromY;
         pos.z = sin(totalAngle) * distFromY;
 
-        // 2. Audio Wave Breathing & Shockwaves
-        float breath = sin(uTime * 2.0 + aPhase * 6.28) * 0.15;
+        // 2. Harmonic Audio Wave Breathing & Shockwaves during inputs/responses
+        float breath = sin(uTime * 2.4 + aPhase * 6.28) * 0.18;
         if (uAudioLevel > 0.01) {
-          float audioPulse = sin(length(pos) * 3.0 - uTime * 8.0) * (uAudioLevel * 0.9);
+          float audioPulse = sin(length(pos) * 3.5 - uTime * 9.0) * (uAudioLevel * 1.1);
           pos += normalize(pos) * (breath + audioPulse);
         } else {
           pos += normalize(pos) * breath;
         }
 
-        // 3. Mouse Interactive Deflection
-        vec3 mouseWorld = vec3(uMouse.x * 6.0, uMouse.y * 6.0, 2.0);
-        float mouseDist = distance(pos, mouseWorld);
-        if (mouseDist < 5.0) {
-          vec3 repelDir = normalize(pos - mouseWorld);
-          float force = (5.0 - mouseDist) / 5.0;
-          pos += repelDir * (force * uMouseForce * 1.8);
+        // 3. Fluid Mouse Interactive Deflection (Accurately projected to 3D cursor position)
+        vec2 mouseDelta = pos.xy - uMouseWorld;
+        float mouseDist = length(mouseDelta);
+        if (mouseDist < 4.2) {
+          vec2 repelDir = normalize(mouseDelta);
+          float force = (4.2 - mouseDist) / 4.2;
+          pos.xy += repelDir * (force * uMouseForce * 2.2);
+          pos.z += sin(force * 3.1415) * 1.4;
         }
 
-        // 4. Color Calculation (Dual Cyan/Blue vs Solar Orange/Magenta)
-        // Upper hemisphere is Cyan/Blue, lower hemisphere is Orange/Magenta
-        float hemisphereFactor = smoothstep(-1.5, 1.5, pos.y);
+        // 4. Color Calculation (Electric Cyan/Blue vs Solar Orange/Magenta)
+        float hemisphereFactor = smoothstep(-1.2, 1.2, pos.y);
         vec3 streamColor = mix(uColorOrange, uColorCyan, hemisphereFactor);
 
         // Core starburst brightness
         float centerDist = length(pos);
-        float centerGlow = 1.0 - smoothstep(0.0, 3.2, centerDist);
-        vColor = mix(streamColor, uColorCenter, centerGlow * (0.6 + uAudioLevel * 0.4));
+        float centerGlow = 1.0 - smoothstep(0.0, 2.5, centerDist);
+        vColor = mix(streamColor, uColorCenter, centerGlow * (0.7 + uAudioLevel * 0.3));
 
         vDist = centerDist;
 
         vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
-        float pointSize = (aScale * 38.0 + uAudioLevel * 25.0) * (18.0 / -mvPosition.z);
-        gl_PointSize = clamp(pointSize, 2.0, 60.0);
+        // Bold, punchy point size that scales with perspective and audio
+        float pointSize = (aScale * 44.0 + uAudioLevel * 30.0) * (20.0 / -mvPosition.z);
+        gl_PointSize = clamp(pointSize, 3.0, 65.0);
         gl_Position = projectionMatrix * mvPosition;
       }
     `;
 
-    // --- Custom GLSL Fragment Shader for Radiant Photonic Glow ---
+    // --- Custom GLSL Fragment Shader for Crisp, Bright & Bold Particles ---
     const fragmentShader = `
       varying vec3 vColor;
       varying float vDist;
 
       void main() {
-        // High quality circular particle with soft gaussian flare
         float r = length(gl_PointCoord - vec2(0.5));
         if (r > 0.5) discard;
 
-        float intensity = exp(-r * 5.0);
-        float edgeAlpha = 1.0 - smoothstep(0.1, 0.5, r);
-        float alpha = edgeAlpha * intensity * 0.95;
+        // Solid, bright core with smooth anti-aliased perimeter
+        float alpha = smoothstep(0.5, 0.08, r);
 
-        gl_FragColor = vec4(vColor, alpha);
+        // Radiant specular core
+        vec3 finalColor = mix(vColor, vec3(1.0, 1.0, 1.0), (1.0 - smoothstep(0.0, 0.22, r)) * 0.55);
+
+        gl_FragColor = vec4(finalColor, alpha);
       }
     `;
 
@@ -157,20 +162,18 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
     for (let i = 0; i < PARTICLE_COUNT; i++) {
       const i3 = i * 3;
 
-      // Distribute particles across sphere volume and shell
       const u = Math.random();
       const v = Math.random();
       const theta = u * 2.0 * Math.PI;
       const phi = Math.acos(2.0 * v - 1.0);
       
-      // Density concentrated toward core and glowing rim
       const radiusVariation = Math.pow(Math.random(), 0.65) * SPHERE_RADIUS;
 
       positions[i3] = radiusVariation * Math.sin(phi) * Math.cos(theta);
       positions[i3 + 1] = radiusVariation * Math.cos(phi);
       positions[i3 + 2] = radiusVariation * Math.sin(phi) * Math.sin(theta);
 
-      scales[i] = 0.5 + Math.random() * 0.8;
+      scales[i] = 0.6 + Math.random() * 0.8;
       phases[i] = Math.random();
 
       directions[i3] = (Math.random() - 0.5) * 0.2;
@@ -183,15 +186,15 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
     geometry.setAttribute('aPhase', new THREE.BufferAttribute(phases, 1));
     geometry.setAttribute('aDirection', new THREE.BufferAttribute(directions, 3));
 
-    // Colors matching the user's reference image
+    // Colors matching user requirements (Electric Cyan, Molten Orange, Blazing White)
     const colorCyan = new THREE.Color('#00E5FF');   // Brilliant Electric Cyan
-    const colorOrange = new THREE.Color('#FF6A00'); // Fiery Molten Solar Orange
+    const colorOrange = new THREE.Color('#FF5500'); // Fiery Molten Solar Orange
     const colorCenter = new THREE.Color('#FFFFFF'); // Blazing White Starburst
 
     const particleMaterial = new THREE.ShaderMaterial({
       uniforms: {
         uTime: { value: 0 },
-        uMouse: { value: new THREE.Vector2(0, 0) },
+        uMouseWorld: { value: new THREE.Vector2(999, 999) },
         uMouseForce: { value: 1.0 },
         uAudioLevel: { value: 0 },
         uSpeedFactor: { value: 0 },
@@ -202,58 +205,59 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
       vertexShader,
       fragmentShader,
       transparent: true,
-      blending: THREE.AdditiveBlending,
+      blending: THREE.NormalBlending, // Bold, solid, opaque particles over the Frosted Ice Blue backdrop
       depthWrite: false,
     });
 
     const particles = new THREE.Points(geometry, particleMaterial);
-    scene.add(particles);
+    orbMasterGroup.add(particles);
 
-    // --- 3D Orbital Light Rings & Star Constellations (As in Image) ---
+    // --- 3D Orbital Light Rings & Star Constellations ---
     const orbitalGroup = new THREE.Group();
+    orbMasterGroup.add(orbitalGroup);
 
     // Ring 1 (Primary Cyan/Blue Ring inclined at 45 deg)
-    const ring1Geom = new THREE.TorusGeometry(3.6, 0.026, 16, 120);
+    const ring1Geom = new THREE.TorusGeometry(3.6, 0.035, 16, 120);
     const ring1Mat = new THREE.MeshBasicMaterial({
-      color: 0x00f5ff,
+      color: 0x00E5FF,
       transparent: true,
-      opacity: 0.75,
-      blending: THREE.AdditiveBlending,
+      opacity: 0.95,
+      blending: THREE.NormalBlending,
     });
     const ring1 = new THREE.Mesh(ring1Geom, ring1Mat);
     ring1.rotation.x = Math.PI / 3;
     ring1.rotation.y = Math.PI / 6;
     orbitalGroup.add(ring1);
 
-    // Ring 2 (Secondary Magenta/Orange Ring inclined at -35 deg)
-    const ring2Geom = new THREE.TorusGeometry(3.2, 0.022, 16, 120);
+    // Ring 2 (Secondary Magenta/Coral Ring inclined at -35 deg)
+    const ring2Geom = new THREE.TorusGeometry(3.2, 0.03, 16, 120);
     const ring2Mat = new THREE.MeshBasicMaterial({
-      color: 0xff4899,
+      color: 0xFF2D78,
       transparent: true,
-      opacity: 0.7,
-      blending: THREE.AdditiveBlending,
+      opacity: 0.92,
+      blending: THREE.NormalBlending,
     });
     const ring2 = new THREE.Mesh(ring2Geom, ring2Mat);
     ring2.rotation.x = -Math.PI / 4;
     ring2.rotation.y = Math.PI / 4;
     orbitalGroup.add(ring2);
 
-    // Ring 3 (Outer Equatorial Constellation Track)
-    const ring3Geom = new THREE.TorusGeometry(4.2, 0.016, 16, 140);
+    // Ring 3 (Outer Constellation Track)
+    const ring3Geom = new THREE.TorusGeometry(4.2, 0.022, 16, 140);
     const ring3Mat = new THREE.MeshBasicMaterial({
-      color: 0x8b5cf6,
+      color: 0x6366F1,
       transparent: true,
-      opacity: 0.5,
-      blending: THREE.AdditiveBlending,
+      opacity: 0.8,
+      blending: THREE.NormalBlending,
     });
     const ring3 = new THREE.Mesh(ring3Geom, ring3Mat);
     ring3.rotation.z = Math.PI / 8;
     orbitalGroup.add(ring3);
 
     // Star Node Beads on Orbital Rings (Glistening Starbursts)
-    const starGeom = new THREE.SphereGeometry(0.09, 12, 12);
-    const starMatCyan = new THREE.MeshBasicMaterial({ color: 0x00ffff });
-    const starMatOrange = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+    const starGeom = new THREE.SphereGeometry(0.11, 16, 16);
+    const starMatCyan = new THREE.MeshBasicMaterial({ color: 0x00FFFF });
+    const starMatOrange = new THREE.MeshBasicMaterial({ color: 0xFFAA00 });
     const starNodes: THREE.Mesh[] = [];
 
     for (let k = 0; k < 6; k++) {
@@ -262,20 +266,18 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
       starNodes.push(star);
     }
 
-    scene.add(orbitalGroup);
-
-    // --- Interactive Mouse Dynamics ---
-    const mouse = new THREE.Vector2(0, 0);
+    // --- Interactive Mouse Dynamics (Direct Window Tracking) ---
+    const mouse = new THREE.Vector2(999, 999);
+    const mouseWorldCurrent = new THREE.Vector2(999, 999);
     let targetMouseForce = 1.0;
 
     const handleMouseMove = (event: MouseEvent) => {
-      const rect = container.getBoundingClientRect();
-      mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-      mouse.y = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
+      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
     };
 
     const handlePointerDown = () => {
-      targetMouseForce = 2.8; // Radiant shockwave on click
+      targetMouseForce = 2.8; // Radiant shockwave pulse on click
       if (onActivate) onActivate();
     };
 
@@ -299,7 +301,7 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
 
     window.addEventListener('resize', handleResize);
 
-    // --- Animation Loop ---
+    // --- 60FPS Animation Loop ---
     const clock = new THREE.Clock();
     let animationFrameId: number;
     let currentOffsetX = 0;
@@ -315,19 +317,40 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
       if (current.isDrawerOpen) {
         targetOffsetX = current.isChatExpanded ? 3.0 : 1.4;
       }
-      currentOffsetX = THREE.MathUtils.lerp(currentOffsetX, targetOffsetX, 0.05);
+      currentOffsetX = THREE.MathUtils.lerp(currentOffsetX, targetOffsetX, 0.06);
+      orbMasterGroup.position.x = currentOffsetX;
 
-      // Speed & Audio Calculations
+      // Speed & Audio Calculations (Active during inputs and responses)
       let speedFactor = 0.0;
-      if (current.agentState === 'working') speedFactor = 1.8;
-      else if (current.agentState === 'speaking') speedFactor = 1.2;
-      else if (current.agentState === 'listening') speedFactor = 0.5;
+      let statePulse = 0.0;
+      if (current.agentState === 'working') {
+        speedFactor = 2.2;
+        statePulse = 0.5;
+      } else if (current.agentState === 'speaking') {
+        speedFactor = 1.4;
+        statePulse = 0.75;
+      } else if (current.agentState === 'listening') {
+        speedFactor = 0.8;
+        statePulse = 0.35; // Responsive breathing while listening / taking inputs
+      }
 
-      const currentAudio = Math.max(current.inputLevel || 0, current.outputLevel || 0);
+      const effectiveAudio = Math.max(current.inputLevel || 0, current.outputLevel || 0, statePulse);
+
+      // Compute exact 3D world position of cursor at z = 0 relative to orbMasterGroup
+      const aspect = container.clientWidth / container.clientHeight;
+      const vHalfHeight = Math.tan((camera.fov * Math.PI) / 360) * camera.position.z;
+      const vHalfWidth = vHalfHeight * aspect;
+
+      const cursorWorldX = mouse.x * vHalfWidth;
+      const cursorWorldY = mouse.y * vHalfHeight;
+      const localMouseX = cursorWorldX - currentOffsetX;
+      const localMouseY = cursorWorldY;
+
+      mouseWorldCurrent.lerp(new THREE.Vector2(localMouseX, localMouseY), 0.2);
 
       // Uniform updates
       particleMaterial.uniforms.uTime.value = elapsedTime;
-      particleMaterial.uniforms.uMouse.value.lerp(mouse, 0.08);
+      particleMaterial.uniforms.uMouseWorld.value.copy(mouseWorldCurrent);
       particleMaterial.uniforms.uMouseForce.value = THREE.MathUtils.lerp(
         particleMaterial.uniforms.uMouseForce.value,
         targetMouseForce,
@@ -335,7 +358,7 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
       );
       particleMaterial.uniforms.uAudioLevel.value = THREE.MathUtils.lerp(
         particleMaterial.uniforms.uAudioLevel.value,
-        currentAudio,
+        effectiveAudio,
         0.25
       );
       particleMaterial.uniforms.uSpeedFactor.value = THREE.MathUtils.lerp(
@@ -358,11 +381,11 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
         node.scale.setScalar(1.0 + Math.sin(elapsedTime * 4.0 + idx) * 0.3);
       });
 
-      // Camera positioning with obstruction avoidance
-      camera.position.x = currentOffsetX + Math.sin(elapsedTime * 0.2) * 0.3 + mouse.x * 0.5;
-      camera.position.y = Math.cos(elapsedTime * 0.2) * 0.3 + mouse.y * 0.5;
+      // Camera micro-sway for depth
+      camera.position.x = Math.sin(elapsedTime * 0.2) * 0.2;
+      camera.position.y = Math.cos(elapsedTime * 0.2) * 0.2;
       camera.position.z = 20;
-      camera.lookAt(currentOffsetX, 0, 0);
+      camera.lookAt(0, 0, 0);
 
       renderer.render(scene, camera);
     };
@@ -402,3 +425,5 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
     />
   );
 };
+
+export default JanuaryCosmicOrb;
