@@ -172,7 +172,7 @@ export const FloatingPromptBar: React.FC<FloatingPromptBarProps> = ({
             interimTranscript
               ? `Listening: "${interimTranscript}"`
               : isListening
-              ? 'Listening... Speak your prompt aloud to January'
+              ? 'Listening 24/7... Speak your prompt aloud to January or type...'
               : 'Ask January anything, engineer 3D scenes, or speak...'
           }
           className="flex-1 bg-transparent px-2.5 py-2 text-xs md:text-[13px] font-sans text-slate-900 placeholder-slate-500/80 focus:outline-none tracking-normal font-medium"
@@ -227,9 +227,9 @@ export const FloatingPromptBar: React.FC<FloatingPromptBarProps> = ({
             }`}
             title={
               isListening
-                ? 'Microphone is Active (Listening) - Click to Mute'
+                ? 'Microphone is Active (Listening 24/7) - Click to Mute'
                 : isMicMuted
-                ? 'Microphone is Muted - Click to Speak'
+                ? 'Microphone is Muted - Click to Resume 24/7 Listening'
                 : 'Click to Speak (Microphone)'
             }
           >

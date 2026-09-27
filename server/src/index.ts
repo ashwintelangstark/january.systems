@@ -569,39 +569,25 @@ systemSpeaker.on('end', () => {
   }
 });
 
-// Wire WakeDetector events
+// Wire WakeDetector events (silent state transitions - no unprompted canned speech)
 wakeDetector.on('wake', (data) => {
-  setAgentState('listening', 'Wake trigger received (Rise)');
-  const wakeMsg = 'I am awake and listening. How can I help you?';
+  console.log(`🌟 [Coordinator] Wake triggered via ${data?.source || 'system'}`);
+  setAgentState('listening', 'Wake trigger received');
   broadcast({
-    type: 'transcript',
-    payload: {
-      role: 'assistant',
-      text: wakeMsg,
-      isFinal: true,
-      timestamp: Date.now(),
-    },
-  });
-  setAgentState('speaking', 'Wake confirmation speech');
-  systemSpeaker.speakText(wakeMsg, { emotion: 'joy' }).then(() => {
-    setAgentState('listening', 'Listening for prompt');
+    type: 'system_log',
+    message: `Activated: listening for speech (${data?.source || 'system'})`,
+    level: 'info',
   });
 });
 
 wakeDetector.on('sleep', (data) => {
+  console.log(`🌙 [Coordinator] Sleep triggered via ${data?.source || 'system'}`);
   systemSpeaker.stopPlayback();
-  setAgentState('sleeping', 'Sleep trigger received (Good Night)');
-  const capWake = config.wakePhrase.charAt(0).toUpperCase() + config.wakePhrase.slice(1);
-  const sleepMsg = `Good night. Standing by until you say ${capWake}.`;
-  systemSpeaker.speakText(sleepMsg);
+  setAgentState('sleeping', 'Sleep trigger received');
   broadcast({
-    type: 'transcript',
-    payload: {
-      role: 'assistant',
-      text: sleepMsg,
-      isFinal: true,
-      timestamp: Date.now(),
-    },
+    type: 'system_log',
+    message: `Sleep mode active (${data?.source || 'system'})`,
+    level: 'info',
   });
 });
 
@@ -640,20 +626,13 @@ async function handleUnifiedPrompt(text: string, source: 'voice' | 'text' = 'voi
 
   if (isCamWakeCommand) {
     visualActivityMonitor.openEyes(60);
-    const msg = 'Eyes open. Real-time 60 FPS camera vision activated.';
-    console.log(`👁️ [Coordinator] Camera wake word recognized: EYES OPEN (60 FPS Stream).`);
-    broadcast({
-      type: 'transcript',
-      payload: { role: 'assistant', text: msg, isFinal: true, timestamp: Date.now() },
-    });
+    console.log(`👁️ [Coordinator] Camera activated: EYES OPEN (60 FPS Stream).`);
     broadcast({
       type: 'system_log',
       message: `Camera Eyes Activated: 60 FPS continuous hardware stream running`,
       level: 'info',
     });
-    setAgentState('speaking', 'Camera eyes opened');
-    await systemSpeaker.speakText(msg, { emotion: 'joy' });
-    setAgentState('passive', 'Speech completed');
+    setAgentState('listening', 'Camera eyes opened');
     return;
   }
 
@@ -665,20 +644,13 @@ async function handleUnifiedPrompt(text: string, source: 'voice' | 'text' = 'voi
 
   if (isCamSleepCommand) {
     visualActivityMonitor.closeEyes();
-    const msg = 'Eyes closed. Camera monitoring paused and hardware turned off.';
-    console.log(`🌙 [Coordinator] Camera sleep word recognized: EYES CLOSED.`);
-    broadcast({
-      type: 'transcript',
-      payload: { role: 'assistant', text: msg, isFinal: true, timestamp: Date.now() },
-    });
+    console.log(`🌙 [Coordinator] Camera deactivated: EYES CLOSED.`);
     broadcast({
       type: 'system_log',
-      message: `Camera Eyes Deactivated: Hardware process terminated (LED off, 0% CPU)`,
+      message: `Camera Eyes Deactivated: Hardware process terminated`,
       level: 'info',
     });
-    setAgentState('speaking', 'Camera eyes closed');
-    await systemSpeaker.speakText(msg, { emotion: 'calm' });
-    setAgentState('passive', 'Speech completed');
+    setAgentState('listening', 'Camera eyes closed');
     return;
   }
 
@@ -692,13 +664,11 @@ async function handleUnifiedPrompt(text: string, source: 'voice' | 'text' = 'voi
     console.log(`🌙 [Coordinator] Sleep phrase recognized: "${clean}"`);
     systemSpeaker.stopPlayback();
     setAgentState('sleeping', 'Sleep phrase spoken');
-    const capWake = config.wakePhrase.charAt(0).toUpperCase() + config.wakePhrase.slice(1);
-    const sleepMsg = `Good night. Standing by until you say ${capWake}.`;
     broadcast({
-      type: 'transcript',
-      payload: { role: 'assistant', text: sleepMsg, isFinal: true, timestamp: Date.now() },
+      type: 'system_log',
+      message: `Sleep mode active`,
+      level: 'info',
     });
-    await systemSpeaker.speakText(sleepMsg, { emotion: 'calm' });
     return;
   }
 
@@ -711,12 +681,11 @@ async function handleUnifiedPrompt(text: string, source: 'voice' | 'text' = 'voi
   if (isSystemWakeCommand) {
     console.log(`⚡ [Coordinator] Wake phrase recognized: "${clean}"`);
     setAgentState('listening', 'Wake phrase received');
-    const wakeMsg = 'I am awake and listening.';
     broadcast({
-      type: 'transcript',
-      payload: { role: 'assistant', text: wakeMsg, isFinal: true, timestamp: Date.now() },
+      type: 'system_log',
+      message: `Wake activated: listening for prompt`,
+      level: 'info',
     });
-    await systemSpeaker.speakText(wakeMsg, { emotion: 'joy' });
     return;
   }
 
@@ -845,37 +814,9 @@ async function handleUnifiedPrompt(text: string, source: 'voice' | 'text' = 'voi
       type: 'transcript',
       payload: { role: 'assistant', text: errorMsg, isFinal: true, timestamp: Date.now() },
     });
-    await systemSpeaker.speakText(errorMsg, { emotion: 'concerned' });
     setAgentState('passive', 'Recovered');
   }
 }
-
-// ----------------------------------------------------
-// Wake Word Detector (Dual-stream worker) Event Wiring
-// ----------------------------------------------------
-wakeDetector.on('wake', (data) => {
-  console.log(`🌟 [Coordinator] WAKE TRIGGERED ("${config.wakePhrase.toUpperCase()}") via ${data.source}!`);
-  setAgentState('listening', `Wake word "${config.wakePhrase}" detected`);
-  broadcast({
-    type: 'system_log',
-    message: `Activated: "${config.wakePhrase}" recognized (${data.source})`,
-    level: 'info',
-  });
-});
-
-wakeDetector.on('sleep', (data) => {
-  console.log(`🌙 [Coordinator] SLEEP TRIGGERED ("${config.sleepPhrase.toUpperCase()}") via ${data.source}!`);
-  systemSpeaker.stopPlayback();
-  setAgentState('sleeping', `Sleep word "${config.sleepPhrase}" detected`);
-  const capWake = config.wakePhrase.charAt(0).toUpperCase() + config.wakePhrase.slice(1);
-  const sleepMsg = `Good night. Standing by until you say ${capWake}.`;
-  systemSpeaker.speakText(sleepMsg);
-  broadcast({
-    type: 'system_log',
-    message: `Sleep mode: "${config.sleepPhrase}" recognized (${data.source})`,
-    level: 'info',
-  });
-});
 
 wakeDetector.on('status', (status) => {
   if (status.message) {
@@ -890,48 +831,13 @@ wakeDetector.on('status', (status) => {
 // ----------------------------------------------------
 // Ambient Camera Visual Activity Monitor Wiring
 // ----------------------------------------------------
-let lastArrivalGreetingTimestamp = 0;
-const ARRIVAL_GREETING_COOLDOWN_MS = 8 * 60 * 1000; // Minimum 8 minutes between unsolicited greetings
-
-visualActivityMonitor.on('userArrival', async (event) => {
+visualActivityMonitor.on('userArrival', (event) => {
   console.log(`👁️ [Coordinator] USER ARRIVAL DETECTED: ${event.user}`);
   broadcast({
     type: 'system_log',
     message: `Visual Perception: ${event.user} arrived at desk`,
     level: 'info',
   });
-
-  const now = Date.now();
-  if (currentState === 'sleeping') {
-    console.log('[Coordinator] User arrived, but agent is in sleep mode. Keeping silent.');
-    return;
-  }
-
-  // Enforce intelligent cooldown between unsolicited proactive greetings
-  if (now - lastArrivalGreetingTimestamp < ARRIVAL_GREETING_COOLDOWN_MS) {
-    const elapsedSec = Math.round((now - lastArrivalGreetingTimestamp) / 1000);
-    console.log(`[Coordinator] Arrival greeting suppressed by cooldown (${elapsedSec}s < 480s).`);
-    return;
-  }
-
-  lastArrivalGreetingTimestamp = now;
-  const hour = new Date().getHours();
-  const timeOfDay = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
-  const greeting = `Good ${timeOfDay}, ${event.user}! Good to see you back. What are we building today?`;
-
-  setAgentState('speaking', 'Proactive arrival greeting');
-  broadcast({
-    type: 'transcript',
-    payload: {
-      role: 'assistant',
-      text: greeting,
-      isFinal: true,
-      timestamp: now,
-    },
-  });
-
-  await systemSpeaker.speakText(greeting, { emotion: 'focused' });
-  setAgentState('passive', 'Speech completed');
 });
 
 visualActivityMonitor.on('userDeparture', (event) => {
@@ -943,25 +849,13 @@ visualActivityMonitor.on('userDeparture', (event) => {
   });
 });
 
-visualActivityMonitor.on('gesture', async (event) => {
+visualActivityMonitor.on('gesture', (event) => {
   console.log(`👋 [Coordinator] Gesture recognized: ${event.type} from ${event.user}`);
-  if (currentState === 'sleeping') return;
-
-  if (event.type === 'wave') {
-    const waveReply = `Hey ${event.user}, I saw you wave! What can I help you with?`;
-    setAgentState('speaking', 'Wave acknowledged');
-    broadcast({
-      type: 'transcript',
-      payload: {
-        role: 'assistant',
-        text: waveReply,
-        isFinal: true,
-        timestamp: Date.now(),
-      },
-    });
-    await systemSpeaker.speakText(waveReply, { emotion: 'joy' });
-    setAgentState('passive', 'Speech completed');
-  }
+  broadcast({
+    type: 'system_log',
+    message: `Visual Perception: ${event.type} detected from ${event.user}`,
+    level: 'info',
+  });
 });
 
 visualActivityMonitor.on('activityUpdate', (context) => {

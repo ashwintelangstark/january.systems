@@ -20,7 +20,7 @@ export function useAgentSocket(activeSessionId?: string, onVoiceTranscript?: (te
   const [inputLevel, setInputLevel] = useState(0);
   const [outputLevel, setOutputLevel] = useState(0);
   const [isMicMuted, setIsMicMuted] = useState(false);
-  const [isListening, setIsListening] = useState(false);
+  const [isListening, setIsListening] = useState(true);
   const [interimTranscript, setInterimTranscript] = useState('');
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isEyesOpen, setIsEyesOpen] = useState(false);
@@ -30,7 +30,7 @@ export function useAgentSocket(activeSessionId?: string, onVoiceTranscript?: (te
   const audioInputRef = useRef<AudioInputManager | null>(null);
   const audioOutputRef = useRef<AudioOutputManager | null>(null);
   const recognitionRef = useRef<any>(null);
-  const isListeningRef = useRef<boolean>(false);
+  const isListeningRef = useRef<boolean>(true);
   const isMicMutedRef = useRef<boolean>(false);
   const agentStateRef = useRef<AgentState>(agentState);
   const onVoiceTranscriptRef = useRef(onVoiceTranscript);
@@ -469,12 +469,25 @@ export function useAgentSocket(activeSessionId?: string, onVoiceTranscript?: (te
         };
 
         recognition.onend = () => {
-          if (isListeningRef.current && !isMicMutedRef.current && agentStateRef.current !== 'speaking') {
-            try {
-              recognition.start();
-            } catch (err: any) {
-              // Ignore if already active
-            }
+          if (!isMicMutedRef.current) {
+            setIsListening(true);
+            isListeningRef.current = true;
+            // 24/7 Auto-recovery: Re-engage recognition seamlessly when browser silence timeout expires
+            setTimeout(() => {
+              if (!isMicMutedRef.current && agentStateRef.current !== 'speaking') {
+                try {
+                  recognition.start();
+                } catch (err: any) {
+                  setTimeout(() => {
+                    if (!isMicMutedRef.current && agentStateRef.current !== 'speaking') {
+                      try {
+                        recognition.start();
+                      } catch {}
+                    }
+                  }, 250);
+                }
+              }
+            }, 100);
           } else {
             setIsListening(false);
             isListeningRef.current = false;
@@ -523,19 +536,44 @@ export function useAgentSocket(activeSessionId?: string, onVoiceTranscript?: (te
     }
   }, [startListening, stopListening]);
 
-  // Echo cancellation: pause speech recognition when January is speaking
+  // 24/7 Continuous Listening: Auto-start on mount and unlock on initial user gesture
+  useEffect(() => {
+    startListening();
+
+    const unlockContinuousMic = () => {
+      if (!isMicMutedRef.current) {
+        startListening();
+      }
+    };
+
+    window.addEventListener('pointerdown', unlockContinuousMic, { once: true });
+    window.addEventListener('keydown', unlockContinuousMic, { once: true });
+
+    return () => {
+      window.removeEventListener('pointerdown', unlockContinuousMic);
+      window.removeEventListener('keydown', unlockContinuousMic);
+    };
+  }, [startListening]);
+
+  // Echo cancellation: pause speech recognition when January is speaking, resume immediately after
   useEffect(() => {
     if (agentState === 'speaking') {
-      if (recognitionRef.current && isListeningRef.current) {
+      if (recognitionRef.current) {
         try {
           recognitionRef.current.abort();
         } catch {}
       }
-    } else if (agentState === 'passive' || agentState === 'listening') {
-      if (isListeningRef.current && !isMicMutedRef.current) {
-        try {
-          recognitionRef.current?.start();
-        } catch {}
+    } else {
+      if (!isMicMutedRef.current) {
+        setIsListening(true);
+        isListeningRef.current = true;
+        setTimeout(() => {
+          if (!isMicMutedRef.current && agentStateRef.current !== 'speaking') {
+            try {
+              recognitionRef.current?.start();
+            } catch {}
+          }
+        }, 150);
       }
     }
   }, [agentState]);
