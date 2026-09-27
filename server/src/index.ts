@@ -673,6 +673,7 @@ async function handleUnifiedPrompt(text: string, source: 'voice' | 'text' = 'voi
     payload: {
       role: 'user',
       text: clean,
+      source,
       isFinal: true,
       timestamp: Date.now(),
     },

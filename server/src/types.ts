@@ -21,6 +21,7 @@ export interface ToolResultPayload {
 export interface TranscriptPayload {
   role: 'user' | 'assistant' | 'system';
   text: string;
+  source?: 'voice' | 'text';
   isFinal?: boolean;
   timestamp?: number;
 }

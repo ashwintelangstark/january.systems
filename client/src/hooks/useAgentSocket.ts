@@ -121,9 +121,23 @@ export function useAgentSocket(activeSessionId?: string) {
           }
 
           case 'transcript': {
-            const { role, text, isFinal } = msg.payload;
+            const { role, text, isFinal, source: msgSource } = msg.payload;
 
             setMessages((prev) => {
+              // Deduplicate user messages: if user message with identical text was added recently
+              // (e.g. optimistic text input from the prompt bar), do not append duplicate!
+              if (role === 'user') {
+                const isDuplicate = prev.some(
+                  (m) =>
+                    m.role === 'user' &&
+                    m.text.trim().toLowerCase() === text.trim().toLowerCase() &&
+                    Math.abs(Date.now() - m.timestamp) < 20000
+                );
+                if (isDuplicate) {
+                  return prev;
+                }
+              }
+
               const last = prev[prev.length - 1];
               if (last && last.role === role && last.isStreaming) {
                 return [
@@ -140,7 +154,7 @@ export function useAgentSocket(activeSessionId?: string) {
                   {
                     id: Math.random().toString(36).substring(2, 9),
                     role,
-                    source: 'voice',
+                    source: msgSource || (role === 'user' ? 'voice' : 'agent'),
                     text,
                     timestamp: Date.now(),
                     isStreaming: !isFinal,

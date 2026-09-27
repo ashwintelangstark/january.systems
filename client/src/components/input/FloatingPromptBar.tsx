@@ -39,18 +39,26 @@ export const FloatingPromptBar: React.FC<FloatingPromptBarProps> = ({
 }) => {
   const [inputText, setInputText] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isSubmittingRef = useRef<boolean>(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputText.trim()) return;
-    onSendText(inputText);
+  const handleSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const text = inputText.trim();
+    if (!text || isSubmittingRef.current) return;
+
+    isSubmittingRef.current = true;
+    onSendText(text);
     setInputText('');
+
+    setTimeout(() => {
+      isSubmittingRef.current = false;
+    }, 300);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit(e);
+      handleSubmit();
     }
   };
 
@@ -65,8 +73,11 @@ export const FloatingPromptBar: React.FC<FloatingPromptBarProps> = ({
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-2xl px-4 select-none">
       <form
         onSubmit={handleSubmit}
-        className="relative flex items-center gap-1.5 p-1.5 rounded-2xl liquid-glass-bar transition-all focus-within:border-white/80 focus-within:shadow-[0_20px_45px_rgba(0,30,60,0.15),0_0_20px_rgba(255,255,255,0.45)]"
+        className="relative flex items-center gap-1.5 p-1.5 rounded-2xl liquid-glass-bar transition-all focus-within:border-white/80 focus-within:shadow-[0_20px_45px_rgba(0,30,60,0.12),inset_0_1.5px_2px_rgba(255,255,255,0.9),0_0_25px_rgba(255,255,255,0.35)]"
       >
+        {/* Subtle Top Specular Glass Refraction Edge */}
+        <div className="absolute top-0 left-6 right-6 h-[1px] bg-gradient-to-r from-transparent via-white/70 to-transparent pointer-events-none" />
+
         {/* Hidden File Input */}
         <input
           type="file"
@@ -80,13 +91,15 @@ export const FloatingPromptBar: React.FC<FloatingPromptBarProps> = ({
         <button
           type="button"
           onClick={onToggleEyes}
-          className={`w-9 h-9 rounded-xl glass-btn flex items-center justify-center transition-all cursor-pointer ${
+          className={`relative w-9 h-9 rounded-xl glass-shine-btn flex items-center justify-center transition-all cursor-pointer ${
             isEyesOpen
-              ? 'bg-emerald-500/25 border-emerald-400 text-emerald-800 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
+              ? 'border-emerald-400 text-emerald-800 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
               : 'text-slate-700 hover:text-slate-950'
           }`}
           title={isEyesOpen ? 'Camera Eyes: OPEN (60 FPS)' : 'Click to open camera eyes'}
         >
+          <span className="glass-glare" />
+          <span className="glass-click-flash" />
           {isEyesOpen ? (
             <Eye className="w-4 h-4 text-emerald-700 animate-pulse" />
           ) : (
@@ -98,16 +111,18 @@ export const FloatingPromptBar: React.FC<FloatingPromptBarProps> = ({
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="w-9 h-9 rounded-xl glass-btn flex items-center justify-center text-slate-700 hover:text-slate-950 transition-all cursor-pointer"
+          className="relative w-9 h-9 rounded-xl glass-shine-btn flex items-center justify-center text-slate-700 hover:text-slate-950 transition-all cursor-pointer"
           title="Attach blueprint, 3D CAD, image, or code file"
         >
+          <span className="glass-glare" />
+          <span className="glass-click-flash" />
           <Paperclip className="w-4 h-4" />
         </button>
 
         {/* Subtle Vertical Hairline Separator */}
-        <div className="w-px h-5 bg-white/40 mx-0.5" />
+        <div className="w-px h-5 bg-white/40 mx-0.5 pointer-events-none" />
 
-        {/* Main Text Input Field */}
+        {/* Main Text Input Field (100% Transparent Glass Interface) */}
         <input
           type="text"
           value={inputText}
@@ -124,9 +139,11 @@ export const FloatingPromptBar: React.FC<FloatingPromptBarProps> = ({
             <button
               type="button"
               onClick={onInterrupt}
-              className="w-9 h-9 rounded-xl glass-btn bg-rose-500/25 hover:bg-rose-500/35 border-rose-400 text-rose-700 flex items-center justify-center transition-all shadow-[0_0_12px_rgba(244,63,94,0.25)] animate-pulse cursor-pointer"
+              className="relative w-9 h-9 rounded-xl glass-shine-btn border-rose-400 text-rose-700 flex items-center justify-center transition-all shadow-[0_0_12px_rgba(244,63,94,0.3)] animate-pulse cursor-pointer"
               title="Interrupt January Speech"
             >
+              <span className="glass-glare" />
+              <span className="glass-click-flash" />
               <Square className="w-3.5 h-3.5 fill-current" />
             </button>
           )}
@@ -135,13 +152,15 @@ export const FloatingPromptBar: React.FC<FloatingPromptBarProps> = ({
           <button
             type="button"
             onClick={onToggleAudio}
-            className={`w-9 h-9 rounded-xl glass-btn flex items-center justify-center transition-all cursor-pointer ${
+            className={`relative w-9 h-9 rounded-xl glass-shine-btn flex items-center justify-center transition-all cursor-pointer ${
               isAudioMuted
-                ? 'bg-rose-500/20 border-rose-400 text-rose-700'
+                ? 'border-rose-400 text-rose-700'
                 : 'text-slate-700 hover:text-slate-950'
             }`}
             title={isAudioMuted ? 'Speaker is OFF (Click to turn ON)' : 'Speaker is ON (Click to turn OFF)'}
           >
+            <span className="glass-glare" />
+            <span className="glass-click-flash" />
             {isAudioMuted ? (
               <VolumeX className="w-4 h-4" />
             ) : (
@@ -153,13 +172,15 @@ export const FloatingPromptBar: React.FC<FloatingPromptBarProps> = ({
           <button
             type="button"
             onClick={onToggleMic}
-            className={`w-9 h-9 rounded-xl glass-btn flex items-center justify-center transition-all cursor-pointer ${
+            className={`relative w-9 h-9 rounded-xl glass-shine-btn flex items-center justify-center transition-all cursor-pointer ${
               isMicMuted
-                ? 'bg-rose-500/20 border-rose-400 text-rose-700'
-                : 'bg-cyan-500/25 border-cyan-400 text-cyan-800 shadow-[0_0_12px_rgba(6,182,212,0.2)]'
+                ? 'border-rose-400 text-rose-700'
+                : 'border-cyan-400 text-cyan-800 shadow-[0_0_12px_rgba(6,182,212,0.25)]'
             }`}
             title={isMicMuted ? 'Microphone is OFF (Click to turn ON)' : 'Microphone is ON (Click to turn OFF)'}
           >
+            <span className="glass-glare" />
+            <span className="glass-click-flash" />
             {isMicMuted ? (
               <MicOff className="w-4 h-4" />
             ) : (
@@ -171,13 +192,15 @@ export const FloatingPromptBar: React.FC<FloatingPromptBarProps> = ({
           <button
             type="submit"
             disabled={!inputText.trim()}
-            className={`w-9 h-9 rounded-xl glass-btn flex items-center justify-center transition-all ${
+            className={`relative w-9 h-9 rounded-xl glass-shine-btn flex items-center justify-center transition-all ${
               inputText.trim()
-                ? 'bg-white/70 hover:bg-white/90 text-slate-950 border-white/80 shadow-md cursor-pointer'
+                ? 'text-slate-950 border-white/80 shadow-md cursor-pointer'
                 : 'text-slate-400 opacity-40 cursor-not-allowed border-white/20'
             }`}
             title="Send Command (Enter)"
           >
+            <span className="glass-glare" />
+            <span className="glass-click-flash" />
             <Send className="w-3.5 h-3.5" />
           </button>
         </div>
