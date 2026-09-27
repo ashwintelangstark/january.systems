@@ -123,13 +123,6 @@ export function useAgentSocket(activeSessionId?: string) {
           case 'transcript': {
             const { role, text, isFinal } = msg.payload;
 
-            // Trigger speech output if final assistant response
-            if (role === 'assistant' && isFinal && text && !isAudioMuted) {
-              if (audioOutputRef.current && !audioOutputRef.current.isPlaying()) {
-                audioOutputRef.current.speakSynthesizedText(text, emotionState.emotion);
-              }
-            }
-
             setMessages((prev) => {
               const last = prev[prev.length - 1];
               if (last && last.role === role && last.isStreaming) {
@@ -289,6 +282,9 @@ export function useAgentSocket(activeSessionId?: string) {
     setIsMicMuted((prev) => {
       const next = !prev;
       if (audioInputRef.current) audioInputRef.current.setMute(next);
+      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+        socketRef.current.send(JSON.stringify({ type: 'set_mic_mute', muted: next }));
+      }
       return next;
     });
   }, []);
@@ -297,9 +293,20 @@ export function useAgentSocket(activeSessionId?: string) {
     setIsAudioMuted((prev) => {
       const next = !prev;
       if (audioOutputRef.current) audioOutputRef.current.setMute(next);
+      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+        socketRef.current.send(JSON.stringify({ type: 'set_speaker_mute', muted: next }));
+      }
       return next;
     });
   }, []);
+
+  const toggleListening = useCallback(() => {
+    if (agentState === 'listening') {
+      triggerSleep();
+    } else {
+      triggerWake('manual');
+    }
+  }, [agentState, triggerSleep, triggerWake]);
 
   return {
     agentState,
@@ -316,6 +323,7 @@ export function useAgentSocket(activeSessionId?: string) {
     sendTextMessage,
     triggerWake,
     triggerSleep,
+    toggleListening,
     interrupt,
     toggleMuteMic,
     toggleMuteAudio,

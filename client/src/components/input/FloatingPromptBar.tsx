@@ -9,7 +9,6 @@ import {
   Volume2,
   VolumeX,
   Square,
-  Sparkles,
 } from 'lucide-react';
 import { AgentState } from '../../types';
 
@@ -19,7 +18,6 @@ interface FloatingPromptBarProps {
   isAudioMuted: boolean;
   isEyesOpen: boolean;
   onSendText: (text: string) => void;
-  onTriggerWake: () => void;
   onInterrupt: () => void;
   onToggleMic: () => void;
   onToggleAudio: () => void;
@@ -33,7 +31,6 @@ export const FloatingPromptBar: React.FC<FloatingPromptBarProps> = ({
   isAudioMuted,
   isEyesOpen,
   onSendText,
-  onTriggerWake,
   onInterrupt,
   onToggleMic,
   onToggleAudio,
@@ -79,22 +76,11 @@ export const FloatingPromptBar: React.FC<FloatingPromptBarProps> = ({
           accept="image/*,.blend,.obj,.glb,.stl,.step,.pdf,.txt,.py,.cpp,.c"
         />
 
-        {/* Quick Wake Button ("Rise") */}
-        <button
-          type="button"
-          onClick={onTriggerWake}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-cyan-500/20 to-blue-500/20 hover:from-cyan-500/30 hover:to-blue-500/30 border border-cyan-400/30 text-cyan-300 text-xs font-mono font-bold tracking-wider transition-all shadow-glow-cyan"
-          title="Wake January (Voice / Manual)"
-        >
-          <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
-          <span>RISE</span>
-        </button>
-
         {/* Camera Eyes Quick Toggle */}
         <button
           type="button"
           onClick={onToggleEyes}
-          className={`p-2 rounded-xl border transition-all ${
+          className={`p-2.5 rounded-xl border transition-all ${
             isEyesOpen
               ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
               : 'bg-white/[0.04] border-white/10 text-slate-400 hover:text-white'
@@ -112,46 +98,46 @@ export const FloatingPromptBar: React.FC<FloatingPromptBarProps> = ({
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-slate-400 hover:text-white transition-colors"
+          className="p-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-slate-400 hover:text-white transition-colors"
           title="Upload Reference Blueprint, 3D CAD, Image, or Code"
         >
           <Paperclip className="w-4 h-4" />
         </button>
 
-        {/* Main Text Input */}
+        {/* Main Text Input Field */}
         <input
           type="text"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask January anything, engineer 3D scenes, or press 'Rise' to speak..."
+          placeholder="Ask January anything, engineer 3D scenes, or speak..."
           className="flex-1 bg-transparent px-3 py-2 text-xs md:text-sm font-sans text-slate-100 placeholder-slate-400/80 focus:outline-none"
         />
 
-        {/* Right Action Buttons */}
+        {/* Action Controls: Interrupt, Speaker Toggle, Mic Toggle, Send */}
         <div className="flex items-center gap-1.5 pr-1">
           {/* Interrupt Button (When speaking) */}
           {agentState === 'speaking' && (
             <button
               type="button"
               onClick={onInterrupt}
-              className="p-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 transition-all shadow-[0_0_15px_rgba(244,63,94,0.3)] animate-pulse"
+              className="p-2.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 transition-all shadow-[0_0_15px_rgba(244,63,94,0.3)] animate-pulse"
               title="Interrupt January Speech"
             >
               <Square className="w-3.5 h-3.5 fill-current" />
             </button>
           )}
 
-          {/* Audio Speaker Mute Toggle */}
+          {/* Speaker On / Off Toggle */}
           <button
             type="button"
             onClick={onToggleAudio}
-            className={`p-2 rounded-xl border transition-colors ${
+            className={`p-2.5 rounded-xl border transition-all ${
               isAudioMuted
-                ? 'bg-rose-500/20 border-rose-500/30 text-rose-400'
-                : 'bg-white/[0.04] border-white/10 text-slate-400 hover:text-white'
+                ? 'bg-rose-500/20 border-rose-500/40 text-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.2)]'
+                : 'bg-white/[0.06] hover:bg-white/[0.12] border-white/15 text-slate-200 hover:text-white'
             }`}
-            title={isAudioMuted ? 'Unmute Audio Playback' : 'Mute Audio Playback'}
+            title={isAudioMuted ? 'Speaker is OFF (Click to turn ON)' : 'Speaker is ON (Click to turn OFF)'}
           >
             {isAudioMuted ? (
               <VolumeX className="w-4 h-4" />
@@ -160,21 +146,21 @@ export const FloatingPromptBar: React.FC<FloatingPromptBarProps> = ({
             )}
           </button>
 
-          {/* Microphone Toggle */}
+          {/* Microphone On / Off Toggle */}
           <button
             type="button"
             onClick={onToggleMic}
-            className={`p-2 rounded-xl border transition-all ${
+            className={`p-2.5 rounded-xl border transition-all ${
               isMicMuted
-                ? 'bg-rose-500/20 border-rose-500/30 text-rose-400'
-                : 'bg-white/[0.04] border-white/10 text-slate-300 hover:text-cyan-300'
+                ? 'bg-rose-500/20 border-rose-500/40 text-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.2)]'
+                : 'bg-cyan-500/20 hover:bg-cyan-500/30 border-cyan-400/40 text-cyan-300 shadow-glow-cyan'
             }`}
-            title={isMicMuted ? 'Unmute Physical Microphone' : 'Mute Microphone'}
+            title={isMicMuted ? 'Microphone is OFF (Click to turn ON)' : 'Microphone is ON (Click to turn OFF)'}
           >
             {isMicMuted ? (
               <MicOff className="w-4 h-4" />
             ) : (
-              <Mic className="w-4 h-4 text-cyan-400" />
+              <Mic className="w-4 h-4 text-cyan-300 animate-pulse" />
             )}
           </button>
 
@@ -192,3 +178,5 @@ export const FloatingPromptBar: React.FC<FloatingPromptBarProps> = ({
     </div>
   );
 };
+
+export default FloatingPromptBar;

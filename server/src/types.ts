@@ -44,6 +44,8 @@ export type ClientMessage =
   | { type: 'audio_input'; data: string; mimeType?: string } // Base64 PCM 16kHz
   | { type: 'text_input'; text: string }
   | { type: 'set_state'; state: AgentState }
+  | { type: 'set_mic_mute'; muted: boolean }
+  | { type: 'set_speaker_mute'; muted: boolean }
   | { type: 'interrupt' }
   | { type: 'ping' };
 

@@ -405,6 +405,9 @@ emotionEngine.on('emotionChange', (emotion) => {
 const clients = new Set<WebSocket>();
 const activeCliSockets = new Set<WebSocket>();
 let isCliActiveHttp = false;
+let isSpeakerMuted = false;
+let isMicMuted = false;
+let micUnmuteTimeout: NodeJS.Timeout | null = null;
 
 function updateCliMode(): void {
   const isCliAttached = activeCliSockets.size > 0 || isCliActiveHttp;
@@ -554,11 +557,24 @@ geminiClient.on('error', (err: Error) => {
 // System Physical Microphone & Speaker Echo Cancellation Wiring
 // ----------------------------------------------------
 systemSpeaker.on('start', () => {
+  if (micUnmuteTimeout) {
+    clearTimeout(micUnmuteTimeout);
+    micUnmuteTimeout = null;
+  }
   systemMic.setMute(true);
 });
 
 systemSpeaker.on('end', () => {
-  systemMic.setMute(false);
+  if (micUnmuteTimeout) {
+    clearTimeout(micUnmuteTimeout);
+  }
+  // Debounce unmute by 700ms to allow acoustic decay in the room, and only unmute if not muted by UI
+  micUnmuteTimeout = setTimeout(() => {
+    micUnmuteTimeout = null;
+    if (!isMicMuted && activeCliSockets.size === 0 && !isCliActiveHttp) {
+      systemMic.setMute(false);
+    }
+  }, 700);
 });
 
 systemMic.on('ready', () => {
@@ -1107,6 +1123,30 @@ wss.on('connection', (ws: WebSocket) => {
         case 'interrupt': {
           geminiClient.emit('interrupt');
           systemSpeaker.stopPlayback();
+          break;
+        }
+
+        case 'set_mic_mute': {
+          isMicMuted = !!msg.muted;
+          systemMic.setMute(isMicMuted);
+          console.log(`🎙️ [Coordinator] Hardware Mic mute set to: ${isMicMuted}`);
+          broadcast({
+            type: 'system_log',
+            message: `Hardware microphone ${isMicMuted ? 'muted' : 'unmuted'} by UI`,
+            level: 'info',
+          });
+          break;
+        }
+
+        case 'set_speaker_mute': {
+          isSpeakerMuted = !!msg.muted;
+          systemSpeaker.setMute(isSpeakerMuted);
+          console.log(`🔊 [Coordinator] Speaker mute set to: ${isSpeakerMuted}`);
+          broadcast({
+            type: 'system_log',
+            message: `Speaker output ${isSpeakerMuted ? 'muted' : 'unmuted'} by UI`,
+            level: 'info',
+          });
           break;
         }
 

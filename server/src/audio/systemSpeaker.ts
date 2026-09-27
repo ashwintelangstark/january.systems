@@ -13,11 +13,23 @@ const __dirname = path.dirname(__filename);
 export class SystemSpeaker extends EventEmitter {
   private currentProcess: ChildProcess | null = null;
   private isSpeaking = false;
+  private isMuted = false;
   private ttsScriptPath: string;
 
   constructor() {
     super();
     this.ttsScriptPath = path.resolve(__dirname, '../../audio_engine/tts_engine.py');
+  }
+
+  public setMute(muted: boolean): void {
+    this.isMuted = muted;
+    if (muted) {
+      this.stopPlayback();
+    }
+  }
+
+  public getIsMuted(): boolean {
+    return this.isMuted;
   }
 
   /**
@@ -135,6 +147,7 @@ export class SystemSpeaker extends EventEmitter {
     text: string,
     options?: { pitch?: string; rate?: string; emotion?: string }
   ): Promise<void> {
+    if (this.isMuted) return;
     if (!text || !text.trim()) return;
 
     const { speechText } = this.sanitizeForSpeech(text);
@@ -264,6 +277,7 @@ export class SystemSpeaker extends EventEmitter {
    * Play a 24kHz PCM audio chunk received from Gemini Live directly through the speakers
    */
   public playPcmChunk(pcmBase64: string): void {
+    if (this.isMuted) return;
     try {
       const buffer = Buffer.from(pcmBase64, 'base64');
       const wavHeader = this.createWavHeader(buffer.length, 24000, 1, 16);

@@ -7,10 +7,10 @@
 
 **January** is an advanced, emotionally attuned, autonomous operating system agent engineered to run directly on your Mac hardware. It listens through your MacBook's physical microphone using local **Faster-Whisper** speech-to-text, sees through your native Mac webcam with **AVFoundation 60 FPS hardware streaming** and sub-20ms **local edge face detection**, reasons across **458+ AI models** via a **Dynamic Multi-Tier Model Router**, acts on your desktop as an autonomous **Computer-Using Agent (CUA)**, creates interactive **3D models and architectural BIM buildings in Blender**, generates production-grade **Python, C, and C++** code, queries real-time internet and weather data, and speaks aloud through physical laptop speakers with **ElevenLabs Ultra-Realistic Neural Voices** dynamically modulated by a **7-Archetype Emotion Engine**, backed by **Microsoft Edge-TTS** and native speech fallback.
 
-January operates across three seamless modes:
-1. **Autonomous Background Daemon (`npm run server`)**: Runs headlessly in the background on `localhost:3001`, listening for wake phrases (**"Rise"**) and spoken commands in the room with no open windows required.
-2. **High-End Liquid-Glass Web Interface (`npm run client` / `http://localhost:5173`)**: An ultra-aesthetic Three.js web application featuring an interactive 2,000 motion particle cosmic core with dual-energy swirling vortex responsive to voice and cursor touch, collapsible liquid-glass session drawer matching the master visual design, floating prompt dock, live tool execution inspector, and 60 FPS camera eyes toggle.
-3. **Interactive Terminal CLI (`npm run cli`)**: A dual-section REPL (`[ME]` & `[JANUARY]`) that automatically pauses the background microphone during keyboard interaction and resumes room listening upon exit.
+January operates primarily through a high-end web interface backed by its local daemon:
+1. **High-End Liquid-Glass Web Interface (`npm run client` / `http://localhost:5173`)**: The primary command center. An ultra-aesthetic Three.js web application featuring an interactive 2,000 motion particle cosmic core with dual-energy swirling vortex responsive to voice and cursor touch, collapsible liquid-glass session drawer with pristine chat history, floating prompt dock with hardware Mic and Speaker toggles, camera eyes toggle, and live fallback AI intelligence.
+2. **Autonomous Background Daemon (`npm run server`)**: Runs headlessly on `localhost:3001`, coordinating single-instance speech, intelligent echo suppression, and room listening without duplicate responses.
+3. **Optional Interactive Terminal CLI (`npm run cli`)**: An auxiliary dual-section REPL (`[ME]` & `[JANUARY]`) that automatically pauses the background microphone during keyboard interaction and resumes room listening upon exit.
 
 ---
 
@@ -978,17 +978,31 @@ CAMERA_SLEEP_PHRASE="eyes closed"
 
 ## 🏃 Running January
 
-### 1. Start the Background Daemon
-```bash
-npm run dev
-```
-> *January starts headlessly in the background, listening to your microphone in the room and vocalizing responses through your laptop speakers.*
+### 1. Launch the System (UI & Backend)
+Start January with the high-end web interface and backend daemon:
 
-### 2. Start the Interactive Terminal CLI
+```bash
+# Terminal 1: Launch Backend Engine
+npm run server
+
+# Terminal 2: Launch Liquid-Glass Web Interface
+npm run client
+```
+Open **`http://localhost:5173`** in your browser.
+
+> **UI-First Operation**: No terminal interaction is required. The web UI serves as January's complete command center:
+> - **Mic & Speaker Toggles**: The floating prompt dock includes physical hardware mute/unmute buttons for both your microphone and speakers with instant visual state feedback.
+> - **Single-Instance Speech & Echo Cancellation**: Hardware audio and STT are tightly coordinated with acoustic tail suppression (700ms debounce), preventing echo loops and duplicate voice responses.
+> - **Dynamic Multi-Tier Fallback Connected to UI**: Every query in the prompt box automatically utilizes the primary Gemini models, falling back gracefully to Claude 3.7 and OpenRouter's 458+ models.
+> - **Top Right Status HUD**: Streamlined to display the interactive agent state toggle (Listening / Standby) and live 7-Archetype Emotion pill.
+> - **Clean SQLite Brain History**: Expandable liquid-glass session drawer with persistent, curated chat sessions.
+
+### 2. Optional: Interactive Terminal CLI
+If you prefer terminal-only interaction:
 ```bash
 npm run cli
 ```
-> *Opens the dual-section CLI (`[ME]` & `[JANUARY]`). Automatically pauses the background microphone while you interact and resumes background listening upon exit.*
+> *Opens the dual-section CLI (`[ME]` & `[JANUARY]`). Automatically pauses the background microphone during keyboard interaction.*
 
 ---
 

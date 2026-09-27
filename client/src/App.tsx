@@ -24,7 +24,6 @@ export const App: React.FC = () => {
   const {
     agentState,
     emotionState,
-    isConnected,
     messages,
     setMessages,
     activeTools,
@@ -32,9 +31,9 @@ export const App: React.FC = () => {
     outputLevel,
     isMicMuted,
     isAudioMuted,
-    config,
     sendTextMessage,
     triggerWake,
+    toggleListening,
     interrupt,
     toggleMuteMic,
     toggleMuteAudio,
@@ -144,8 +143,7 @@ export const App: React.FC = () => {
       <TopStatusBar
         agentState={agentState}
         emotionState={emotionState}
-        isConnected={isConnected}
-        config={config}
+        onToggleListening={toggleListening}
       />
 
       {/* 4. Left Floating Liquid Glass Drawer (Sessions & Extended Chat) */}
@@ -170,7 +168,6 @@ export const App: React.FC = () => {
         isAudioMuted={isAudioMuted}
         isEyesOpen={isEyesOpen}
         onSendText={handleSendText}
-        onTriggerWake={() => triggerWake('manual')}
         onInterrupt={interrupt}
         onToggleMic={toggleMuteMic}
         onToggleAudio={toggleMuteAudio}
