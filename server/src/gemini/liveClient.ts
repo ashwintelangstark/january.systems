@@ -40,9 +40,10 @@ export class GeminiLiveClient extends EventEmitter {
       return;
     }
 
-    const liveModel = config.geminiModel && config.geminiModel.includes('2.0')
+    const liveModel = config.geminiModel && !config.geminiModel.includes('2.0')
       ? config.geminiModel
-      : 'models/gemini-2.0-flash-exp';
+      : 'models/gemini-flash-latest';
+
 
     const host = 'generativelanguage.googleapis.com';
     const path = `/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${config.geminiApiKey}`;
