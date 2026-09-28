@@ -30,40 +30,66 @@ export class AudioOutputManager {
     return this.playingCount > 0;
   }
 
-  public playChunk(base64Pcm: string) {
+  public async playChunk(base64Data: string, visualizeOnly: boolean = false) {
     if (this.isMuted) return;
 
     try {
       this.initContext();
       if (!this.audioCtx) return;
 
-      const binary = atob(base64Pcm);
+      const binary = atob(base64Data);
       const len = binary.length;
+      if (len === 0) return;
+
       const bytes = new Uint8Array(len);
       for (let i = 0; i < len; i++) {
         bytes[i] = binary.charCodeAt(i);
       }
 
-      // Convert 16-bit PCM to float audio buffer
-      const int16 = new Int16Array(bytes.buffer);
-      const float32 = new Float32Array(int16.length);
-      let sumSquares = 0;
+      let audioBuffer: AudioBuffer | null = null;
 
-      for (let i = 0; i < int16.length; i++) {
-        const sample = int16[i] / 32768.0;
-        float32[i] = sample;
-        sumSquares += sample * sample;
+      // 1. Try decoding standard audio containers (MP3, WAV, AAC, OGG)
+      try {
+        audioBuffer = await this.audioCtx.decodeAudioData(bytes.buffer.slice(0));
+      } catch {
+        // 2. Only if decodeAudioData fails and it's valid raw 16-bit PCM at 24kHz (Gemini Live)
+        // Check for 'RIFF' or 'ID3' or MPEG sync to avoid parsing compressed data as PCM noise!
+        const isCompressed = (len > 3 && (binary.startsWith('ID3') || binary.startsWith('RIFF') || (bytes[0] === 0xFF && (bytes[1] & 0xE0) === 0xE0)));
+        if (!isCompressed && len % 2 === 0 && len > 100) {
+          const int16 = new Int16Array(bytes.buffer, 0, Math.floor(bytes.byteLength / 2));
+          const float32 = new Float32Array(int16.length);
+          for (let i = 0; i < int16.length; i++) float32[i] = int16[i] / 32768.0;
+          audioBuffer = this.audioCtx.createBuffer(1, float32.length, 24000);
+          audioBuffer.getChannelData(0).set(float32);
+        }
       }
 
-      // Compute RMS audio level
-      const rms = Math.sqrt(sumSquares / int16.length);
+      if (!audioBuffer) return;
+
+      // Compute RMS audio level for visualizer
+      const channelData = audioBuffer.getChannelData(0);
+      let sumSquares = 0;
+      const step = Math.max(1, Math.floor(channelData.length / 500));
+      let count = 0;
+      for (let i = 0; i < channelData.length; i += step) {
+        const s = channelData[i];
+        sumSquares += s * s;
+        count++;
+      }
+      const rms = Math.sqrt(sumSquares / Math.max(1, count));
       this.onLevelUpdate(Math.min(rms * 4.0, 1.0));
 
-      const buffer = this.audioCtx.createBuffer(1, float32.length, 24000);
-      buffer.getChannelData(0).set(float32);
+      // In Electron desktop app, afplay already outputs directly to physical Mac speakers.
+      // Playing here would cause double-audio echo and radio feedback into the physical mic!
+      if (visualizeOnly) {
+        setTimeout(() => {
+          this.onLevelUpdate(0);
+        }, Math.min(audioBuffer.duration * 1000, 4000));
+        return;
+      }
 
       const source = this.audioCtx.createBufferSource();
-      source.buffer = buffer;
+      source.buffer = audioBuffer;
       source.connect(this.audioCtx.destination);
 
       this.playingCount++;
@@ -77,7 +103,7 @@ export class AudioOutputManager {
       source.start();
       this.currentSource = source;
     } catch (err: any) {
-      console.warn('[AudioOutputManager] Failed to decode audio chunk:', err.message);
+      console.warn('[AudioOutputManager] Error processing audio chunk:', err.message);
     }
   }
 

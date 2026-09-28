@@ -25,6 +25,7 @@ class VideoStreamDelegate: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
     let colorSpace = CGColorSpaceCreateDeviceRGB()
     var frameCount = 0
     var lastFrameTime = Date()
+    var lastWriteTime = Date(timeIntervalSince1970: 0)
 
     init(outputPath: String) {
         self.outputPath = outputPath
@@ -33,6 +34,12 @@ class VideoStreamDelegate: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
     }
 
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+        let now = Date()
+        // Rate-limit disk writes to 5 FPS (~200ms) to keep CPU & disk I/O minimal (<2% CPU)
+        // while maintaining flawless face tracking and visual analysis
+        guard now.timeIntervalSince(lastWriteTime) >= 0.20 else { return }
+        lastWriteTime = now
+
         guard let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
 
         let ciImage = CIImage(cvImageBuffer: imageBuffer)
@@ -45,7 +52,6 @@ class VideoStreamDelegate: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
             _ = try? FileManager.default.replaceItemAt(outURL, withItemAt: tmpURL)
             frameCount += 1
 
-            let now = Date()
             if now.timeIntervalSince(lastFrameTime) >= 5.0 {
                 let currentFps = Double(frameCount) / now.timeIntervalSince(lastFrameTime)
                 fputs("STREAM_FPS:\(String(format: "%.1f", currentFps))\n", stderr)

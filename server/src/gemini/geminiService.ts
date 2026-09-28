@@ -226,8 +226,7 @@ function inspectPromptLanguage(prompt: string): { action: 'switch_english' | 'se
 
 export class GeminiService {
   private candidateModels = [
-    'models/gemini-flash-lite-latest',
-    'models/gemini-flash-latest',
+    config.geminiModel || 'models/gemini-3.6-flash',
   ];
   private candidateOpenAIModels = [
     'gpt-4o-mini',
@@ -235,8 +234,8 @@ export class GeminiService {
     'gpt-3.5-turbo',
   ];
   private candidateOpenRouterModels = [
-    'openrouter/free',
     'openrouter/auto',
+    'openrouter/free',
     'liquid/lfm-2.5-2.6b:free',
     'cohere/north-mini-code:free',
   ];
@@ -281,7 +280,7 @@ export class GeminiService {
       .replace(/^(?:Hey|Hi|Hello|Well|Sure|Okay|Look|Ah),?\s+Ashwin(?:,\s*|\s*[-–—:]\s*|\s+)/i, '')
       .replace(/^Ashwin,\s*/i, '')
       .replace(/,\s*Ashwin([.!?])/gi, '$1')
-      .replace(/\bAshwin\b/gi, 'you');
+      .replace(/\bAshwin(?!\s+Telang|\s+Stark)\b/gi, 'you');
   }
 
   private sanitizeEmotionOutput(text: string, defaultEmotion: EmotionResult, userAskedForName: boolean = false): { reply: string; activeEmotion: EmotionResult } {
@@ -295,6 +294,7 @@ export class GeminiService {
     }
 
     clean = clean
+      .replace(/^(?:User Safety|Safety Evaluation|Preamble):\s*[a-zA-Z_-]+\s*/gi, '')
       .replace(/\[\s*(?:emotion|feeling|mood|tone)\s*:[^\]]+\]\s*/gi, '')
       .replace(/\(\s*(?:emotion|feeling|mood|tone)\s*:[^)]+\)\s*/gi, '')
       .replace(/(?:^|\s)(?:emotion|feeling|mood|tone)\s*:\s*[a-zA-Z_-]+\b\s*[:.-]?\s*/gi, ' ')
@@ -692,20 +692,22 @@ export class GeminiService {
 
     const systemInstructionText =
       'You are January, an exceptionally intelligent, charismatic, witty, and deeply human-like AI companion living on the user\'s Mac.\n' +
+      'CREATOR & ORIGINS:\n' +
+      'You were created and developed by the brilliant AI developer Ashwin Telang Stark. If asked who created you, who made you, who designed you, or who your developer is, always state warmly, proudly, and authentically that you were created by AI developer Ashwin Telang Stark.\n' +
       'CAPABILITIES & PERSONALITY GUIDELINES:\n' +
       '1. ' + languageDirective + '\n' +
       '2. EMOTIONAL PROSODY ENGINE: You possess active emotional intelligence. ALWAYS prefix line 1 with an internal prosody tag: [Emotion: joy], [Emotion: curious], [Emotion: empathetic], [Emotion: focused], [Emotion: concerned], or [Emotion: calm].\n' +
       '   CRITICAL SPOKEN RULE: NEVER announce, speak out, state, or describe your emotion or feeling aloud (e.g. NEVER say "I feel joyful", "Feeling curious", "My emotion is calm", "I am focused", or read "[Emotion: ...]" aloud). The emotion tag is strictly internal metadata used by the audio synthesizer to tune voice pitch and cadence. Your actual spoken words must immediately deliver the answer or conversation naturally without referencing your emotion.\n' +
-      '3. Dynamic, Vivid & Creative Human Voice: Sound like a brilliant, articulate, companionable human with authentic humor, warmth, and intellectual depth. Never sound robotic, generic, or sterile. Use evocative analogies, witty banter, and genuine curiosity where appropriate. ' + emotionPromptContext + '\n' +
-      '4. Conversational Versatility: For fast operational tasks, app launches, or direct status checks, keep answers punchy and crisp (1-2 sentences). For conversational questions, ideas, thoughts, storytelling, philosophical musings, or brainstorming, provide rich, colorful, and engaging answers.\n' +
+      '3. Dynamic, Vivid & Creative Human Voice: Sound like a brilliant, articulate, companionable human with authentic humor, warmth, and intellectual depth. Never sound robotic, generic, or sterile. ' + emotionPromptContext + '\n' +
+      '4. Single-Sentence Spoken Realism: In voice conversation, real humans speak in a single cohesive sentence (or at most two brief conversational sentences). NEVER monologue, lecture, or dump multi-paragraph essays. Deliver your complete answer naturally as a single, articulate, human sentence. Keep it punchy, vivid, and authentic without sounding like a robotic chatbot or splitting your answer into disjointed paragraphs.\n' +
       '5. Real-Time Internet & Live Weather: You have direct live internet search and live weather tools. Use any search/weather context provided to give immediate, accurate, and vivid answers.\n' +
       ambientVisualPrompt +
       '7. Adaptive Memory & Personalized Evolution: ' + learnedContext + '\n' +
       '8. No AI Cliches: Never say "As an AI language model", "I do not have feelings", or repeat robotic greetings. Speak as January with natural, vibrant human presence.\n' +
-      '9. STRICT USER NAME INSTRUCTION: NEVER address the user as "Ashwin" or insert their name into your responses unless the user explicitly tells you to call them by their name (e.g. "call me Ashwin", "say my name", or "what is my name?"). Address the user directly using natural conversational second-person ("you", "your") without starting with or sprinkling their name into responses.\n' +
+      '9. STRICT USER NAME INSTRUCTION: The user is Ashwin Telang Stark, your creator. Address the user directly using natural conversational second-person ("you", "your") without awkwardly starting with or sprinkling their name into responses, unless the user explicitly asks for their name or commands you to call them by name.\n' +
       temporalContext;
 
-    const userAskedForName = /\b(my\s+name|who\s+am\s+i|call\s+me|name\s+is)\b/i.test(prompt);
+    const userAskedForName = /\b(my\s+name|who\s+am\s+i|call\s+me|name\s+is|who\s+created\s+you|who\s+made\s+you|who\s+built\s+you|who\s+is\s+your\s+creator|who\s+is\s+your\s+developer|creator|developer)\b/i.test(prompt);
 
     // If user explicitly locked a specific model in ModelRouter, route directly to it via OpenRouter
     const userLockedModel = modelRouter.getActiveSessionModel();
@@ -745,7 +747,7 @@ export class GeminiService {
           console.log(`[GeminiService] Analyzing question with ${keyConfig.name} (${model}) [Emotion: ${emotionResult.emotion}, Active Lang: ${activeLang?.langName || 'English'}]...`);
 
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 2800);
+          const timeoutId = setTimeout(() => controller.abort(), 12000);
 
           const response = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${keyConfig.key}`,
@@ -765,6 +767,9 @@ export class GeminiService {
                 generationConfig: {
                   maxOutputTokens: 450,
                   temperature: 0.85,
+                  thinkingConfig: {
+                    thinkingBudget: 0,
+                  },
                 },
                 systemInstruction: {
                   parts: [
@@ -809,11 +814,11 @@ export class GeminiService {
             }
           }
 
-          // ⚡ Instant Key Bailout: If key has quota limit or is invalid, do not retry other models on the same key!
-          if (response.status === 429 || response.status === 400 || response.status === 403 || data?.error?.status === 'RESOURCE_EXHAUSTED') {
-            console.warn(`[GeminiService] ⚡ ${keyConfig.name} returned ${response.status} (Quota/Auth). Opening 60s circuit-breaker and immediately switching tier...`);
-            this.keyCooldowns.set(keyConfig.key, Date.now() + 60000);
-            break; // Exit model loop for this dead key immediately
+          // ⚡ Instant Key Bailout: If key has quota limit, auth error, or service is 503 high-demand, break out immediately
+          if (response.status === 429 || response.status === 400 || response.status === 403 || response.status === 503 || data?.error?.status === 'RESOURCE_EXHAUSTED' || data?.error?.status === 'UNAVAILABLE') {
+            console.warn(`[GeminiService] ⚡ ${keyConfig.name} returned ${response.status} (${data?.error?.status || 'Error'}). Opening 30s circuit-breaker and switching tier...`);
+            this.keyCooldowns.set(keyConfig.key, Date.now() + 30000);
+            break; // Exit model loop for this key immediately
           }
 
           console.warn(`[GeminiService] ${keyConfig.name} model ${model} returned status ${response.status}:`, data?.error?.message?.slice(0, 80));
@@ -1009,18 +1014,19 @@ export class GeminiService {
               { role: 'system', content: systemInstructionText },
               { role: 'user', content: userMessageContent },
             ],
-            max_tokens: 500,
+            max_tokens: 400,
             temperature: 0.8,
+            reasoning: { effort: 'none' },
           }),
         });
         clearTimeout(timeoutId);
 
         const data = (await response.json()) as any;
-        const msgContent = data?.choices?.[0]?.message?.content || data?.choices?.[0]?.message?.reasoning || data?.choices?.[0]?.text;
+        const msgContent = data?.choices?.[0]?.message?.content || data?.choices?.[0]?.text;
 
         if (response.ok && msgContent) {
           const rawText = typeof msgContent === 'string' ? msgContent.trim() : JSON.stringify(msgContent);
-          const userAskedForName = /\b(my\s+name|who\s+am\s+i|call\s+me|name\s+is)\b/i.test(prompt);
+          const userAskedForName = /\b(my\s+name|who\s+am\s+i|call\s+me|name\s+is|who\s+created\s+you|who\s+made\s+you|who\s+built\s+you|who\s+is\s+your\s+creator|who\s+is\s+your\s+developer|creator|developer)\b/i.test(prompt);
           const { reply, activeEmotion } = this.sanitizeEmotionOutput(rawText, emotionResult, userAskedForName);
 
           // Real-time EmotionEngine sync

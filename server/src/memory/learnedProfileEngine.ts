@@ -58,7 +58,7 @@ export class LearnedProfileEngine {
     }
 
     const initialProfile: LearnedUserProfile = {
-      userName: 'Ashwin',
+      userName: 'Ashwin Telang Stark',
       totalInteractions: 0,
       preferredCodingLanguages: {
         'C++': 1,
@@ -77,8 +77,8 @@ export class LearnedProfileEngine {
         'Never read code syntax aloud over speakers',
       ],
       communicationStylePreferences: [
-        'Crisp, direct 1-3 sentence conversational replies',
-        'Warm, authentic emotional attunement without robotic phrases',
+        'Single-sentence natural conversational replies without robotic fragmentation',
+        'Warm, authentic emotional attunement without robotic phrases or essays',
         'Respect persistent session language until explicitly changed',
       ],
       workPatterns: {
@@ -207,6 +207,7 @@ export class LearnedProfileEngine {
 
     return (
       `\n[ADAPTIVE LEARNED USER PREFERENCES & MEMORY]:\n` +
+      `• Creator & Developer: You were created by AI developer Ashwin Telang Stark.\n` +
       `• Primary Region & Timezone: India (${timeZone}, IST, UTC+5:30)\n` +
       `• Preferred Programming Languages: ${topCodingLangs || 'C++, Python, C'}\n` +
       `• Preferred Communication Languages: ${topSpokenLangs || 'English, Hindi, Marathi'}\n` +

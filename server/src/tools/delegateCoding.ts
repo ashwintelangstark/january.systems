@@ -163,7 +163,8 @@ export async function delegateCoding(args: DelegateCodingArgs): Promise<Delegate
   ].filter((item) => !!item.key);
 
   const candidateModels = [
-    'models/gemini-flash-lite-latest',
+    config.geminiModel || 'models/gemini-3.6-flash',
+    'models/gemini-3.6-flash',
     'models/gemini-flash-latest',
   ];
 

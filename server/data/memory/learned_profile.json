@@ -1,5 +1,6 @@
 {
-  "userName": "Ashwin",
+  "userName": "Ashwin Telang Stark",
+  "creator": "Ashwin Telang Stark",
   "totalInteractions": 164,
   "preferredCodingLanguages": {
     "C++": 5,
@@ -19,8 +20,8 @@
     "Never read code syntax aloud over speakers"
   ],
   "communicationStylePreferences": [
-    "Crisp, direct 1-3 sentence conversational replies",
-    "Warm, authentic emotional attunement without robotic phrases",
+    "Single-sentence natural conversational replies without robotic fragmentation",
+    "Warm, authentic emotional attunement without robotic phrases or essays",
     "Respect persistent session language until explicitly changed"
   ],
   "workPatterns": {

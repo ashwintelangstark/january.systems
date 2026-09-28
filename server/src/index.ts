@@ -493,8 +493,10 @@ geminiClient.on('audio', (pcmChunkBase64: string, mimeType: string) => {
     data: pcmChunkBase64,
     mimeType,
   });
-  // Output directly through laptop's physical speakers
-  systemSpeaker.playPcmChunk(pcmChunkBase64);
+  // Output directly through laptop's physical speakers only if not using Kokoro voice engine
+  if (!config.useKokoro) {
+    systemSpeaker.playPcmChunk(pcmChunkBase64);
+  }
 });
 
 geminiClient.on('transcript', (role: 'user' | 'assistant', text: string, isFinal?: boolean) => {
@@ -575,6 +577,63 @@ geminiClient.on('error', (err: Error) => {
 // ----------------------------------------------------
 // System Physical Microphone & Speaker Echo Cancellation Wiring
 // ----------------------------------------------------
+const recentAssistantUtterances: Array<{ text: string; clean: string; words: Set<string>; timestamp: number }> = [];
+
+function recordAssistantSpoken(text: string) {
+  if (!text) return;
+  const clean = text.toLowerCase().replace(/[^\w\s]/g, '').trim();
+  if (!clean) return;
+  const words = new Set(clean.split(/\s+/).filter((w) => w.length > 1));
+  recentAssistantUtterances.push({ text, clean, words, timestamp: Date.now() });
+  if (recentAssistantUtterances.length > 15) {
+    recentAssistantUtterances.shift();
+  }
+  // Notify mic process directly for dual-layer echo cancellation
+  systemMic.notifyAssistantSpoke(text);
+}
+
+function isSelfSpeechEcho(heardText: string): boolean {
+  const clean = heardText.toLowerCase().replace(/[^\w\s]/g, '').trim();
+  if (!clean || clean.length < 3) return true;
+  const heardWords = new Set(clean.split(/\s+/).filter((w) => w.length > 1));
+  const now = Date.now();
+
+  for (let i = recentAssistantUtterances.length - 1; i >= 0; i--) {
+    const item = recentAssistantUtterances[i];
+    const ageMs = now - item.timestamp;
+    if (ageMs > 25000) continue;
+
+    // Direct substring match
+    if (item.clean.includes(clean) || clean.includes(item.clean)) {
+      return true;
+    }
+
+    // Word overlap match (if >= 50% words match within 12 seconds)
+    if (heardWords.size > 0 && item.words.size > 0) {
+      let matches = 0;
+      for (const w of heardWords) {
+        if (item.words.has(w)) matches++;
+      }
+      const overlapRatio = matches / heardWords.size;
+      if (overlapRatio >= 0.5 && ageMs < 12000) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+systemSpeaker.on('will_speak', (payload?: { text?: string }) => {
+  if (micUnmuteTimeout) {
+    clearTimeout(micUnmuteTimeout);
+    micUnmuteTimeout = null;
+  }
+  systemMic.setMute(true);
+  if (payload?.text) {
+    recordAssistantSpoken(payload.text);
+  }
+});
+
 systemSpeaker.on('start', () => {
   if (micUnmuteTimeout) {
     clearTimeout(micUnmuteTimeout);
@@ -583,17 +642,28 @@ systemSpeaker.on('start', () => {
   systemMic.setMute(true);
 });
 
+systemSpeaker.on('audio_output', (payload: { data: string; mimeType?: string; text?: string }) => {
+  if (payload?.text) {
+    recordAssistantSpoken(payload.text);
+  }
+  broadcast({
+    type: 'audio_output',
+    data: payload.data,
+    mimeType: payload.mimeType || 'audio/wav',
+  });
+});
+
 systemSpeaker.on('end', () => {
   if (micUnmuteTimeout) {
     clearTimeout(micUnmuteTimeout);
   }
-  // Debounce unmute by 700ms to allow acoustic decay in the room, and only unmute if not muted by UI
+  // Debounce unmute by 900ms to allow room acoustic decay to completely clear, preventing echo loop
   micUnmuteTimeout = setTimeout(() => {
     micUnmuteTimeout = null;
     if (!isMicMuted && activeCliSockets.size === 0 && !isCliActiveHttp) {
       systemMic.setMute(false);
     }
-  }, 700);
+  }, 900);
 });
 
 systemMic.on('ready', () => {
@@ -908,6 +978,12 @@ async function handleUnifiedPrompt(text: string, source: 'voice' | 'text' = 'voi
 }
 
 systemMic.on('speech', async (text: string) => {
+  // Acoustic echo suppression: Discard if this speech is an echo of January's own voice output
+  if (isSelfSpeechEcho(text)) {
+    console.log(`🔇 [Coordinator] Suppressed acoustic echo (self-speech): "${text}"`);
+    return;
+  }
+
   const stripped = text.toLowerCase().replace(/[^\w\s]/g, '').trim();
 
   // If agent is sleeping, only wake phrases awaken it

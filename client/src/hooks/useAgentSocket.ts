@@ -66,7 +66,9 @@ export function useAgentSocket(activeSessionId?: string) {
 
   // Fetch initial config & health
   useEffect(() => {
-    fetch('/api/health')
+    const isFile = window.location.protocol === 'file:' || !!(window as any).electronAPI;
+    const apiBase = isFile ? 'http://localhost:3001' : '';
+    fetch(`${apiBase}/api/health`)
       .then((res) => res.json())
       .then((data) => setConfig(data))
       .catch((err) => console.log('[useAgentSocket] Server health notice:', err.message));
@@ -74,9 +76,10 @@ export function useAgentSocket(activeSessionId?: string) {
 
   // Connect WebSocket
   useEffect(() => {
+    const isFile = window.location.protocol === 'file:' || !!(window as any).electronAPI;
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.hostname || 'localhost';
-    const port = window.location.port === '5173' ? '3001' : window.location.port || '3001';
+    const host = isFile ? 'localhost' : (window.location.hostname || 'localhost');
+    const port = isFile ? '3001' : (window.location.port === '5173' ? '3001' : window.location.port || '3001');
     const wsUrl = `${wsProtocol}//${host}:${port}`;
 
     console.log(`[useAgentSocket] Connecting to January Agent WebSocket: ${wsUrl}`);
@@ -115,7 +118,8 @@ export function useAgentSocket(activeSessionId?: string) {
 
           case 'audio_output': {
             if (audioOutputRef.current && msg.data) {
-              audioOutputRef.current.playChunk(msg.data);
+              const isElectron = typeof window !== 'undefined' && !!(window as any).electronAPI;
+              audioOutputRef.current.playChunk(msg.data, isElectron);
             }
             break;
           }
@@ -254,9 +258,13 @@ export function useAgentSocket(activeSessionId?: string) {
     [activeSessionId]
   );
 
-  // Trigger Wake
+  // Trigger Wake with debounce
+  const lastWakeTimeRef = useRef(0);
   const triggerWake = useCallback((source: 'voice' | 'manual' = 'manual') => {
-    if (!socketRef.current) return;
+    const now = Date.now();
+    if (now - lastWakeTimeRef.current < 2000) return;
+    lastWakeTimeRef.current = now;
+    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) return;
     socketRef.current.send(
       JSON.stringify({
         type: 'wake_trigger',

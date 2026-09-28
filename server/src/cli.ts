@@ -99,8 +99,9 @@ ${cyan(bold('╔═════════════════════�
 ${cyan(bold('║               ⚡ JANUARY AI — DUAL INTERACTIVE CLI                ║'))}
 ${cyan(bold('╠═══════════════════════════════════════════════════════════════════╣'))}
 ${cyan(bold('║'))} ${brightCyan(bold(' [ME]      '))} ${white('Ask questions, Indian languages, or Python/C/C++ code  ')} ${cyan(bold('║'))}
-${cyan(bold('║'))} ${purple(bold(' [JANUARY] '))} ${white('Gemini & Claude Core with out-loud speaker synthesis   ')} ${cyan(bold('║'))}
+${cyan(bold('║'))} ${purple(bold(' [JANUARY] '))} ${white('Gemini & Claude Core with Kokoro Female Voice          ')} ${cyan(bold('║'))}
 ${cyan(bold('╠═══════════════════════════════════════════════════════════════════╣'))}
+${cyan(bold('║'))} ${dim('Voice Engine:')}    ${white('Kokoro-82M Realistic Female Voice (af_heart)')}      ${cyan(bold('║'))}
 ${cyan(bold('║'))} ${dim('Coding Engine:')}   Python, C, and C++ (Claude with instant Gemini fallback)${cyan(bold('║'))}
 ${cyan(bold('║'))} ${dim('Brain Database:')}   SQLite Persistent History, Code, Images & 3D Models ${cyan(bold('║'))}
 ${cyan(bold('║'))} ${dim('Ambient Eyes:')}    Continuous Camera & Face/Posture Monitoring (Local Edge)${cyan(bold('║'))}

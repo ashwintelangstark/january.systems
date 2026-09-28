@@ -1,18 +1,20 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { SafetyInterlock } from './safetyInterlock.js';
+import { getCliclickPath } from '../utils/paths.js';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const execAsync = promisify(exec);
 
 export class MouseController {
   private static instance: MouseController;
-  private cliclickPath = '/opt/homebrew/bin/cliclick';
+  private cliclickPath = 'cliclick';
 
   private constructor() {
-    if (!fs.existsSync(this.cliclickPath)) {
-      this.cliclickPath = '/usr/local/bin/cliclick';
-    }
+    this.cliclickPath = getCliclickPath();
   }
 
   public static getInstance(): MouseController {

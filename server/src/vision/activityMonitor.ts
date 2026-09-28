@@ -43,7 +43,7 @@ export class VisualActivityMonitor extends EventEmitter {
     super();
     this.cameraService = new CameraService();
     this.faceEngine = new FaceEngine();
-    this.pollingIntervalMs = options.pollingIntervalMs || 1000; // 1s high-speed local check when eyes open
+    this.pollingIntervalMs = options.pollingIntervalMs || 2500; // 2.5s gentle cadence keeps CPU low and audio smooth
     this.ambientVisionCadenceMs = options.ambientVisionCadenceMs || 30000; // Gemini check every 30s when active
 
     const enrolled = this.faceEngine.getEnrolledUser();
@@ -228,7 +228,8 @@ export class VisualActivityMonitor extends EventEmitter {
     ].filter((item) => !!item.key);
 
     const candidateModels = [
-      'models/gemini-flash-lite-latest',
+      config.geminiModel || 'models/gemini-3.6-flash',
+      'models/gemini-3.6-flash',
       'models/gemini-flash-latest',
     ];
 

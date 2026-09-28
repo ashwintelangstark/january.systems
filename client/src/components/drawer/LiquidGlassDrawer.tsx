@@ -150,7 +150,7 @@ export const LiquidGlassDrawer: React.FC<LiquidGlassDrawerProps> = ({
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-full p-[1.5px] bg-gradient-to-tr from-cyan-400 via-indigo-500 to-pink-500 shadow-sm">
                 <img
-                  src="/jan_logo.png"
+                  src="./jan_logo.png"
                   alt="January AI Logo"
                   className="w-full h-full object-contain rounded-full bg-white/40"
                 />

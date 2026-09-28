@@ -1,6 +1,10 @@
 import { BrainSession, ChatMessage } from '../types';
 
-export const API_BASE = '';
+export const API_BASE =
+  typeof window !== 'undefined' &&
+  (window.location.protocol === 'file:' || (window as any).electronAPI)
+    ? 'http://localhost:3001'
+    : '';
 
 export async function fetchSessions(): Promise<BrainSession[]> {
   try {

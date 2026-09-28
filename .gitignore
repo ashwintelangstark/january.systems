@@ -26,6 +26,11 @@ server/data/exports/
 *.db-shm
 data/
 release/
-dist-electron/
+JAN_APP/
+server/python/
+server/bin/
+server/audio_engine/weights/
+server/audio_engine/espeak/
+server/audio_engine/.venv_kokoro/
 
 

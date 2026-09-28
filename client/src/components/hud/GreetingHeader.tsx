@@ -49,12 +49,12 @@ export const GreetingHeader: React.FC<GreetingHeaderProps> = ({
       }}
     >
       {/* Dynamic Main Greeting in SF Pro Display */}
-      <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-[-0.035em] text-slate-800/95 leading-tight drop-shadow-[0_2px_12px_rgba(255,255,255,0.75)] font-display transition-all duration-500">
+      <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-[-0.03em] text-white leading-tight drop-shadow-[0_3px_18px_rgba(0,0,0,0.95)] [text-shadow:_0_1px_12px_rgba(0,0,0,0.8)] font-display transition-all duration-500">
         {greeting}
       </h1>
 
       {/* Subheading in SF Pro Text */}
-      <p className="mt-1.5 text-xs sm:text-sm md:text-[14.5px] font-normal tracking-[-0.015em] text-slate-600/90 font-sans">
+      <p className="mt-1.5 text-xs sm:text-sm md:text-[14.5px] font-medium tracking-[-0.015em] text-slate-200 drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)] [text-shadow:_0_1px_8px_rgba(0,0,0,0.8)] font-sans">
         what are we planning today ?
       </p>
     </header>

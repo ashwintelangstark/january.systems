@@ -26,7 +26,7 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const stateRef = useRef({ agentState, emotionState, inputLevel, outputLevel, isDrawerOpen, isChatExpanded });
   const isClickedRef = useRef(false);
-  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Synchronize state ref without unmounting Three.js instance
   useEffect(() => {
@@ -260,7 +260,14 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
       mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
     };
 
-    const handlePointerDown = () => {
+    const handlePointerDown = (event: PointerEvent) => {
+      // Only trigger if click is on/near the cosmic orb sphere
+      const isDrawerOpen = stateRef.current.isDrawerOpen;
+      const orbCenterX = window.innerWidth / 2 + (isDrawerOpen ? 90 : 0);
+      const orbCenterY = window.innerHeight * 0.48;
+      const dist = Math.hypot(event.clientX - orbCenterX, event.clientY - orbCenterY);
+      if (dist > 250) return;
+
       targetMouseForce = 2.6; // Radiant shockwave pulse on click
       isClickedRef.current = true;
 
@@ -278,9 +285,7 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
     };
 
     window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('pointerdown', handlePointerDown);
     renderer.domElement.addEventListener('pointerdown', handlePointerDown);
-    container.addEventListener('pointerdown', handlePointerDown);
     window.addEventListener('pointerup', handlePointerUp);
 
     // Resize Observer for 60FPS fluid responsiveness
@@ -414,7 +419,9 @@ export const JanuaryCosmicOrb: React.FC<JanuaryCosmicOrbProps> = ({
       cancelAnimationFrame(animationFrameId);
       if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current);
       window.removeEventListener('mousemove', handleMouseMove);
-      container.removeEventListener('pointerdown', handlePointerDown);
+      if (renderer.domElement) {
+        renderer.domElement.removeEventListener('pointerdown', handlePointerDown);
+      }
       window.removeEventListener('pointerup', handlePointerUp);
       window.removeEventListener('resize', handleResize);
 

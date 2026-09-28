@@ -5,6 +5,7 @@ import { EventEmitter } from 'events';
 import { fileURLToPath } from 'url';
 import readline from 'readline';
 import { config } from '../config.js';
+import { getUvPath, getPythonExecutablePath } from '../utils/paths.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,28 +17,34 @@ export class SystemMicrophone extends EventEmitter {
 
   constructor() {
     super();
-    this.scriptPath = path.resolve(__dirname, '../../audio_engine/mic_stt_engine.py');
+    const resourcesPath = (process as any).resourcesPath || '';
+    const candidates = [
+      path.join(resourcesPath, 'server', 'audio_engine', 'mic_stt_engine.py'),
+      path.resolve(__dirname, '../../audio_engine/mic_stt_engine.py'),
+      path.resolve(__dirname, '../../../audio_engine/mic_stt_engine.py'),
+      path.resolve(__dirname, '../../../server/audio_engine/mic_stt_engine.py'),
+      path.resolve(process.cwd(), 'server/audio_engine/mic_stt_engine.py'),
+    ];
+    let found = candidates[1];
+    for (const c of candidates) {
+      if (fs.existsSync(c)) {
+        found = c;
+        break;
+      }
+    }
+    this.scriptPath = found;
   }
 
   public start(): void {
     if (this.isRunning) return;
 
-    const uvPath = fs.existsSync('/Users/ashwintelangstark/.local/bin/uv')
-      ? '/Users/ashwintelangstark/.local/bin/uv'
-      : 'uv';
-
-    console.log('[SystemMicrophone] Spawning native microphone & Faster-Whisper engine via uv...');
+    const pythonBin = getPythonExecutablePath();
+    console.log(`[SystemMicrophone] Spawning native microphone & Faster-Whisper engine via ${pythonBin}...`);
 
     try {
       this.micProcess = spawn(
-        uvPath,
-        [
-          'run',
-          '--with',
-          'sounddevice,faster-whisper,scipy,numpy',
-          'python3',
-          this.scriptPath,
-        ],
+        pythonBin,
+        [this.scriptPath],
         {
           stdio: ['pipe', 'pipe', 'pipe'],
           env: {
@@ -134,6 +141,12 @@ export class SystemMicrophone extends EventEmitter {
   public setMute(muted: boolean): void {
     if (this.micProcess && this.micProcess.stdin && !this.micProcess.stdin.destroyed) {
       this.micProcess.stdin.write(JSON.stringify({ type: 'mute', muted }) + '\n');
+    }
+  }
+
+  public notifyAssistantSpoke(text: string): void {
+    if (this.micProcess && this.micProcess.stdin && !this.micProcess.stdin.destroyed) {
+      this.micProcess.stdin.write(JSON.stringify({ type: 'assistant_spoke', text }) + '\n');
     }
   }
 

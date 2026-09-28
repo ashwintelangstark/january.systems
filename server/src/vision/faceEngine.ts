@@ -2,7 +2,7 @@ import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { getWritableDataDir } from '../utils/paths.js';
+import { getWritableDataDir, getPythonExecutablePath } from '../utils/paths.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,9 +27,26 @@ export class FaceEngine {
   private dataDir: string;
   private profilePath: string;
   private currentProfile: UserProfile;
+  private isDetecting = false;
+  private lastResult: FaceDetectionResult = { hasFace: false, count: 0, faces: [], message: 'No face detected.' };
 
   constructor() {
-    this.scriptPath = path.resolve(__dirname, '../../camera_engine/face_detect.py');
+    const resourcesPath = (process as any).resourcesPath || '';
+    const candidates = [
+      path.join(resourcesPath, 'server', 'camera_engine', 'face_detect.py'),
+      path.resolve(__dirname, '../../camera_engine/face_detect.py'),
+      path.resolve(__dirname, '../../../camera_engine/face_detect.py'),
+      path.resolve(__dirname, '../../../server/camera_engine/face_detect.py'),
+      path.resolve(process.cwd(), 'server/camera_engine/face_detect.py'),
+    ];
+    let found = candidates[1];
+    for (const c of candidates) {
+      if (fs.existsSync(c)) {
+        found = c;
+        break;
+      }
+    }
+    this.scriptPath = found;
     this.dataDir = getWritableDataDir('faces');
     this.profilePath = path.join(this.dataDir, 'profile.json');
 
@@ -96,16 +113,32 @@ export class FaceEngine {
       };
     }
 
-    const uvPath = fs.existsSync('/Users/ashwintelangstark/.local/bin/uv')
-      ? '/Users/ashwintelangstark/.local/bin/uv'
-      : 'uv';
+    if (this.isDetecting) {
+      return this.lastResult;
+    }
+    this.isDetecting = true;
+
+    const pythonBin = getPythonExecutablePath();
+    const workingDir = fs.existsSync(path.dirname(this.scriptPath))
+      ? path.dirname(this.scriptPath)
+      : process.cwd();
 
     return new Promise((resolve) => {
+      let isResolved = false;
       const child = spawn(
-        uvPath,
-        ['run', '--with', 'opencv-python,numpy', 'python3', this.scriptPath, imagePath],
-        { stdio: ['ignore', 'pipe', 'pipe'] }
+        pythonBin,
+        [this.scriptPath, imagePath],
+        { cwd: workingDir, stdio: ['ignore', 'pipe', 'pipe'] }
       );
+
+      const timeoutId = setTimeout(() => {
+        if (!isResolved) {
+          isResolved = true;
+          this.isDetecting = false;
+          try { child.kill('SIGKILL'); } catch {}
+          resolve(this.lastResult);
+        }
+      }, 2500);
 
       let stdout = '';
       let stderr = '';
@@ -114,13 +147,13 @@ export class FaceEngine {
       child.stderr.on('data', (d) => { stderr += d.toString(); });
 
       child.on('close', (code) => {
+        clearTimeout(timeoutId);
+        if (isResolved) return;
+        isResolved = true;
+        this.isDetecting = false;
+
         if (code !== 0 || !stdout.trim()) {
-          console.warn('[FaceEngine] Detection notice:', stderr.trim() || `exit code ${code}`);
-          resolve({
-            hasFace: false,
-            count: 0,
-            message: 'Face detection engine returned no output.',
-          });
+          resolve(this.lastResult);
           return;
         }
 
@@ -130,7 +163,7 @@ export class FaceEngine {
           const hasFace = count > 0;
           const ownerName = this.currentProfile.name;
 
-          resolve({
+          const result: FaceDetectionResult = {
             hasFace,
             count,
             faces: parsed.faces,
@@ -139,13 +172,20 @@ export class FaceEngine {
             message: hasFace
               ? `Recognized ${ownerName} (${count} face(s) detected in frame).`
               : 'No human face currently detected in the camera view.',
-          });
-        } catch (err: any) {
-          resolve({
-            hasFace: false,
-            count: 0,
-            message: `JSON parse error in face detector: ${err.message}`,
-          });
+          };
+          this.lastResult = result;
+          resolve(result);
+        } catch {
+          resolve(this.lastResult);
+        }
+      });
+
+      child.on('error', () => {
+        clearTimeout(timeoutId);
+        if (!isResolved) {
+          isResolved = true;
+          this.isDetecting = false;
+          resolve(this.lastResult);
         }
       });
     });

@@ -27,7 +27,25 @@ export class CameraService {
   private latestFramePath: string;
 
   constructor() {
-    this.binaryPath = path.resolve(__dirname, '../../camera_engine/camera_snap');
+    const candidatePaths = [
+      path.join((process as any).resourcesPath || '', 'server', 'camera_engine', 'camera_snap'),
+      path.resolve(__dirname, '../../camera_engine/camera_snap'),
+      path.resolve(__dirname, '../../../camera_engine/camera_snap'),
+      path.resolve(__dirname, '../../../server/camera_engine/camera_snap'),
+      path.resolve(process.cwd(), 'server/camera_engine/camera_snap'),
+      path.resolve(process.cwd(), 'camera_engine/camera_snap'),
+    ];
+    let foundPath = candidatePaths[1];
+    for (const p of candidatePaths) {
+      if (fs.existsSync(p)) {
+        foundPath = p;
+        try {
+          fs.chmodSync(p, 0o755);
+        } catch {}
+        break;
+      }
+    }
+    this.binaryPath = foundPath;
     this.capturesDir = getWritableDataDir('captures');
     this.latestFramePath = path.join(this.capturesDir, 'latest.jpg');
   }
@@ -38,9 +56,19 @@ export class CameraService {
   public startStreaming(targetFps = 60): void {
     if (this.streamChildProcess) return;
 
+    if (!fs.existsSync(this.binaryPath)) {
+      console.warn(`⚠️ [CameraService] Native camera_snap binary not found at: ${this.binaryPath}`);
+      return;
+    }
+
     console.log(`📷 [CameraService] Launching continuous ${targetFps} FPS hardware camera stream...`);
     const child = spawn(this.binaryPath, ['--stream', this.latestFramePath, targetFps.toString()]);
     this.streamChildProcess = child;
+
+    child.on('error', (err) => {
+      console.warn(`⚠️ [CameraService] Camera stream process error: ${err.message}`);
+      this.streamChildProcess = null;
+    });
 
     child.stdout?.on('data', (chunk: Buffer) => {
       const msg = chunk.toString().trim();

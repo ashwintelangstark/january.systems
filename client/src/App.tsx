@@ -12,6 +12,7 @@ import {
   fetchSessionMessages,
   toggleCameraEyes,
   uploadAttachment,
+  API_BASE,
 } from './utils/api';
 import { BrainSession } from './types';
 
@@ -61,7 +62,7 @@ export const App: React.FC = () => {
     });
 
     // Check camera status
-    fetch('/api/camera/status')
+    fetch(`${API_BASE}/api/camera/status`)
       .then((res) => res.json())
       .then((data) => {
         if (data.isEyesOpen) setIsEyesOpen(true);
@@ -148,10 +149,15 @@ export const App: React.FC = () => {
     }
   };
 
+  const isElectron = typeof window !== 'undefined' && !!(window as any).electronAPI;
+
   return (
     <div
-      className="relative w-screen h-screen overflow-hidden select-none font-sans bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: `url('/january_bg.png')`, backgroundColor: '#B4C5D4' }}
+      className="relative w-screen h-screen overflow-hidden select-none font-sans"
+      style={{
+        backgroundColor: isElectron ? 'transparent' : 'rgba(182, 195, 208, 0.35)',
+        backdropFilter: isElectron ? 'none' : 'blur(16px)',
+      }}
     >
       {/* 1. Dynamic Greeting Header (SF Pro Display) */}
       <GreetingHeader

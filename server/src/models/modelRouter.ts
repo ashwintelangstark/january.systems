@@ -196,10 +196,10 @@ export class DynamicModelRouter {
         if (!candidates.includes(m)) candidates.push(m);
       }
     } else {
-      // General conversational chat: openrouter/free (~500ms) and openrouter/auto
+      // General conversational chat: openrouter/auto and verified fast models
       const generalPool = [
-        'openrouter/free',
         'openrouter/auto',
+        'openrouter/free',
         'liquid/lfm-2.5-2.6b:free',
         'cohere/north-mini-code:free',
       ];

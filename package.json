@@ -12,6 +12,10 @@
     "dev:client": "npm run dev --prefix client",
     "build": "npm run build --prefix server",
     "build:client": "npm run build --prefix client",
-    "build:all": "npm run build --prefix server && npm run build --prefix client"
+    "build:all": "npm run build --prefix server && npm run build --prefix client",
+    "build:dmg": "npm run build:dmg --prefix JAN_APP",
+    "build:app": "npm run build:dmg --prefix JAN_APP",
+    "app": "npm start --prefix JAN_APP",
+    "app:dev": "npm run dev --prefix JAN_APP"
   }
 }

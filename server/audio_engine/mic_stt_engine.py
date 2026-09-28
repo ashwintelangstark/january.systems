@@ -24,25 +24,77 @@ SILENCE_DURATION = 0.42  # Fast silence cutoff for real-time responsiveness
 audio_queue = queue.Queue()
 is_muted = False
 mute_until_time = 0.0
+recent_assistant_utterances = []
+
+def record_assistant_speech(text):
+    global recent_assistant_utterances
+    clean = re.sub(r'[^\w\s]', '', text.lower()).strip()
+    if not clean:
+        return
+    words = set(clean.split())
+    recent_assistant_utterances.append({
+        "clean": clean,
+        "words": words,
+        "timestamp": time.time()
+    })
+    if len(recent_assistant_utterances) > 10:
+        recent_assistant_utterances.pop(0)
+
+def is_echo_of_assistant(text):
+    if not text:
+        return True
+    clean = re.sub(r'[^\w\s]', '', text.lower()).strip()
+    if not clean or len(clean) < 3:
+        return True
+    words = set(clean.split())
+    now = time.time()
+    for item in reversed(recent_assistant_utterances):
+        age = now - item["timestamp"]
+        if age > 25.0:
+            continue
+        ast_clean = item["clean"]
+        if not ast_clean:
+            continue
+        # Direct substring match
+        if clean in ast_clean or ast_clean in clean:
+            return True
+        # Word overlap check
+        ast_words = item["words"]
+        if words and ast_words:
+            overlap = len(words.intersection(ast_words))
+            if overlap >= len(words) * 0.5 and age < 12.0:
+                return True
+    return False
 
 def audio_callback(indata, frames, time_info, status):
-    if status:
-        sys.stderr.write(f"[Mic] Status: {status}\n")
     if not is_muted and time.time() > mute_until_time:
-        audio_queue.put(indata.copy())
+        try:
+            audio_queue.put_nowait(indata.copy())
+        except Exception:
+            pass
 
 def stdin_listener():
-    global is_muted, mute_until_time
+    global is_muted, mute_until_time, audio_queue
     for line in sys.stdin:
         try:
-            cmd = json.loads(line.strip())
-            if cmd.get("type") == "mute":
+            line_str = line.strip()
+            if not line_str:
+                continue
+            cmd = json.loads(line_str)
+            cmd_type = cmd.get("type")
+            if cmd_type == "mute":
                 if cmd.get("muted"):
                     is_muted = True
-                    sys.stderr.write("[Mic Engine] Muted (speaker active - suppressing echo)\n")
+                    # Instantly purge queued audio chunks to kill any speaker echo
+                    while not audio_queue.empty():
+                        try:
+                            audio_queue.get_nowait()
+                        except Exception:
+                            break
+                    sys.stderr.write("[Mic Engine] Muted (suppressing playback echo)\n")
                 else:
-                    # 250ms cooldown before unmuting for rapid conversational back-and-forth
-                    mute_until_time = time.time() + 0.25
+                    # 600ms acoustic dampening cooldown after speaker stops
+                    mute_until_time = time.time() + 0.60
                     is_muted = False
                     # Clear any audio queued while speaker was active
                     while not audio_queue.empty():
@@ -50,7 +102,11 @@ def stdin_listener():
                             audio_queue.get_nowait()
                         except Exception:
                             break
-                    sys.stderr.write("[Mic Engine] Unmuted (listening for user with 250ms guard)\n")
+                    sys.stderr.write("[Mic Engine] Unmuted (listening with 600ms acoustic guard)\n")
+            elif cmd_type == "assistant_spoke":
+                ast_text = cmd.get("text", "")
+                if ast_text:
+                    record_assistant_speech(ast_text)
         except Exception:
             pass
 
@@ -142,16 +198,21 @@ def main():
 
                     # In-memory float32 normalized transcription (zero disk I/O)
                     audio_float = full_audio.astype(np.float32) / 32768.0
+                    stt_lang = os.environ.get("STT_LANGUAGE", "en").strip() or "en"
                     segments, info = model.transcribe(
                         audio_float,
                         beam_size=1,
-                        language=None,
+                        language=stt_lang,
                         condition_on_previous_text=False,
                         vad_filter=True,
                     )
                     text = " ".join([seg.text.strip() for seg in segments]).strip()
 
                     if text:
+                        if is_echo_of_assistant(text):
+                            sys.stderr.write(f"[Mic Engine] Discarded acoustic echo of assistant: \"{text}\"\n")
+                            continue
+
                         lower_text = text.lower()
                         # Strip punctuation and extra whitespace for robust phrase recognition
                         clean_text = re.sub(r'[^\w\s]', '', lower_text).strip()

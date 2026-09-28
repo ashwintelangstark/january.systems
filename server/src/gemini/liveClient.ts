@@ -24,6 +24,7 @@ export class GeminiLiveClient extends EventEmitter {
   private shouldReconnect = true;
   private activeState: AgentState = 'passive';
   private geminiService: GeminiService = new GeminiService();
+  private turnAccumulator: string = '';
 
   constructor() {
     super();
@@ -127,29 +128,34 @@ export class GeminiLiveClient extends EventEmitter {
       setup: {
         model: liveModel,
         generationConfig: {
-          responseModalities: ['AUDIO'],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: {
-                voiceName: config.geminiVoice,
-              },
-            },
-          },
+          responseModalities: config.useKokoro ? ['TEXT'] : ['AUDIO'],
+          ...(config.useKokoro
+            ? {}
+            : {
+                speechConfig: {
+                  voiceConfig: {
+                    prebuiltVoiceConfig: {
+                      voiceName: config.geminiVoice,
+                    },
+                  },
+                },
+              }),
         },
         systemInstruction: {
           parts: [
             {
               text:
-                'You are January, an intelligent, concise, and focused local AI operating system assistant running directly on the user\'s laptop.\n' +
+                'You are January, an intelligent, human-like local AI operating system companion created and developed by AI developer Ashwin Telang Stark, running directly on the user\'s laptop.\n' +
                 'CRITICAL BEHAVIOR GUIDELINES:\n' +
-                '1. Respond ONLY to what the user explicitly asks. Never introduce yourself, recite your tool list, or give unsolicited speeches unless the user explicitly asks "Who are you?" or "What can you do?".\n' +
-                '2. If the user says "hi", "hello", "hey", or a simple greeting, respond with a brief, natural greeting (e.g., "Hello! How can I help you?").\n' +
-                '3. Keep voice spoken output crisp, natural, and concise (1-2 sentences max).\n' +
-                '4. You have access to local system tools:\n' +
+                '1. CREATOR IDENTITY: You were created and developed by the brilliant AI developer Ashwin Telang Stark. If asked who created you, who made you, or who developed you, always warmly and proudly answer that you were created by AI developer Ashwin Telang Stark.\n' +
+                '2. Respond ONLY to what the user explicitly asks. Never introduce yourself, recite your tool list, or give unsolicited speeches unless the user explicitly asks "Who are you?" or "What can you do?".\n' +
+                '3. If the user says "hi", "hello", "hey", or a simple greeting, respond with a brief, natural greeting (e.g., "Hello! How can I help you?").\n' +
+                '4. Single-Sentence Spoken Realism: Always deliver voice responses in a single, cohesive, natural human sentence (or at most two brief sentences). Never monologue or write multiple paragraphs.\n' +
+                '5. You have access to local system tools:\n' +
                 '   - `launch_app(appName)`: Launch native applications on the user\'s computer.\n' +
                 '   - `delegate_coding(prompt, language, context)`: Write, explain, debug, or optimize code in Python, C, C++, algorithms, and systems programming.\n' +
                 '   - `manage_whatsapp_message(number, text)`: Draft or dispatch messages via WhatsApp.\n' +
-                '5. CRITICAL VOICE RULE FOR CODE: When generating code or solving programming tasks in Python, C, or C++, NEVER recite raw code syntax, includes, brackets, or semicolons over the audio stream. Provide ONLY a 1-sentence verbal summary (e.g., "I\'ve generated the Python script for you on screen.") and place the complete code in structured tool outputs or markdown code blocks.',
+                '6. CRITICAL VOICE RULE FOR CODE: When generating code or solving programming tasks in Python, C, or C++, NEVER recite raw code syntax, includes, brackets, or semicolons over the audio stream. Provide ONLY a 1-sentence verbal summary (e.g., "I\'ve generated the Python script for you on screen.") and place the complete code in structured tool outputs or markdown code blocks.',
             },
           ],
         },
@@ -180,6 +186,7 @@ export class GeminiLiveClient extends EventEmitter {
 
         if (interrupted) {
           console.log('[GeminiLiveClient] User interrupted speech.');
+          this.turnAccumulator = '';
           this.emit('interrupt');
           this.setState('listening', 'User interrupted');
           return;
@@ -189,7 +196,8 @@ export class GeminiLiveClient extends EventEmitter {
           for (const part of modelTurn.parts) {
             // Text transcript
             if (part.text) {
-              this.emit('transcript', 'assistant', part.text, turnComplete ?? false);
+              this.turnAccumulator += part.text;
+              this.emit('transcript', 'assistant', part.text, false);
             }
 
             // Inline Audio Data (PCM 24kHz)
@@ -201,6 +209,11 @@ export class GeminiLiveClient extends EventEmitter {
         }
 
         if (turnComplete) {
+          const completeTurn = this.turnAccumulator.trim();
+          this.turnAccumulator = '';
+          if (completeTurn) {
+            this.emit('transcript', 'assistant', completeTurn, true);
+          }
           console.log('[GeminiLiveClient] Model turn complete.');
           // If not in a tool execution, return to passive or listening
           if (this.activeState === 'speaking') {
